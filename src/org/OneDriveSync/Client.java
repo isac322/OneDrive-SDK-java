@@ -2,7 +2,6 @@ package org.OneDriveSync;
 
 import lombok.Getter;
 import org.OneDriveSync.container.Drive;
-import org.OneDriveSync.container.Identity;
 import org.OneDriveSync.utils.AuthServer;
 import org.OneDriveSync.utils.OneDriveRequest;
 import org.json.simple.parser.ParseException;
@@ -15,8 +14,6 @@ import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -37,8 +34,6 @@ public class Client {
 	@Getter private String clientSecret;
 	@Getter private String redirectURL;
 	@Getter private String authCode;
-
-	private Map<String, Identity> userSet = new HashMap<>();
 
 	/**
 	 * Construct with auto login.
