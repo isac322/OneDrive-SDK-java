@@ -1,13 +1,19 @@
-package org.OneDriveSync.container;
+package org.onedrive.container;
 
 import lombok.Getter;
-import org.simpler.json.JsonObject;
+import org.json.simple.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * TODO: add javadoc
  * Created by isac322 on 16. 10. 2.
+ *
+ * @author isac322
  */
-public class Drive extends Container {
+public class Drive extends BaseContainer {
+	protected static Map<String, Drive> containerSet = new HashMap<>();
 	@Getter protected final String id;
 	@Getter protected final String driveType;
 	@Getter protected final String state;
@@ -29,13 +35,18 @@ public class Drive extends Container {
 		this.remaining = remaining;
 	}
 
-	public static Drive parse(JsonObject json) {
-		JsonObject quota = json.getObject("quota");
+	public static Drive parse(JSONObject json) {
+		if (json == null) return null;
+
+		JSONObject quota = json.getObject("quota");
 
 		String id = json.getString("id");
 
 		if (Drive.contains(id)) {
-			return (Drive) Drive.get(id);
+			return Drive.get(id);
+
+		} else if (quota == null) {
+			throw new RuntimeException("quota is empty in drive");
 
 		} else {
 			Drive drive = new Drive(
@@ -55,6 +66,18 @@ public class Drive extends Container {
 		}
 	}
 
+	public static boolean contains(String id) {
+		return containerSet.containsKey(id);
+	}
+
+	public static Drive get(String id) {
+		return containerSet.get(id);
+	}
+
+	public static void put(Drive drive) {
+		containerSet.put(drive.id, drive);
+	}
+
 	@Override
 	public int hashCode() {
 		return id.hashCode();
@@ -63,10 +86,5 @@ public class Drive extends Container {
 	@Override
 	public boolean equals(Object obj) {
 		return obj instanceof Drive && id.equals(((Drive) obj).getId());
-	}
-
-	@Override
-	public String toString() {
-		return id + ' ' + driveType + ' ' + state + ' ' + identitySet + ' ' + totalCapacity + ' ' + deleted + ' ' + usedCapacity + ' ' + remaining;
 	}
 }

@@ -1,28 +1,35 @@
-package org.OneDriveSync;
+package org.onedrive;
 
+import com.sun.istack.internal.NotNull;
 import lombok.Getter;
-import org.OneDriveSync.container.Drive;
-import org.OneDriveSync.utils.AuthServer;
-import org.OneDriveSync.utils.OneDriveRequest;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.network.HttpsRequest;
 import org.network.HttpsResponse;
-import org.simpler.json.JSON;
-import org.simpler.json.JsonObject;
+import org.onedrive.container.Drive;
+import org.onedrive.container.items.FileItem;
+import org.onedrive.container.items.FolderItem;
+import org.onedrive.utils.AuthServer;
+import org.onedrive.utils.OneDriveRequest;
 
 import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Semaphore;
 
 /**
  * TODO: add javadoc
  * Created by isac322 on 16. 9. 29.
+ *
+ * @author isac322
  */
 public class Client {
 	private static final String UNREACHABLE_MSG = "Unreachable Area. Check stack stace above";
-
+	private final JSONParser parser = new JSONParser();
 	private long lastRefresh;
 	@Getter private long expirationTime;
 	@Getter private String tokenType;
@@ -40,7 +47,8 @@ public class Client {
 	 *
 	 * @param clientId     Client id that MS gave to programmer for identify programmer's applications.
 	 * @param scope        Array of scopes that client requires.
-	 * @param redirectURL  Redirect URL that programmer already set in Application setting. It must matches with set one!
+	 * @param redirectURL  Redirect URL that programmer already set in Application setting. It must matches with set
+	 *                     one!
 	 * @param clientSecret Client secret key that MS gave to programmer.
 	 */
 	public Client(String clientId, String[] scope, String redirectURL, String clientSecret) {
@@ -50,7 +58,8 @@ public class Client {
 	/**
 	 * @param clientId     Client id that MS gave to programmer for identify programmer's applications.
 	 * @param scope        Array of scopes that client requires.
-	 * @param redirectURL  Redirect URL that programmer already set in Application setting. It must matches with set one!
+	 * @param redirectURL  Redirect URL that programmer already set in Application setting. It must matches with set
+	 *                     one!
 	 * @param clientSecret Client secret key that MS gave to programmer.
 	 * @param autoLogin    if {@code true} construct with auto login.
 	 */
@@ -102,9 +111,11 @@ public class Client {
 			answerLock.release();
 
 			return code;
-		} catch (IOException | URISyntaxException e) {
+		}
+		catch (IOException | URISyntaxException e) {
 			e.printStackTrace();
-		} catch (InterruptedException e) {
+		}
+		catch (InterruptedException e) {
 			e.printStackTrace();
 			System.err.println("Lock Error In " + this.getClass().getName());
 		}
@@ -124,18 +135,20 @@ public class Client {
 		}
 
 		return getToken(
-				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token",
+				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&refresh_token=%s&grant_type" +
+								"=refresh_token",
 						clientId, redirectURL, clientSecret, refreshToken));
 	}
 
 	private String getToken(String httpBody) {
 		try {
 			HttpsRequest request = new HttpsRequest("https://login.live.com/oauth20_token.srf");
-			request.setHeader("Content-Type", "Application/x-www-form-urlencoded");
+			request.setHeader("Content-Type", "application/x-www-form-urlencoded");
 
 			HttpsResponse response = request.doPost(httpBody);
 
-			JsonObject jsonResponse = JSON.parse(response.getContentString());
+
+			JSONObject jsonResponse = (JSONObject) parser.parse(response.getContentString());
 
 			saveToken(
 					jsonResponse.getString("access_token"),
@@ -147,10 +160,12 @@ public class Client {
 
 			return jsonResponse.getString("access_token");
 
-		} catch (IOException e) {
+		}
+		catch (IOException e) {
 			e.printStackTrace();
 			System.err.println("Internet Connection Error While Refreshing Login Info");
-		} catch (ParseException e) {
+		}
+		catch (ParseException e) {
 			e.printStackTrace();
 			System.err.println("Response Json Error in " + this.getClass().getName());
 		}
@@ -179,9 +194,7 @@ public class Client {
 	 * @throws RuntimeException if it isn't login when called.
 	 */
 	public void logout() {
-		if (!isLogin()) {
-			throw new RuntimeException("Already Logout!!");
-		}
+		if (!isLogin()) throw new RuntimeException("Already Logout!!");
 
 		try {
 			String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
@@ -196,7 +209,8 @@ public class Client {
 			userId = null;
 			refreshToken = null;
 			expirationTime = 0;
-		} catch (IOException e) {
+		}
+		catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -209,21 +223,69 @@ public class Client {
 		return authCode != null && accessToken != null && userId != null && refreshToken != null;
 	}
 
+	@NotNull
 	public Drive getDefaultDrive() {
 		checkExpired();
 
 		try {
 			HttpsResponse response = OneDriveRequest.doGet("/drive", accessToken);
-			JsonObject json = JSON.parse(response.getContentString());
+			JSONObject json = (JSONObject) parser.parse(response.getContentString());
 
 			return Drive.parse(json);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.err.println("Internet connection error while getDefaultDrive.");
-		} catch (ParseException e) {
+		}
+		catch (ParseException e) {
 			e.printStackTrace();
 			System.err.println("Wrong json response. It must be connection error");
+		}
+
+		throw new RuntimeException(UNREACHABLE_MSG);
+	}
+
+	@NotNull
+	public List<Drive> getAllDrive() {
+		ArrayList<Drive> list = new ArrayList<>();
+
+		JSONObject json = OneDriveRequest.getJsonResponse("/drives", accessToken);
+
+		for (Object drive : json.getArray("value")) {
+			list.add(Drive.parse((JSONObject) drive));
+		}
+
+		return list;
+	}
+
+	@NotNull
+	public FolderItem getRootDir() {
+		JSONObject json = OneDriveRequest.getJsonResponse("/drive/root:/?expand=children", accessToken);
+
+		return (FolderItem) FolderItem.parse(this, json);
+	}
+
+	@NotNull
+	public FolderItem getFolder(@NotNull String id) {
+		try {
+			JSONObject json = OneDriveRequest.getJsonResponse("/drive/items/" + id + "?expand=children", accessToken);
+
+			return (FolderItem) FolderItem.parse(this, json);
+		}
+		catch (ClassCastException e) {
+			e.printStackTrace();
+			System.err.println(id + " is not folder ID.");
+		}
+
+		throw new RuntimeException(UNREACHABLE_MSG);
+	}
+
+	@NotNull
+	public FileItem getFile(@NotNull String id) {
+		try {
+			JSONObject json = OneDriveRequest.getJsonResponse("/drive/items/" + id + "?expand=children", accessToken);
+
+			return (FileItem) FileItem.parse(this, json);
+		}
+		catch (ClassCastException e) {
+			e.printStackTrace();
+			System.err.println(id + " is not file ID.");
 		}
 
 		throw new RuntimeException(UNREACHABLE_MSG);

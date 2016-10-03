@@ -1,33 +1,41 @@
-package org.OneDriveSync.container;
+package org.onedrive.container;
 
 import lombok.Getter;
-import org.simpler.json.JsonObject;
+import org.json.simple.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * https://dev.onedrive.com/resources/identitySet.htm
  * TODO: Enhance javadoc
  * Created by isac322 on 16. 10. 2.
+ *
+ * @author isac322
  */
-public class Identity extends Container {
+public class Identity extends BaseContainer {
+	protected static Map<String, Identity> identitySet = new HashMap<>();
 	@Getter protected final String id;
 	@Getter protected final String displayName;
-	@Getter protected final JsonObject thumbnails;
+	@Getter protected final JSONObject thumbnails;
 
-	protected Identity(String name, String id, JsonObject thumbnails) {
+	protected Identity(String name, String id, JSONObject thumbnails) {
 		this.displayName = name;
 		this.id = id;
 		this.thumbnails = thumbnails;
 	}
 
-	public static Identity parse(JsonObject json) {
+	public static Identity parse(JSONObject json) {
+		if (json == null) return null;
+
 		String id = json.getString("id");
 
 		if (Identity.contains(id)) {
-			return (Identity) Identity.get(id);
+			return Identity.get(id);
 
 		} else {
 			Identity identity = new Identity(
-					json.getString("id"),
+					id,
 					json.getString("displayName"),
 					json.getObject("thumbnails")
 			);
@@ -38,6 +46,18 @@ public class Identity extends Container {
 		}
 	}
 
+	public static boolean contains(String id) {
+		return identitySet.containsKey(id);
+	}
+
+	public static Identity get(String id) {
+		return identitySet.get(id);
+	}
+
+	public static void put(Identity identity) {
+		identitySet.put(identity.id, identity);
+	}
+
 	@Override
 	public int hashCode() {
 		return id.hashCode();
@@ -46,10 +66,5 @@ public class Identity extends Container {
 	@Override
 	public boolean equals(Object obj) {
 		return obj instanceof Identity && id.equals(((Identity) obj).getId());
-	}
-
-	@Override
-	public String toString() {
-		return displayName + ' ' + id;
 	}
 }

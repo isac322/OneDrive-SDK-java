@@ -1,5 +1,6 @@
 package org.network;
 
+import com.sun.istack.internal.NotNull;
 import lombok.Getter;
 
 import java.net.URL;
@@ -8,7 +9,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * TODO: Enhance javadoc
  * Created by isac322 on 16. 9. 30.
+ *
+ * @author isac322
  */
 public class HttpsResponse {
 	@Getter protected final URL url;
@@ -33,6 +37,7 @@ public class HttpsResponse {
 	 *
 	 * @return HTTP response body as {@code String}. Body is forced to decode with UTF-8.
 	 */
+	@NotNull
 	public String getContentString() {
 		if (contentString == null) {
 			contentString = new String(content, StandardCharsets.UTF_8);

@@ -1,4 +1,4 @@
-package org.OneDriveSync.utils;
+package org.onedrive.utils;
 
 import java.net.URI;
 import java.util.*;
@@ -9,8 +9,11 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 /**
+ * TODO: Enhance javadoc
  * original: http://stackoverflow.com/a/13592567
  * Created by isac322 on 16. 9. 29.
+ *
+ * @author isac322
  */
 public class URLQueryParser {
 	public static Map<String, List<String>> splitQuery(URI url) {

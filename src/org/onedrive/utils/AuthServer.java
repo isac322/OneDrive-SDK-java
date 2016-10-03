@@ -1,4 +1,4 @@
-package org.OneDriveSync.utils;
+package org.onedrive.utils;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -7,13 +7,14 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Semaphore;
 
 /**
  * TODO: add javadoc
  * Created by isac322 on 16. 9. 29.
+ *
+ * @author isac322
  */
 public final class AuthServer {
 	private final Semaphore authLock;
@@ -57,20 +58,22 @@ public final class AuthServer {
 	private class AuthHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange httpExchange) throws IOException {
-			String response = "<script type='text/javascript'>window.close()</script>";
-			httpExchange.sendResponseHeaders(200, response.length());
+			byte[] response = "<script type='text/javascript'>window.close()</script>".getBytes(StandardCharsets.UTF_8);
+			httpExchange.sendResponseHeaders(200, response.length);
 			OutputStream os = httpExchange.getResponseBody();
-			os.write(response.getBytes());
+			os.write(response);
 			os.close();
 
-			Map<String, List<String>> queryMap = URLQueryParser.splitQuery(httpExchange.getRequestURI());
+			String[] query = httpExchange.getRequestURI().getQuery().split("=");
 
-			if (queryMap.containsKey("code")) {
-				authCode = queryMap.get("code").get(0);
-			} else if (queryMap.containsKey("error")) {
-				throw new IOException("Wrong Login Info");
-			} else {
-				throw new IOException("Unrecognized OneDrive Server Error");
+			switch (query[0]) {
+				case "code":
+					authCode = query[1];
+					break;
+				case "error":
+					throw new IOException("Wrong Login Info");
+				default:
+					throw new IOException("Unrecognized OneDrive Server Error");
 			}
 
 			authLock.release();

@@ -14,7 +14,7 @@ buildNumber.properties
 Thumbs.db
 ehthumbs.db
 
-# Folder config file
+# FolderFacet config file
 Desktop.ini
 
 # Recycle Bin used on file shares
@@ -99,7 +99,3 @@ gradle-app.setting
 
 # Linux trash folder which might appear on any partition or disk
 .Trash-*
-.gitignore 제거할 예정
-.idea/ 제거할 예정
-OneDriveSync.iml 제거할 예정
-out/ 제거할 예정

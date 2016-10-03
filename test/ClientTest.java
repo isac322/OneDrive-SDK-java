@@ -1,10 +1,13 @@
 import junit.framework.TestCase;
-import org.OneDriveSync.Client;
-import org.OneDriveSync.container.Drive;
-import org.OneDriveSync.utils.OneDriveRequest;
 import org.network.HttpsResponse;
+import org.onedrive.Client;
+import org.onedrive.container.Drive;
+import org.onedrive.container.items.BaseItem;
+import org.onedrive.container.items.FileItem;
+import org.onedrive.container.items.FolderItem;
+import org.onedrive.container.items.PackageItem;
+import org.onedrive.utils.OneDriveRequest;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -15,11 +18,6 @@ public class ClientTest extends TestCase {
 	private static Client client;
 
 	private static Client getClient() {
-		if (client == null) {
-			final String clientId = "f21d2eff-49e2-4a10-a515-4a077f23c694";
-			final String[] scope = {"onedrive.readwrite", "offline_access"};
-			final String redirectURL = "http://localhost:8080/";
-			final String clientSecret = "mwsydWThCRbJJZZ7uep5GLm";
 
 			client = new Client(clientId, scope, redirectURL, clientSecret);
 		}
@@ -27,7 +25,7 @@ public class ClientTest extends TestCase {
 		return client;
 	}
 
-	public void testLogin() throws IOException {
+	public void testLogin() {
 		getClient();
 
 		assertNotNull(client.getAccessToken());
@@ -55,11 +53,21 @@ public class ClientTest extends TestCase {
 		assertFalse(client.isLogin());
 	}
 
-	public void testItem() throws IOException {
+	public void testItem() {
 		getClient();
 
 		HttpsResponse response = OneDriveRequest.doGet("/drive/root?expand=children", client.getAccessToken());
 		System.out.println(response.getContentString());
+	}
+
+	public void testDrives() {
+		getClient();
+
+		for (Drive drive : client.getAllDrive()) {
+			System.out.println(drive.getDriveType());
+			System.out.println(drive.getId());
+			System.out.println(drive.getTotalCapacity());
+		}
 	}
 
 	public void testDrive() {
@@ -68,5 +76,53 @@ public class ClientTest extends TestCase {
 		Drive defaultDrive = client.getDefaultDrive();
 
 		System.out.println(defaultDrive);
+	}
+
+	public void testRoot() {
+		getClient();
+
+		HttpsResponse response = OneDriveRequest.doGet("/drive/root:/?expand=children", client.getAccessToken());
+		System.out.println(response.getCode());
+		System.out.println(response.getMessage());
+		System.out.println(response.getContentString());
+	}
+
+	public void testRootDir() {
+		getClient();
+
+		FolderItem rootDir = client.getRootDir();
+		System.out.println(rootDir.getId());
+		System.out.println(rootDir.getCTag());
+		System.out.println(rootDir.getETag());
+		System.out.println(rootDir.getName());
+		System.out.println(rootDir.getSize());
+	}
+
+	private void dfs(FolderItem folder, String tab) {
+		System.out.print(tab);
+		System.out.println(folder.getName());
+
+		tab += '\t';
+		for (BaseItem item : folder) {
+			if (item instanceof FolderItem) {
+				dfs((FolderItem) item, tab);
+			}
+			else if (item instanceof FileItem) {
+				System.out.print(tab);
+				System.out.println(item.getName());
+			}
+			else if (item instanceof PackageItem) {
+				System.out.println(item.getName());
+			}
+			else {
+				throw new RuntimeException("Unsupported type item.");
+			}
+		}
+	}
+
+	public void testRecursiveTravel() {
+		getClient();
+
+		dfs(client.getRootDir(), "");
 	}
 }
