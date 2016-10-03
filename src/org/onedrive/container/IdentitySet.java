@@ -1,5 +1,6 @@
 package org.onedrive.container;
 
+import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 import org.json.simple.JSONObject;
 
@@ -11,10 +12,10 @@ import org.json.simple.JSONObject;
  * @author isac322
  */
 public class IdentitySet {
-	@Getter protected final Identity user;
-	@Getter protected final Identity application;
-	@Getter protected final Identity device;
-	@Getter protected final Identity organization;
+	@Getter @Nullable protected final Identity user;
+	@Getter @Nullable protected final Identity application;
+	@Getter @Nullable protected final Identity device;
+	@Getter @Nullable protected final Identity organization;
 
 	protected IdentitySet(Identity user, Identity app, Identity device, Identity org) {
 		this.user = user;
@@ -23,6 +24,7 @@ public class IdentitySet {
 		this.organization = org;
 	}
 
+	@Nullable
 	public static IdentitySet parse(JSONObject json) {
 		if (json == null) return null;
 

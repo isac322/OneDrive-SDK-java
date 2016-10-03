@@ -50,11 +50,4 @@ public class JSONUtil {
 		else if (value instanceof Boolean) return (Boolean) value;
 		else throw new ClassCastException("Invalid Cast");
 	}
-
-	@Nullable
-	static Integer convertToInt(Object value) {
-		if (value == null) return null;
-		else if (value instanceof Integer) return (Integer) value;
-		else throw new ClassCastException("Invalid Cast");
-	}
 }

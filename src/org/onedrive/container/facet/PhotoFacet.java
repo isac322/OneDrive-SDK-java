@@ -19,14 +19,14 @@ public class PhotoFacet {
 	/**
 	 * Always ensure local date time.
 	 */
-	@Getter protected final ZonedDateTime takenDateTime;
-	@Getter protected final String cameraMake;
-	@Getter protected final String cameraModel;
-	@Getter protected final Double fNumber;
-	@Getter protected final Double exposureDenominator;
-	@Getter protected final Double exposureNumerator;
-	@Getter protected final Double focalLength;
-	@Getter protected final Long iso;
+	@Getter @Nullable protected final ZonedDateTime takenDateTime;
+	@Getter @Nullable protected final String cameraMake;
+	@Getter @Nullable protected final String cameraModel;
+	@Getter @Nullable protected final Double fNumber;
+	@Getter @Nullable protected final Double exposureDenominator;
+	@Getter @Nullable protected final Double exposureNumerator;
+	@Getter @Nullable protected final Double focalLength;
+	@Getter @Nullable protected final Long iso;
 
 	protected PhotoFacet(ZonedDateTime takenDateTime, String cameraMake, String cameraModel, Double fNumber,
 						 Double exposureDenominator, Double exposureNumerator, Double focalLength, Long iso) {

@@ -412,9 +412,4 @@ public class JSONArray extends ArrayList implements JSONAware, JSONStreamAware {
 	public Boolean getBoolean(int index) {
 		return JSONUtil.convertToBool(get(index));
 	}
-
-	@Nullable
-	public Integer getInt(int index) {
-		return JSONUtil.convertToInt(get(index));
-	}
 }

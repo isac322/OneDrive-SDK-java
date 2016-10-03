@@ -16,24 +16,24 @@ public class AudioFacet {
 	@Getter @Nullable protected final String album;
 	@Getter @Nullable protected final String albumArtist;
 	@Getter @Nullable protected final String artist;
-	@Getter @NotNull protected final int bitrate;
+	@Getter @NotNull protected final long bitrate;
 	@Getter @Nullable protected final String composers;
 	@Getter @Nullable protected final String copyright;
-	@Getter @Nullable protected final Integer disc;
-	@Getter @Nullable protected final Integer discCount;
+	@Getter @Nullable protected final Long disc;
+	@Getter @Nullable protected final Long discCount;
 	@Getter @NotNull protected final long duration;
 	@Getter @Nullable protected final String genre;
 	@Getter @NotNull protected final boolean hasDrm;
-	@Getter @NotNull protected final boolean isVariableBitrate;
+	@Getter @Nullable protected final Boolean isVariableBitrate;
 	@Getter @Nullable protected final String title;
-	@Getter @Nullable protected final Integer track;
-	@Getter @Nullable protected final Integer trackCount;
-	@Getter @Nullable protected final Integer year;
+	@Getter @Nullable protected final Long track;
+	@Getter @Nullable protected final Long trackCount;
+	@Getter @Nullable protected final Long year;
 
-	protected AudioFacet(String album, String albumArtist, String artist, int bitrate, String composers,
-						 String copyright, Integer disc, Integer discCount, long duration, String genre,
-						 boolean hasDrm, boolean isVariableBitrate, String title, Integer track, Integer trackCount,
-						 Integer year) {
+	protected AudioFacet(String album, String albumArtist, String artist, long bitrate, String composers,
+						 String copyright, Long disc, Long discCount, long duration, String genre,
+						 boolean hasDrm, Boolean isVariableBitrate, String title, Long track, Long trackCount,
+						 Long year) {
 		this.album = album;
 		this.albumArtist = albumArtist;
 		this.artist = artist;
@@ -60,19 +60,19 @@ public class AudioFacet {
 				json.getString("album"),
 				json.getString("albumArtist"),
 				json.getString("artist"),
-				json.getInt("bitrate"),
+				json.getLong("bitrate"),
 				json.getString("composers"),
 				json.getString("copyright"),
-				json.getInt("disc"),
-				json.getInt("discCount"),
+				json.getLong("disc"),
+				json.getLong("discCount"),
 				json.getLong("duration"),
 				json.getString("genre"),
 				json.getBoolean("hasDrm"),
 				json.getBoolean("isVariableBitrate"),
 				json.getString("title"),
-				json.getInt("track"),
-				json.getInt("trackCount"),
-				json.getInt("year")
+				json.getLong("track"),
+				json.getLong("trackCount"),
+				json.getLong("year")
 		);
 	}
 }

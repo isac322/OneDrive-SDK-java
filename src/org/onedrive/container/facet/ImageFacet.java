@@ -1,5 +1,6 @@
 package org.onedrive.container.facet;
 
+import com.sun.istack.internal.NotNull;
 import lombok.Getter;
 import org.json.simple.JSONObject;
 
@@ -11,8 +12,8 @@ import org.json.simple.JSONObject;
  * @author isac322
  */
 public class ImageFacet {
-	@Getter protected final long width;
-	@Getter protected final long height;
+	@Getter @NotNull protected final long width;
+	@Getter @NotNull protected final long height;
 
 	protected ImageFacet(long width, long height) {
 		this.width = width;

@@ -1,5 +1,6 @@
 package org.onedrive.container;
 
+import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 import org.json.simple.JSONObject;
 
@@ -35,6 +36,7 @@ public class Drive extends BaseContainer {
 		this.remaining = remaining;
 	}
 
+	@Nullable
 	public static Drive parse(JSONObject json) {
 		if (json == null) return null;
 
@@ -70,6 +72,7 @@ public class Drive extends BaseContainer {
 		return containerSet.containsKey(id);
 	}
 
+	@Nullable
 	public static Drive get(String id) {
 		return containerSet.get(id);
 	}

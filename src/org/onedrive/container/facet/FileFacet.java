@@ -12,10 +12,10 @@ import org.json.simple.JSONObject;
  * @author isac322
  */
 public class FileFacet {
-	@Getter protected final String mimeType;
-	@Getter protected final String sha1Hash;
-	@Getter protected final String crc32Hash;
-	@Getter protected final String quickXorHash;
+	@Getter @Nullable protected final String mimeType;
+	@Getter @Nullable protected final String sha1Hash;
+	@Getter @Nullable protected final String crc32Hash;
+	@Getter @Nullable protected final String quickXorHash;
 
 	protected FileFacet(String mimeType, String sha1Hash, String crc32Hash, String quickXorHash) {
 		this.mimeType = mimeType;
@@ -28,13 +28,21 @@ public class FileFacet {
 	public static FileFacet parse(JSONObject json) {
 		if (json == null) return null;
 
-		JSONObject hashes = json.getObject("hashes");
+		if (json.containsKey("hashes")) {
+			JSONObject hashes = json.getObject("hashes");
 
-		return new FileFacet(
-				json.getString("mimeType"),
-				hashes.getString("crc32Hash"),
-				hashes.getString("sha1Hash"),
-				hashes.getString("quickXorHash")
-		);
+			return new FileFacet(
+					json.getString("mimeType"),
+					hashes.getString("crc32Hash"),
+					hashes.getString("sha1Hash"),
+					hashes.getString("quickXorHash")
+			);
+		}
+		else {
+			return new FileFacet(
+					json.getString("mimeType"),
+					null, null, null
+			);
+		}
 	}
 }

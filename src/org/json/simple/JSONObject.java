@@ -163,9 +163,4 @@ public class JSONObject extends HashMap implements Map, JSONAware, JSONStreamAwa
 	public Boolean getBoolean(@NotNull String key) {
 		return JSONUtil.convertToBool(get(key));
 	}
-
-	@Nullable
-	public Integer getInt(@NotNull String key) {
-		return JSONUtil.convertToInt(get(key));
-	}
 }

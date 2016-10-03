@@ -1,5 +1,7 @@
 package org.onedrive.container;
 
+import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 import org.json.simple.JSONObject;
 
@@ -15,9 +17,9 @@ import java.util.Map;
  */
 public class Identity extends BaseContainer {
 	protected static Map<String, Identity> identitySet = new HashMap<>();
-	@Getter protected final String id;
-	@Getter protected final String displayName;
-	@Getter protected final JSONObject thumbnails;
+	@Getter @NotNull protected final String id;
+	@Getter @Nullable protected final String displayName;
+	@Getter @Nullable protected final JSONObject thumbnails;
 
 	protected Identity(String name, String id, JSONObject thumbnails) {
 		this.displayName = name;
@@ -25,6 +27,7 @@ public class Identity extends BaseContainer {
 		this.thumbnails = thumbnails;
 	}
 
+	@Nullable
 	public static Identity parse(JSONObject json) {
 		if (json == null) return null;
 
@@ -50,6 +53,7 @@ public class Identity extends BaseContainer {
 		return identitySet.containsKey(id);
 	}
 
+	@Nullable
 	public static Identity get(String id) {
 		return identitySet.get(id);
 	}

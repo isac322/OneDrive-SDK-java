@@ -1,5 +1,6 @@
 package org.onedrive.container.facet;
 
+import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 import org.json.simple.JSONObject;
@@ -12,7 +13,7 @@ import org.json.simple.JSONObject;
  * @author isac322
  */
 public class FolderFacet {
-	@Getter protected final long childCount;
+	@Getter @NotNull protected final long childCount;
 
 	protected FolderFacet(long childCount) {
 		this.childCount = childCount;
