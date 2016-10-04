@@ -12,10 +12,9 @@ import java.time.ZonedDateTime;
 
 /**
  * https://dev.onedrive.com/facets/package_facet.htm
- * TODO: enhance javadoc
- * Created by isac322 on 16. 10. 3.
+ * {@// TODO: enhance javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class PackageItem extends BaseItem {
 	@Getter protected PackageFacet packages;

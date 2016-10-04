@@ -3,10 +3,9 @@ package org.json.simple;
 import com.sun.istack.internal.Nullable;
 
 /**
- * TODO: add javadoc
- * Created by isac322 on 16. 10. 2.
+ * {@// TODO: add javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class JSONUtil {
 	@Nullable

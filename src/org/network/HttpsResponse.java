@@ -9,10 +9,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TODO: Enhance javadoc
- * Created by isac322 on 16. 9. 30.
+ * {@// TODO: Enhance javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class HttpsResponse {
 	@Getter protected final URL url;
@@ -33,7 +32,7 @@ public class HttpsResponse {
 	/**
 	 * For programmer's convenience, return decoded HTTP response's body as {@code String}.<br>
 	 * Always decode with <b>UTF-8</b>.<br>
-	 * If you want to decode body with another encoding, you should call {@code getContent()} and decode manually.
+	 * If you want to decode the body with another encoding, you should call {@code getContent()} and decode manually.
 	 *
 	 * @return HTTP response body as {@code String}. Body is forced to decode with UTF-8.
 	 */

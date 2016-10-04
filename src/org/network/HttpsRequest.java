@@ -2,11 +2,11 @@ package org.network;
 
 import com.sun.istack.internal.NotNull;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
@@ -15,14 +15,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TODO: Enhance javadoc
- * Created by isac322 on 16. 9. 30.
+ * {@// TODO: Enhance javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class HttpsRequest {
-	public static final String NETWORK_ERR_MSG = "Network connection error. Please retry later or contact author.";
-	protected final HttpURLConnection httpConnection;
+	public static final String NETWORK_ERR_MSG = "Network connection error. Please retry later or contact API author.";
+	protected final HttpsURLConnection httpConnection;
 
 	public HttpsRequest(@NotNull String url) throws MalformedURLException {
 		this(new URL(url));
@@ -30,7 +29,7 @@ public class HttpsRequest {
 
 	public HttpsRequest(@NotNull URL url) {
 		try {
-			httpConnection = (HttpURLConnection) url.openConnection();
+			httpConnection = (HttpsURLConnection) url.openConnection();
 		}
 		catch (IOException e) {
 			e.printStackTrace();
@@ -38,6 +37,13 @@ public class HttpsRequest {
 		}
 	}
 
+	/**
+	 * Add {@code key}, {@code value} pair to http request's header.<br>
+	 * Like: {@code key}: {@code value}.
+	 *
+	 * @param key   Key to add in request's header.
+	 * @param value Value to add in request's header. It could be {@code null}.
+	 */
 	public void setHeader(@NotNull String key, String value) {
 		httpConnection.setRequestProperty(key, value);
 	}
@@ -89,7 +95,7 @@ public class HttpsRequest {
 	}
 
 	/**
-	 * TODO: handling NOT 200 OK response.
+	 * {@// TODO: handling NOT 200 OK response.}
 	 *
 	 * @return Response object.
 	 * @throws RuntimeException fail to network connection or fail to read response.

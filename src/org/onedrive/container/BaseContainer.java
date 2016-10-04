@@ -6,11 +6,11 @@ import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Map;
 
 /**
- * TODO: Enhance javadoc
- * Created by isac322 on 16. 10. 3.
- * @author isac322
+ * {@// TODO: Enhance javadoc}
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 abstract public class BaseContainer {
 	/**
@@ -26,7 +26,7 @@ abstract public class BaseContainer {
 			field.setAccessible(true);
 			try {
 				Object object = field.get(this);
-				if (object != null) {
+				if (object != null && !(object instanceof Map)) {
 					buffer.append(field.getName()).append(" : ").append(object).append(", ");
 				}
 			} catch (IllegalAccessException e) {
@@ -34,6 +34,7 @@ abstract public class BaseContainer {
 			}
 		}
 
+		buffer.deleteCharAt(buffer.length() - 1);
 		return buffer.toString();
 	}
 

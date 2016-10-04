@@ -109,150 +109,146 @@ public class JSONParser {
 		LinkedList<Object> statusStack = new LinkedList<>();
 		LinkedList<Object> valueStack = new LinkedList<>();
 
-		try {
-			do {
-				nextToken();
-				switch (status) {
-					case S_INIT:
-						switch (token.type) {
-							case Yytoken.TYPE_VALUE:
-								status = S_IN_FINISHED_VALUE;
-								statusStack.addFirst(status);
-								valueStack.addFirst(token.value);
-								break;
-							case Yytoken.TYPE_LEFT_BRACE:
-								status = S_IN_OBJECT;
-								statusStack.addFirst(status);
-								valueStack.addFirst(createObjectContainer(containerFactory));
-								break;
-							case Yytoken.TYPE_LEFT_SQUARE:
-								status = S_IN_ARRAY;
-								statusStack.addFirst(status);
-								valueStack.addFirst(createArrayContainer(containerFactory));
-								break;
-							default:
-								status = S_IN_ERROR;
-						}//inner switch
-						break;
+		do {
+			nextToken();
+			switch (status) {
+				case S_INIT:
+					switch (token.type) {
+						case Yytoken.TYPE_VALUE:
+							status = S_IN_FINISHED_VALUE;
+							statusStack.addFirst(status);
+							valueStack.addFirst(token.value);
+							break;
+						case Yytoken.TYPE_LEFT_BRACE:
+							status = S_IN_OBJECT;
+							statusStack.addFirst(status);
+							valueStack.addFirst(createObjectContainer(containerFactory));
+							break;
+						case Yytoken.TYPE_LEFT_SQUARE:
+							status = S_IN_ARRAY;
+							statusStack.addFirst(status);
+							valueStack.addFirst(createArrayContainer(containerFactory));
+							break;
+						default:
+							status = S_IN_ERROR;
+					}//inner switch
+					break;
 
-					case S_IN_FINISHED_VALUE:
-						if (token.type == Yytoken.TYPE_EOF)
-							return valueStack.removeFirst();
-						else
-							throw new ParseException(getPosition(), ParseException.ERROR_UNEXPECTED_TOKEN, token);
-
-					case S_IN_OBJECT:
-						switch (token.type) {
-							case Yytoken.TYPE_COMMA:
-								break;
-							case Yytoken.TYPE_VALUE:
-								if (token.value instanceof String) {
-									String key = (String) token.value;
-									valueStack.addFirst(key);
-									status = S_PASSED_PAIR_KEY;
-									statusStack.addFirst(status);
-								} else {
-									status = S_IN_ERROR;
-								}
-								break;
-							case Yytoken.TYPE_RIGHT_BRACE:
-								if (valueStack.size() > 1) {
-									statusStack.removeFirst();
-									valueStack.removeFirst();
-									status = peekStatus(statusStack);
-								} else {
-									status = S_IN_FINISHED_VALUE;
-								}
-								break;
-							default:
-								status = S_IN_ERROR;
-								break;
-						}//inner switch
-						break;
-
-					case S_PASSED_PAIR_KEY:
-						switch (token.type) {
-							case Yytoken.TYPE_COLON:
-								break;
-							case Yytoken.TYPE_VALUE:
-								statusStack.removeFirst();
-								String key = (String) valueStack.removeFirst();
-								Map parent = (Map) valueStack.getFirst();
-								parent.put(key, token.value);
-								status = peekStatus(statusStack);
-								break;
-							case Yytoken.TYPE_LEFT_SQUARE:
-								statusStack.removeFirst();
-								key = (String) valueStack.removeFirst();
-								parent = (Map) valueStack.getFirst();
-								List newArray = createArrayContainer(containerFactory);
-								parent.put(key, newArray);
-								status = S_IN_ARRAY;
-								statusStack.addFirst(status);
-								valueStack.addFirst(newArray);
-								break;
-							case Yytoken.TYPE_LEFT_BRACE:
-								statusStack.removeFirst();
-								key = (String) valueStack.removeFirst();
-								parent = (Map) valueStack.getFirst();
-								Map newObject = createObjectContainer(containerFactory);
-								parent.put(key, newObject);
-								status = S_IN_OBJECT;
-								statusStack.addFirst(status);
-								valueStack.addFirst(newObject);
-								break;
-							default:
-								status = S_IN_ERROR;
-						}
-						break;
-
-					case S_IN_ARRAY:
-						switch (token.type) {
-							case Yytoken.TYPE_COMMA:
-								break;
-							case Yytoken.TYPE_VALUE:
-								List<Object> val = (List) valueStack.getFirst();
-								val.add(token.value);
-								break;
-							case Yytoken.TYPE_RIGHT_SQUARE:
-								if (valueStack.size() > 1) {
-									statusStack.removeFirst();
-									valueStack.removeFirst();
-									status = peekStatus(statusStack);
-								} else {
-									status = S_IN_FINISHED_VALUE;
-								}
-								break;
-							case Yytoken.TYPE_LEFT_BRACE:
-								val = (List) valueStack.getFirst();
-								Map newObject = createObjectContainer(containerFactory);
-								val.add(newObject);
-								status = S_IN_OBJECT;
-								statusStack.addFirst(status);
-								valueStack.addFirst(newObject);
-								break;
-							case Yytoken.TYPE_LEFT_SQUARE:
-								val = (List) valueStack.getFirst();
-								List newArray = createArrayContainer(containerFactory);
-								val.add(newArray);
-								status = S_IN_ARRAY;
-								statusStack.addFirst(status);
-								valueStack.addFirst(newArray);
-								break;
-							default:
-								status = S_IN_ERROR;
-						}//inner switch
-						break;
-					case S_IN_ERROR:
+				case S_IN_FINISHED_VALUE:
+					if (token.type == Yytoken.TYPE_EOF)
+						return valueStack.removeFirst();
+					else
 						throw new ParseException(getPosition(), ParseException.ERROR_UNEXPECTED_TOKEN, token);
-				}//switch
-				if (status == S_IN_ERROR) {
+
+				case S_IN_OBJECT:
+					switch (token.type) {
+						case Yytoken.TYPE_COMMA:
+							break;
+						case Yytoken.TYPE_VALUE:
+							if (token.value instanceof String) {
+								String key = (String) token.value;
+								valueStack.addFirst(key);
+								status = S_PASSED_PAIR_KEY;
+								statusStack.addFirst(status);
+							} else {
+								status = S_IN_ERROR;
+							}
+							break;
+						case Yytoken.TYPE_RIGHT_BRACE:
+							if (valueStack.size() > 1) {
+								statusStack.removeFirst();
+								valueStack.removeFirst();
+								status = peekStatus(statusStack);
+							} else {
+								status = S_IN_FINISHED_VALUE;
+							}
+							break;
+						default:
+							status = S_IN_ERROR;
+							break;
+					}//inner switch
+					break;
+
+				case S_PASSED_PAIR_KEY:
+					switch (token.type) {
+						case Yytoken.TYPE_COLON:
+							break;
+						case Yytoken.TYPE_VALUE:
+							statusStack.removeFirst();
+							String key = (String) valueStack.removeFirst();
+							Map<String, Object> parent = (Map<String, Object>) valueStack.getFirst();
+							parent.put(key, token.value);
+							status = peekStatus(statusStack);
+							break;
+						case Yytoken.TYPE_LEFT_SQUARE:
+							statusStack.removeFirst();
+							key = (String) valueStack.removeFirst();
+							parent = (Map<String, Object>) valueStack.getFirst();
+							List newArray = createArrayContainer(containerFactory);
+							parent.put(key, newArray);
+							status = S_IN_ARRAY;
+							statusStack.addFirst(status);
+							valueStack.addFirst(newArray);
+							break;
+						case Yytoken.TYPE_LEFT_BRACE:
+							statusStack.removeFirst();
+							key = (String) valueStack.removeFirst();
+							parent = (Map<String, Object>) valueStack.getFirst();
+							Map newObject = createObjectContainer(containerFactory);
+							parent.put(key, newObject);
+							status = S_IN_OBJECT;
+							statusStack.addFirst(status);
+							valueStack.addFirst(newObject);
+							break;
+						default:
+							status = S_IN_ERROR;
+					}
+					break;
+
+				case S_IN_ARRAY:
+					switch (token.type) {
+						case Yytoken.TYPE_COMMA:
+							break;
+						case Yytoken.TYPE_VALUE:
+							List<Object> val = (List<Object>) valueStack.getFirst();
+							val.add(token.value);
+							break;
+						case Yytoken.TYPE_RIGHT_SQUARE:
+							if (valueStack.size() > 1) {
+								statusStack.removeFirst();
+								valueStack.removeFirst();
+								status = peekStatus(statusStack);
+							} else {
+								status = S_IN_FINISHED_VALUE;
+							}
+							break;
+						case Yytoken.TYPE_LEFT_BRACE:
+							val = (List<Object>) valueStack.getFirst();
+							Map newObject = createObjectContainer(containerFactory);
+							val.add(newObject);
+							status = S_IN_OBJECT;
+							statusStack.addFirst(status);
+							valueStack.addFirst(newObject);
+							break;
+						case Yytoken.TYPE_LEFT_SQUARE:
+							val = (List<Object>) valueStack.getFirst();
+							List newArray = createArrayContainer(containerFactory);
+							val.add(newArray);
+							status = S_IN_ARRAY;
+							statusStack.addFirst(status);
+							valueStack.addFirst(newArray);
+							break;
+						default:
+							status = S_IN_ERROR;
+					}//inner switch
+					break;
+				case S_IN_ERROR:
 					throw new ParseException(getPosition(), ParseException.ERROR_UNEXPECTED_TOKEN, token);
-				}
-			} while (token.type != Yytoken.TYPE_EOF);
-		} catch (IOException ie) {
-			throw ie;
-		}
+			}//switch
+			if (status == S_IN_ERROR) {
+				throw new ParseException(getPosition(), ParseException.ERROR_UNEXPECTED_TOKEN, token);
+			}
+		} while (token.type != Yytoken.TYPE_EOF);
 
 		throw new ParseException(getPosition(), ParseException.ERROR_UNEXPECTED_TOKEN, token);
 	}

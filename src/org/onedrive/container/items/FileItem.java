@@ -18,10 +18,9 @@ import java.nio.file.FileAlreadyExistsException;
 import java.time.ZonedDateTime;
 
 /**
- * TODO: Enhance javadoc
- * Created by isac322 on 16. 10. 3.
+ * {@// TODO: Enhance javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class FileItem extends BaseItem {
 	@Getter @Nullable protected AudioFacet audio;

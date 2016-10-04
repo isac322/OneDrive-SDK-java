@@ -17,10 +17,9 @@ import java.time.ZonedDateTime;
 
 /**
  * https://dev.onedrive.com/resources/item.htm
- * TODO: enhance javadoc
- * Created by isac322 on 16. 10. 3.
+ * {@// TODO: enhance javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 abstract public class BaseItem extends BaseContainer {
 	@Getter protected String id;
@@ -52,7 +51,7 @@ abstract public class BaseItem extends BaseContainer {
 	protected Client client;
 
 	@NotNull
-	static public BaseItem parse(Client client, JSONObject json) {
+	public static BaseItem parse(Client client, JSONObject json) {
 		if (json.containsKey("file")) {
 			return FileItem.parseFile(client, json);
 		}

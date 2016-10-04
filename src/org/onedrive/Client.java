@@ -22,10 +22,9 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 
 /**
- * TODO: add javadoc
- * Created by isac322 on 16. 9. 29.
+ * {@// TODO: add javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class Client {
 	private static final String UNREACHABLE_MSG = "Unreachable Area. Check stack stace above";
@@ -189,7 +188,7 @@ public class Client {
 	}
 
 	/**
-	 * TODO: check logout HTTP response about error.
+	 * {@// TODO: check logout HTTP response about error.}
 	 *
 	 * @throws RuntimeException if it isn't login when called.
 	 */
@@ -245,7 +244,7 @@ public class Client {
 	public List<Drive> getAllDrive() {
 		ArrayList<Drive> list = new ArrayList<>();
 
-		JSONObject json = OneDriveRequest.getJsonResponse("/drives", accessToken);
+		JSONObject json = OneDriveRequest.doGetJson("/drives", accessToken);
 
 		for (Object drive : json.getArray("value")) {
 			list.add(Drive.parse((JSONObject) drive));
@@ -256,7 +255,7 @@ public class Client {
 
 	@NotNull
 	public FolderItem getRootDir() {
-		JSONObject json = OneDriveRequest.getJsonResponse("/drive/root:/?expand=children", accessToken);
+		JSONObject json = OneDriveRequest.doGetJson("/drive/root:/?expand=children", accessToken);
 
 		return (FolderItem) FolderItem.parse(this, json);
 	}
@@ -264,7 +263,7 @@ public class Client {
 	@NotNull
 	public FolderItem getFolder(@NotNull String id) {
 		try {
-			JSONObject json = OneDriveRequest.getJsonResponse("/drive/items/" + id + "?expand=children", accessToken);
+			JSONObject json = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
 
 			return (FolderItem) FolderItem.parse(this, json);
 		}
@@ -279,7 +278,7 @@ public class Client {
 	@NotNull
 	public FileItem getFile(@NotNull String id) {
 		try {
-			JSONObject json = OneDriveRequest.getJsonResponse("/drive/items/" + id + "?expand=children", accessToken);
+			JSONObject json = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
 
 			return (FileItem) FileItem.parse(this, json);
 		}

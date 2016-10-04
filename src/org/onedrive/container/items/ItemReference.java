@@ -5,10 +5,9 @@ import org.json.simple.JSONObject;
 
 /**
  * https://dev.onedrive.com/resources/itemReference.htm
- * TODO: Enhance javadoc
+ * {@// TODO: Enhance javadoc}
  *
- * @author isac322
- *         Created by isac322 on 16. 10. 3.
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class ItemReference {
 	@Getter protected final String driveId;

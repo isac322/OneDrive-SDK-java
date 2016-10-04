@@ -12,65 +12,268 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 /**
- * TODO: Enhance javadoc
- * Created by isac322 on 16. 10. 2.
+ * {@// TODO: Enhance javadoc}
+ * {@// TODO: Support OneDrive for Business}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class OneDriveRequest {
+	/**
+	 * OneDrive API base URL.
+	 */
 	@Getter private static final String baseUrl = "https://api.onedrive.com/v1.0";
 	private static final JSONParser parser = new JSONParser();
 
+	/**
+	 * @deprecated {@link OneDriveRequest} is just static util class. Can not instantiations.
+	 */
 	@Deprecated
 	private OneDriveRequest() {
 	}
 
+
 	/**
-	 * https://dev.onedrive.com/items/delete.htm
+	 * <a href='https://dev.onedrive.com/items/get.htm'>https://dev.onedrive.com/items/get.htm</a>
+	 * <br><br>
+	 * Instantly send GET request to OneDrive with {@code api}, and return response.
+	 * <br><br>
+	 * It is assured that the return value is always not {@code null}, if the response is successfully received.
+	 * (when 200 OK or even non-OK response like 404 NOT FOUND or something is received).
+	 * <br>
+	 * But if other error happens while requesting (for example network error, bad api, wrong token... etc.),
+	 * it will throw {@link RuntimeException}.
+	 * <br><br>
+	 * {@code api} must fallow API form.
+	 * <br>
+	 * Example:<br>
+	 * {@code
+	 * OneDriveRequest.doGet("/drives", "AAD....2XA")
+	 * }
 	 *
-	 * @param url         Id or path that want to get.
+	 * @param api         API to get. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
+	 *                    <tt>/drive/root:/{path}</tt>)
 	 * @param accessToken OneDrive access token.
 	 * @return HTTP GET's response object.
-	 * @throws RuntimeException In case {@code url} form is incorrect or connection fails.
-	 * @see HttpsRequest#makeResponse()
+	 * @throws RuntimeException If {@code api} form is incorrect or connection fails.
+	 * @see HttpsRequest#doGet()
 	 */
 	@NotNull
-	public static HttpsResponse doGet(@NotNull String url, @NotNull String accessToken) {
-		return makeRequest(url, accessToken).doGet();
+	public static HttpsResponse doGet(@NotNull String api, @NotNull String accessToken) {
+		return newOneDriveRequest(api, accessToken).doGet();
 	}
 
 
 	/**
-	 * https://dev.onedrive.com/items/delete.htm
+	 * <a href='https://dev.onedrive.com/items/get.htm'>https://dev.onedrive.com/items/get.htm</a>
+	 * <br><br>
+	 * Instantly send GET request {@code url}, and return response.
+	 * <br><br>
+	 * It is assured that the return value is always not {@code null}, if the response is successfully received.
+	 * (when 200 OK or even non-OK response like 404 NOT FOUND or something is received).
+	 * <br>
+	 * But if other error happens while requesting (for example network error, bad url, wrong token... etc.),
+	 * it will throw {@link RuntimeException}.
+	 * <br><br>
+	 * {@code url} must contains full URL.
+	 * <br>
+	 * Example:<br>
+	 * {@code
+	 * OneDriveRequest.doGet(new URL("https://api.onedrive.com/v1.0/drive"), "AAD....2XA")
+	 * }
 	 *
-	 * @param url         Id or path that want to remove.
+	 * @param url         URL to get. It must contains full URL
+	 *                    (for example <tt>https://api.onedrive.com/v1.0/drive</tt>).
 	 * @param accessToken OneDrive access token.
-	 * @return HTTP DELETE's response object.
-	 * @throws RuntimeException In case {@code url} form is incorrect or connection fails.
-	 * @see HttpsRequest#makeResponse()
+	 * @return HTTP GET's response object.
+	 * @throws RuntimeException If {@code url} form is incorrect or connection fails.
+	 * @see HttpsRequest#doGet()
 	 */
 	@NotNull
-	public static HttpsResponse doDelete(@NotNull String url, @NotNull String accessToken) {
-		return makeRequest(url, accessToken).doDelete();
+	public static HttpsResponse doGet(@NotNull URL url, @NotNull String accessToken) {
+		return newOneDriveRequest(url, accessToken).doGet();
 	}
 
 
+	/**
+	 * <a href="https://dev.onedrive.com/items/delete.htm">https://dev.onedrive.com/items/delete.htm</a>
+	 * <br><br>
+	 * Instantly send DELETE request to OneDrive with {@code api}, and return response.
+	 * <br><br>
+	 * It is assured that the return value is always not {@code api}, if the response is successfully received.
+	 * (when 200 OK or even non-OK response like 404 NOT FOUND or something is received).
+	 * <br>
+	 * But if other error happens while requesting (for example network error, bad api, wrong token... etc.),
+	 * it will throw {@link RuntimeException}.
+	 * <br><br>
+	 * {@code api} must fallow API form.
+	 * <br>
+	 * Example:<br>
+	 * {@code
+	 * OneDriveRequest.doDelete("/drive/items/{item-id}", "AAD....2XA")
+	 * }
+	 *
+	 * @param api         API to delete. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
+	 *                    <tt>/drive/root:/{path}</tt>)
+	 * @param accessToken OneDrive access token.
+	 * @return HTTP DELETE's response object.
+	 * @throws RuntimeException If {@code api} form is incorrect or connection fails.
+	 * @see HttpsRequest#doDelete()
+	 */
 	@NotNull
-	public static HttpsRequest makeRequest(@NotNull String url, @NotNull String accessToken) {
+	public static HttpsResponse doDelete(@NotNull String api, @NotNull String accessToken) {
+		return newOneDriveRequest(api, accessToken).doDelete();
+	}
+
+
+	/**
+	 * <a href="https://dev.onedrive.com/items/delete.htm">https://dev.onedrive.com/items/delete.htm</a>
+	 * <br><br>
+	 * Instantly send DELETE request {@code url}, and return response.
+	 * <br><br>
+	 * It is assured that the return value is always not {@code null}, if the response is successfully received.
+	 * (when 200 OK or even non-OK response like 404 NOT FOUND or something is received).
+	 * <br>
+	 * But if other error happens while requesting (for example network error, bad url, wrong token... etc.),
+	 * it will throw {@link RuntimeException}.
+	 * <br><br>
+	 * {@code url} must contains full URL.
+	 * <br>
+	 * Example:<br>
+	 * {@code
+	 * OneDriveRequest.doDelete(new URL("https://api.onedrive.com/v1.0/drive/items/{item-id}"), "AAD....2XA")
+	 * }
+	 *
+	 * @param url         URL to delete. It must contains full URL
+	 *                    (for example <tt>https://api.onedrive.com/v1.0/drive</tt>).
+	 * @param accessToken OneDrive access token.
+	 * @return HTTP DELETE's response object.
+	 * @throws RuntimeException If {@code url} form is incorrect or connection fails.
+	 * @see HttpsRequest#doDelete()
+	 */
+	@NotNull
+	public static HttpsResponse doDelete(@NotNull URL url, @NotNull String accessToken) {
+		return newOneDriveRequest(url, accessToken).doDelete();
+	}
+
+
+	/**
+	 * Make {@link HttpsRequest} object with given {@code api} and {@code accessToken} for programmer's convenience.
+	 * <br><br>
+	 * {@code api} must fallow API form.
+	 * <br>
+	 * Example:<br>
+	 * {@code
+	 * OneDriveRequest.newOneDriveRequest("/drives", "AAD....2XA")
+	 * }
+	 *
+	 * @param api         API to request. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
+	 *                    <tt>/drive/root:/{path}</tt>)
+	 * @param accessToken OneDrive access token.
+	 * @return {@link HttpsRequest} object that contains {@code api} and {@code accessToken}.
+	 * @throws RuntimeException If api form is invalid. It is mainly because of {@code api} that starting with
+	 *                          <tt>"http"</tt> or <tt>"https"</tt>.
+	 */
+	@NotNull
+	public static HttpsRequest newOneDriveRequest(@NotNull String api, @NotNull String accessToken) {
 		try {
-			URL requestUrl = new URL(baseUrl + url);
-			HttpsRequest request = new HttpsRequest(requestUrl);
-			request.setHeader("Authorization", "bearer " + accessToken);
-			return request;
+			URL requestUrl = new URL(baseUrl + api);
+			return newOneDriveRequest(requestUrl, accessToken);
 		}
 		catch (MalformedURLException e) {
 			e.printStackTrace();
-			throw new RuntimeException("Code error. Wrong URL form. Should check code's String.");
+			throw new RuntimeException(
+					"Code error. Wrong URL form. Should check code's String: \"" + baseUrl + api + "\"");
 		}
 	}
 
+
+	/**
+	 * Make {@link HttpsRequest} object with given {@code url} and {@code accessToken} for programmer's convenience.
+	 * <br><br>
+	 * {@code url} must contains full URL.
+	 * <br>
+	 * Example:<br>
+	 * {@code
+	 * OneDriveRequest.newOneDriveRequest(new URL("https://api.onedrive.com/v1.0/drive/items/{item-id}"), "AAD....2XA")
+	 * }
+	 *
+	 * @param url         URL to request. It must contains full URL.
+	 *                    (for example <tt>https://api.onedrive.com/v1.0/drive</tt>).
+	 * @param accessToken OneDrive access token.
+	 * @return {@link HttpsRequest} object that contains {@code url} and {@code accessToken}.
+	 * @throws RuntimeException If api form is invalid. It is mainly because of {@code api} that starting with
+	 *                          <tt>"http"</tt> or <tt>"https"</tt>.
+	 */
 	@NotNull
-	public static JSONObject getJsonResponse(@NotNull String url, @NotNull String accessToken) {
+	public static HttpsRequest newOneDriveRequest(@NotNull URL url, @NotNull String accessToken) {
+		HttpsRequest request = new HttpsRequest(url);
+		request.setHeader("Authorization", "bearer " + accessToken);
+		return request;
+	}
+
+	/**
+	 * <a href='https://dev.onedrive.com/items/get.htm'>https://dev.onedrive.com/items/get.htm</a>
+	 * <br><br>
+	 * Instantly send GET request to OneDrive with {@code api}, and return parsed JSON response.
+	 * <br><br>
+	 * It is assured that the return value is always not {@code null}, if the response is successfully received.
+	 * (when 200 OK or even non-OK response like 404 NOT FOUND or something is received).
+	 * <br>
+	 * But if other error happens while requesting (for example network error, bad api, wrong token... etc.),
+	 * it will throw {@link RuntimeException}.
+	 * <br><br>
+	 * {@code api} must fallow API form.
+	 * <br>
+	 * Example:<br>
+	 * {@code
+	 * OneDriveRequest.doGetJson("/drives", "AAD....2XA")
+	 * }
+	 *
+	 * @param api         API to get. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
+	 *                    <tt>/drive/root:/{path}</tt>)
+	 * @param accessToken OneDrive access token.
+	 * @return {@link JSONObject} that parsed from HTTP GET's json response.
+	 * @throws RuntimeException If {@code api} form is incorrect or connection fails.
+	 */
+	@NotNull
+	public static JSONObject doGetJson(@NotNull String api, @NotNull String accessToken) {
+		HttpsResponse response = doGet(api, accessToken);
+		try {
+			// TODO: handling not 200 OK response.
+			return (JSONObject) parser.parse(response.getContentString());
+		}
+		catch (ParseException e) {
+			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+		}
+	}
+
+	/**
+	 * <a href='https://dev.onedrive.com/items/get.htm'>https://dev.onedrive.com/items/get.htm</a>
+	 * <br><br>
+	 * Instantly send GET request to {@code url}, and return parsed JSON response.
+	 * <br><br>
+	 * It is assured that the return value is always not {@code null}, if the response is successfully received.
+	 * (when 200 OK or even non-OK response like 404 NOT FOUND or something is received).
+	 * <br>
+	 * But if other error happens while requesting (for example network error, bad api, wrong token... etc.),
+	 * it will throw {@link RuntimeException}.
+	 * <br><br>
+	 * {@code api} must contains full URL.
+	 * <br>
+	 * Example:<br>
+	 * {@code
+	 * OneDriveRequest.doGetJson(new URL("https://api.onedrive.com/v1.0/drive/items/{item-id}"), "AAD....2XA")
+	 * }
+	 *
+	 * @param url         URL to request. It must contains full URL.
+	 *                    (for example <tt>https://api.onedrive.com/v1.0/drive</tt>).
+	 * @param accessToken OneDrive access token.
+	 * @return {@link JSONObject} that parsed from HTTP GET's json response.
+	 * @throws RuntimeException If {@code url} form is incorrect or connection fails.
+	 */
+	@NotNull
+	public static JSONObject doGetJson(@NotNull URL url, @NotNull String accessToken) {
 		HttpsResponse response = doGet(url, accessToken);
 		try {
 			// TODO: handling not 200 OK response.

@@ -5,36 +5,40 @@ import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.network.HttpsRequest;
 import org.onedrive.Client;
 import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
 import org.onedrive.utils.OneDriveRequest;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 /**
- * TODO: Enhance javadoc
- * Created by isac322 on 16. 10. 3.
+ * {@// TODO: Enhance javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class FolderItem extends BaseItem implements Iterable<BaseItem> {
-	protected FolderFacet folder;
-	@Getter protected SpecialFolderFacet specialFolder;
-	protected List<FolderItem> folderChildren;
-	protected List<FileItem> fileChildren;
-	protected List<BaseItem> allChildren;
+	@Getter protected FolderFacet folder;
+	@Nullable protected SpecialFolderFacet specialFolder;
+	@NotNull protected List<FolderItem> folderChildren;
+	@NotNull protected List<FileItem> fileChildren;
+	@NotNull protected List<BaseItem> allChildren;
+	protected boolean root;
+
 
 	protected FolderItem(Client client, String id, IdentitySet createdBy, ZonedDateTime createdDateTime, String cTag,
 						 boolean deleted, String description, String eTag, FileSystemInfoFacet fileSystemInfo,
-						 IdentitySet lastModifiedBy, ZonedDateTime lastModifiedDateTime, String name,
-						 ItemReference parentReference, RemoteItemFacet remoteItem, SearchResultFacet searchResult,
-						 SharedFacet shared, SharePointIdsFacet sharePointIds, Long size,
-						 SpecialFolderFacet specialFolder, String webDavUrl, String webUrl,
+						 FolderFacet folder, IdentitySet lastModifiedBy, ZonedDateTime lastModifiedDateTime,
+						 String name, ItemReference parentReference, RemoteItemFacet remoteItem,
+						 SearchResultFacet searchResult, SharedFacet shared, SharePointIdsFacet sharePointIds,
+						 Long size, SpecialFolderFacet specialFolder, String webDavUrl, String webUrl, boolean root,
 						 List<FolderItem> folderChildren, List<FileItem> fileChildren, List<BaseItem> allChildren) {
 		this.client = client;
 		this.id = id;
@@ -45,6 +49,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		this.description = description;
 		this.eTag = eTag;
 		this.fileSystemInfo = fileSystemInfo;
+		this.folder = folder;
 		this.lastModifiedBy = lastModifiedBy;
 		this.lastModifiedDateTime = lastModifiedDateTime;
 		this.name = name;
@@ -57,34 +62,54 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		this.specialFolder = specialFolder;
 		this.webDavUrl = webDavUrl;
 		this.webUrl = webUrl;
+		this.root = root;
 		this.folderChildren = folderChildren;
 		this.fileChildren = fileChildren;
 		this.allChildren = allChildren;
 	}
 
-	protected static void parseChildren(Client client, JSONArray json,
+	protected static void parseChildren(Client client, JSONArray array, @Nullable String nextLink,
 										List<BaseItem> all, List<FolderItem> folder, List<FileItem> file) {
-		for (Object item : json) {
-			if (item instanceof JSONObject) {
-				BaseItem child = BaseItem.parse(client, (JSONObject) item);
+		while (true) {
+			for (Object item : array) {
+				if (item instanceof JSONObject) {
+					BaseItem child = BaseItem.parse(client, (JSONObject) item);
 
-				if (child instanceof FolderItem) {
-					folder.add((FolderItem) child);
+					if (child instanceof FolderItem) {
+						folder.add((FolderItem) child);
+					}
+					else if (child instanceof FileItem) {
+						file.add((FileItem) child);
+					}
+					else if (child instanceof PackageItem) {
+						// TODO: Handling Package (https://dev.onedrive.com/facets/package_facet.htm).
+					}
+					else {
+						// if child is neither FolderItem nor FileItem nor PackageItem.
+						throw new UnsupportedOperationException("Children object must file or folder of package");
+					}
+					all.add(child);
 				}
-				else if (child instanceof FileItem) {
-					file.add((FileItem) child);
-				}
-				else if (child instanceof PackageItem) {
-					// TODO: Handling Package (https://dev.onedrive.com/facets/package_facet.htm).
-				}
-				else {
-					// if child is neither FolderItem nor FileItem nor PackageItem.
-					throw new UnsupportedOperationException("Children object must file or folder of package");
-				}
-				all.add(child);
-
+				else throw new UnsupportedOperationException("Wrong Children type.");
 			}
-			else throw new UnsupportedOperationException("Wrong Children type.");
+
+			if (nextLink == null) break;
+			else {
+				/*
+				if children list is larger than 200, it will split into 200-size response.
+				see "skipToken" in
+				https://dev.onedrive.com/odata/optional-query-parameters.htm#optional-odata-query-parameters
+		 		*/
+				try {
+					JSONObject response = OneDriveRequest.doGetJson(new URL(nextLink), client.getAccessToken());
+					array = response.getArray("value");
+					nextLink = response.getString("@odata.nextLink");
+				}
+				catch (MalformedURLException e) {
+					e.printStackTrace();
+					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+				}
+			}
 		}
 	}
 
@@ -102,7 +127,8 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			folder = new ArrayList<>();
 			file = new ArrayList<>();
 
-			parseChildren(client, json.getArray("children"), all, folder, file);
+			parseChildren(client, json.getArray("children"), json.getString("children@odata.nextLink"),
+					all, folder, file);
 		}
 
 		return new FolderItem(
@@ -115,6 +141,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 				json.getString("description"),
 				json.getString("eTag"),
 				FileSystemInfoFacet.parse(json.getObject("fileSystemInfo")),
+				FolderFacet.parse(json.getObject("folder")),
 				IdentitySet.parse(json.getObject("lastModifiedBy")),
 				BaseContainer.parseDateTime(json.getString("lastModifiedDateTime")),
 				json.getString("name"),
@@ -127,18 +154,23 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 				SpecialFolderFacet.parse(json.getObject("specialFolder")),
 				json.getString("webDavUrl"),
 				json.getString("webUrl"),
+				json.getObject("root") != null,
 				folder,
 				file,
 				all
 		);
 	}
 
-	public long chilerenCount() {
+	public boolean isRoot() {
+		return root;
+	}
+
+	public long childrenCount() {
 		return folder.getChildCount();
 	}
 
 	private void fetchChildren() {
-		JSONObject json = OneDriveRequest.getJsonResponse(
+		JSONObject json = OneDriveRequest.doGetJson(
 				"/drive/items/" + id + "/children", client.getAccessToken());
 
 		allChildren = new ArrayList<>();
@@ -147,11 +179,16 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 
 		// TODO: if-none-match request header handling.
 		// TODO: not 200 OK response handling.
-		parseChildren(client, json.getArray("value"), allChildren, folderChildren, fileChildren);
+		parseChildren(client, json.getArray("value"), json.getString("@odata.nextLink"),
+				allChildren, folderChildren, fileChildren);
 	}
 
 	public boolean isChildrenFetched() {
 		return allChildren != null && folderChildren != null && fileChildren != null;
+	}
+
+	public boolean isSpecial() {
+		return specialFolder != null;
 	}
 
 	@NotNull

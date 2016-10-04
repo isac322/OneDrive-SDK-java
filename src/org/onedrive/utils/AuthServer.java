@@ -11,10 +11,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Semaphore;
 
 /**
- * TODO: add javadoc
- * Created by isac322 on 16. 9. 29.
+ * {@// TODO: add javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public final class AuthServer {
 	private final Semaphore authLock;
@@ -22,7 +21,7 @@ public final class AuthServer {
 	private String authCode;
 
 	/**
-	 * TODO: flexible port and address.
+	 * {@// TODO: flexible port and address.}
 	 */
 	public AuthServer(Semaphore authLock) {
 		this.authLock = authLock;

@@ -19,7 +19,7 @@ import java.util.Map;
  *
  * @author FangYidong<fangyidong@yahoo.com.cn>
  */
-public class JSONObject extends HashMap implements Map, JSONAware, JSONStreamAware {
+public class JSONObject extends HashMap<String, Object> implements Map<String, Object>, JSONAware, JSONStreamAware {
 
 	private static final long serialVersionUID = -503443796854799292L;
 
@@ -34,7 +34,7 @@ public class JSONObject extends HashMap implements Map, JSONAware, JSONStreamAwa
 	 *
 	 * @param map
 	 */
-	public JSONObject(Map map) {
+	public JSONObject(Map<String, Object> map) {
 		super(map);
 	}
 

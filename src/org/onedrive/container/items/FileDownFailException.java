@@ -1,10 +1,9 @@
 package org.onedrive.container.items;
 
 /**
- * TODO: Enhance javadoc
- * Created by isac322 on 16. 10. 4.
+ * {@// TODO: Enhance javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class FileDownFailException extends Exception {
 	public FileDownFailException(String message) {

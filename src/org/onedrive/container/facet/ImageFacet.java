@@ -6,10 +6,9 @@ import org.json.simple.JSONObject;
 
 /**
  * https://dev.onedrive.com/facets/image_facet.htm
- * TODO: Enhance javadoc
- * Created by isac322 on 16. 10. 3.
+ * {@// TODO: Enhance javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class ImageFacet {
 	@Getter @NotNull protected final long width;

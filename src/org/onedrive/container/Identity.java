@@ -10,10 +10,9 @@ import java.util.Map;
 
 /**
  * https://dev.onedrive.com/resources/identitySet.htm
- * TODO: Enhance javadoc
- * Created by isac322 on 16. 10. 2.
+ * {@// TODO: Enhance javadoc}
  *
- * @author isac322
+ * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class Identity extends BaseContainer {
 	protected static Map<String, Identity> identitySet = new HashMap<>();
