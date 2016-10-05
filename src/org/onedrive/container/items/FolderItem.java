@@ -1,10 +1,16 @@
 package org.onedrive.container.items;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import lombok.Getter;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 import org.network.HttpsRequest;
 import org.onedrive.Client;
 import org.onedrive.container.BaseContainer;
@@ -12,18 +18,20 @@ import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
 import org.onedrive.utils.OneDriveRequest;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@// TODO: Enhance javadoc}
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
+@JsonDeserialize(as = FolderItem.class)
 public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	@Getter protected FolderFacet folder;
 	@Nullable protected SpecialFolderFacet specialFolder;
@@ -32,133 +40,63 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	@NotNull protected List<BaseItem> allChildren;
 	protected boolean root;
 
-
-	protected FolderItem(Client client, String id, IdentitySet createdBy, ZonedDateTime createdDateTime, String cTag,
-						 boolean deleted, String description, String eTag, FileSystemInfoFacet fileSystemInfo,
-						 FolderFacet folder, IdentitySet lastModifiedBy, ZonedDateTime lastModifiedDateTime,
-						 String name, ItemReference parentReference, RemoteItemFacet remoteItem,
-						 SearchResultFacet searchResult, SharedFacet shared, SharePointIdsFacet sharePointIds,
-						 Long size, SpecialFolderFacet specialFolder, String webDavUrl, String webUrl, boolean root,
-						 List<FolderItem> folderChildren, List<FileItem> fileChildren, List<BaseItem> allChildren) {
-		this.client = client;
-		this.id = id;
-		this.createdBy = createdBy;
-		this.createdDateTime = createdDateTime;
-		this.cTag = cTag;
-		this.deleted = deleted;
-		this.description = description;
-		this.eTag = eTag;
-		this.fileSystemInfo = fileSystemInfo;
-		this.folder = folder;
-		this.lastModifiedBy = lastModifiedBy;
-		this.lastModifiedDateTime = lastModifiedDateTime;
-		this.name = name;
-		this.parentReference = parentReference;
-		this.remoteItem = remoteItem;
-		this.searchResult = searchResult;
-		this.shared = shared;
-		this.sharePointIds = sharePointIds;
-		this.size = size;
-		this.specialFolder = specialFolder;
-		this.webDavUrl = webDavUrl;
-		this.webUrl = webUrl;
-		this.root = root;
-		this.folderChildren = folderChildren;
-		this.fileChildren = fileChildren;
-		this.allChildren = allChildren;
+	private FolderItem() {
 	}
 
-	protected static void parseChildren(Client client, JSONArray array, @Nullable String nextLink,
-										List<BaseItem> all, List<FolderItem> folder, List<FileItem> file) {
-		while (true) {
-			for (Object item : array) {
-				if (item instanceof JSONObject) {
-					BaseItem child = BaseItem.parse(client, (JSONObject) item);
+	protected static void parseChildren(@NotNull Client client, @Nullable JsonNode array, @Nullable String nextLink,
+										@NotNull List<BaseItem> all, @NotNull List<FolderItem> folder,
+										@NotNull List<FileItem> file) {
+		if (array == null) return;
 
-					if (child instanceof FolderItem) {
-						folder.add((FolderItem) child);
+		while (true) {
+			for (JsonNode child : array) {
+				if (child.isObject()) {
+					BaseItem item = client.getMapper().convertValue(child, BaseItem.class);
+
+					if (item instanceof FolderItem) {
+						folder.add((FolderItem) item);
 					}
-					else if (child instanceof FileItem) {
-						file.add((FileItem) child);
+					else if (item instanceof FileItem) {
+						file.add((FileItem) item);
 					}
-					else if (child instanceof PackageItem) {
+					else if (item instanceof PackageItem) {
 						// TODO: Handling Package (https://dev.onedrive.com/facets/package_facet.htm).
 					}
 					else {
 						// if child is neither FolderItem nor FileItem nor PackageItem.
 						throw new UnsupportedOperationException("Children object must file or folder of package");
 					}
-					all.add(child);
+					all.add(item);
 				}
-				else throw new UnsupportedOperationException("Wrong Children type.");
+				// if child is neither FolderItem nor FileItem nor PackageItem.
+				else
+					throw new UnsupportedOperationException("Children object must file or folder of package");
 			}
 
 			if (nextLink == null) break;
-			else {
-				/*
-				if children list is larger than 200, it will split into 200-size response.
-				see "skipToken" in
-				https://dev.onedrive.com/odata/optional-query-parameters.htm#optional-odata-query-parameters
-		 		*/
-				try {
-					JSONObject response = OneDriveRequest.doGetJson(new URL(nextLink), client.getAccessToken());
-					array = response.getArray("value");
-					nextLink = response.getString("@odata.nextLink");
+
+			try {
+				ObjectNode json = OneDriveRequest.doGetJson(new URL(nextLink), client.getAccessToken());
+
+				if (json.has("@odata.nextLink")) {
+					nextLink = json.get("@odata.nextLink").asText();
 				}
-				catch (MalformedURLException e) {
-					e.printStackTrace();
-					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+				else {
+					nextLink = null;
+				}
+
+				if (json.has("value")) {
+					array = json.get("value");
+				}
+				else {
+					throw new UnsupportedOperationException("Children object must file or folder of package");
 				}
 			}
+			catch (MalformedURLException e) {
+				e.printStackTrace();
+				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+			}
 		}
-	}
-
-	@Nullable
-	static FolderItem parseFolder(Client client, JSONObject json) {
-		if (json == null) return null;
-
-		List<BaseItem> all = null;
-		List<FolderItem> folder = null;
-		List<FileItem> file = null;
-
-		// make items of children recursively.
-		if (json.containsKey("children")) {
-			all = new ArrayList<>();
-			folder = new ArrayList<>();
-			file = new ArrayList<>();
-
-			parseChildren(client, json.getArray("children"), json.getString("children@odata.nextLink"),
-					all, folder, file);
-		}
-
-		return new FolderItem(
-				client,
-				json.getString("id"),
-				IdentitySet.parse(json.getObject("createdBy")),
-				BaseContainer.parseDateTime(json.getString("createdDateTime")),
-				json.getString("cTag"),
-				json.getObject("deleted") != null,
-				json.getString("description"),
-				json.getString("eTag"),
-				FileSystemInfoFacet.parse(json.getObject("fileSystemInfo")),
-				FolderFacet.parse(json.getObject("folder")),
-				IdentitySet.parse(json.getObject("lastModifiedBy")),
-				BaseContainer.parseDateTime(json.getString("lastModifiedDateTime")),
-				json.getString("name"),
-				ItemReference.parse(json.getObject("parentReference")),
-				RemoteItemFacet.parse(json.getObject("remoteItem")),
-				SearchResultFacet.parse(json.getObject("searchResult")),
-				SharedFacet.parse(json.getObject("shared")),
-				SharePointIdsFacet.parse(json.getObject("sharepointIds")),
-				json.getLong("size"),
-				SpecialFolderFacet.parse(json.getObject("specialFolder")),
-				json.getString("webDavUrl"),
-				json.getString("webUrl"),
-				json.getObject("root") != null,
-				folder,
-				file,
-				all
-		);
 	}
 
 	public boolean isRoot() {
@@ -170,16 +108,22 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	}
 
 	private void fetchChildren() {
-		JSONObject json = OneDriveRequest.doGetJson(
-				"/drive/items/" + id + "/children", client.getAccessToken());
+		ObjectNode content = OneDriveRequest.doGetJson("/drive/items/" + id + "/children", client.getAccessToken());
 
 		allChildren = new ArrayList<>();
 		folderChildren = new ArrayList<>();
 		fileChildren = new ArrayList<>();
 
+		JsonNode value = content.get("value");
+		JsonNode nextLink = content.get("@odata.nextLink");
+
+		if (!value.isArray() || (nextLink != null && !nextLink.isTextual())) {
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+		}
+
 		// TODO: if-none-match request header handling.
 		// TODO: not 200 OK response handling.
-		parseChildren(client, json.getArray("value"), json.getString("@odata.nextLink"),
+		parseChildren(client, value, nextLink == null ? null : nextLink.asText(),
 				allChildren, folderChildren, fileChildren);
 	}
 
@@ -214,6 +158,145 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	public Iterator<BaseItem> iterator() {
 		if (!isChildrenFetched()) fetchChildren();
 		return new ChildrenIterator(allChildren.iterator());
+	}
+
+	public static class FolderDeserializer extends JsonDeserializer<FolderItem> {
+		private Client client;
+
+		public FolderDeserializer(Client client) {
+			super();
+			this.client = client;
+		}
+
+		@Override
+		public FolderItem deserialize(JsonParser parser, DeserializationContext context) throws IOException {
+			ObjectMapper mapper = (ObjectMapper) parser.getCodec();
+
+			FolderItem folderItem = new FolderItem();
+			folderItem.client = client;
+
+			ObjectNode rootNode = mapper.readTree(parser);
+			Iterator<Map.Entry<String, JsonNode>> iterator = rootNode.fields();
+
+			String nextLink = null;
+			ArrayNode arrayNode = null;
+
+			while (iterator.hasNext()) {
+				Map.Entry<String, JsonNode> next = iterator.next();
+
+				JsonNode value = next.getValue();
+				String key = next.getKey();
+
+				/*
+				for performance (I think). but didn't test yet.
+				 */
+				switch (value.getNodeType()) {
+					// createdBy, fileSystemInfo, folder, lastModifiedBy, parentReference, remoteItem, root,
+					// searchResult, shared, sharePointIds, specialFolder
+					case OBJECT:
+						switch (key) {
+							case "createdBy":
+								folderItem.createdBy = mapper.convertValue(value, IdentitySet.class);
+								break;
+							case "fileSystemInfo":
+								folderItem.fileSystemInfo = mapper.convertValue(value, FileSystemInfoFacet.class);
+								break;
+							case "folder":
+								folderItem.folder = mapper.convertValue(value, FolderFacet.class);
+								break;
+							case "lastModifiedBy":
+								folderItem.lastModifiedBy = mapper.convertValue(value, IdentitySet.class);
+								break;
+							case "parentReference":
+								folderItem.parentReference = mapper.convertValue(value, ItemReference.class);
+								break;
+							case "remoteItem":
+								folderItem.remoteItem = mapper.convertValue(value, RemoteItemFacet.class);
+								break;
+							case "root":
+								folderItem.root = true;
+								break;
+							case "shared":
+								folderItem.shared = mapper.convertValue(value, SharedFacet.class);
+								break;
+							case "sharePointIds":
+								folderItem.sharePointIds = mapper.convertValue(value, SharePointIdsFacet.class);
+								break;
+							case "searchResult":
+								folderItem.searchResult = mapper.convertValue(value, SearchResultFacet.class);
+								break;
+							case "specialFolder":
+								folderItem.specialFolder = mapper.convertValue(value, SpecialFolderFacet.class);
+								break;
+							default:
+								throw new RuntimeException("Unsupported Class Type." + key + " : " + value);
+						}
+						break;
+					// id, createdDateTime, cTag, description, eTag, lastModifiedDateTime, name, webDavUrl, webUrl
+					case STRING:
+						switch (key) {
+							case "id":
+								folderItem.id = value.asText();
+								break;
+							case "createdDateTime":
+								folderItem.createdDateTime = BaseContainer.parseDateTime(value.asText());
+								break;
+							case "cTag":
+								folderItem.cTag = value.asText();
+								break;
+							case "description":
+								folderItem.description = value.asText();
+								break;
+							case "eTag":
+								folderItem.description = value.asText();
+								break;
+							case "lastModifiedDateTime":
+								folderItem.lastModifiedDateTime = BaseContainer.parseDateTime(value.asText());
+								break;
+							case "name":
+								folderItem.name = value.asText();
+								break;
+							case "webUrl":
+								folderItem.webUrl = value.asText();
+								break;
+							case "webDavUrl":
+								folderItem.webDavUrl = value.asText();
+								break;
+							case "children@odata.nextLink":
+								nextLink = value.asText();
+								break;
+						}
+						break;
+					case BOOLEAN:
+						if (key.equals("deleted"))
+							folderItem.deleted = value.asBoolean();
+						else throw new RuntimeException("Unsupported Class Type." + key + " : " + value);
+						break;
+					case ARRAY:
+						if (key.equals("children"))
+							arrayNode = (ArrayNode) value;
+						else throw new RuntimeException("Unsupported Class Type." + key + " : " + value);
+						break;
+					case NUMBER:
+						if (key.equals("size")) folderItem.size = value.asLong();
+						else throw new RuntimeException("Unsupported Class Type." + key + " : " + value);
+						break;
+					default:
+						throw new RuntimeException("Unsupported Class Type");
+				}
+			}
+
+			if (arrayNode != null) {
+				folderItem.folderChildren = new ArrayList<>();
+				folderItem.allChildren = new ArrayList<>();
+				folderItem.fileChildren = new ArrayList<>();
+
+				parseChildren(folderItem.client, arrayNode, nextLink,
+						folderItem.allChildren, folderItem.folderChildren, folderItem.fileChildren);
+			}
+
+			return folderItem;
+		}
 	}
 
 	class ChildrenIterator implements Iterator<BaseItem> {

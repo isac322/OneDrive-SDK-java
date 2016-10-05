@@ -1,13 +1,16 @@
 package org.onedrive;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.istack.internal.NotNull;
 import lombok.Getter;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.network.HttpsRequest;
 import org.network.HttpsResponse;
 import org.onedrive.container.Drive;
+import org.onedrive.container.items.BaseItem;
 import org.onedrive.container.items.FileItem;
 import org.onedrive.container.items.FolderItem;
 import org.onedrive.utils.AuthServer;
@@ -28,7 +31,7 @@ import java.util.concurrent.Semaphore;
  */
 public class Client {
 	private static final String UNREACHABLE_MSG = "Unreachable Area. Check stack stace above";
-	private final JSONParser parser = new JSONParser();
+	@Getter private final ObjectMapper mapper = new ObjectMapper();
 	private long lastRefresh;
 	@Getter private long expirationTime;
 	@Getter private String tokenType;
@@ -68,6 +71,13 @@ public class Client {
 		this.clientSecret = clientSecret;
 		this.redirectURL = redirectURL;
 		if (autoLogin) login();
+
+		SimpleModule itemDeserializeModule = new SimpleModule();
+		itemDeserializeModule.addDeserializer(FolderItem.class, new FolderItem.FolderDeserializer(this));
+		itemDeserializeModule.addDeserializer(BaseItem.class, new BaseItem.ItemDeserializer(this));
+		mapper.registerModule(itemDeserializeModule);
+
+		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 	}
 
 	/**
@@ -146,27 +156,32 @@ public class Client {
 
 			HttpsResponse response = request.doPost(httpBody);
 
+			JsonNode json = mapper.readTree(response.getContent());
 
-			JSONObject jsonResponse = (JSONObject) parser.parse(response.getContentString());
+			JsonNode access = json.get("access_token");
+			JsonNode refresh = json.get("refresh_token");
+			JsonNode id = json.get("user_id");
+			JsonNode type = json.get("token_type");
+			JsonNode expires = json.get("expires_in");
+
+			if (access == null || refresh == null || id == null || type == null || expires == null) {
+				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+			}
 
 			saveToken(
-					jsonResponse.getString("access_token"),
-					jsonResponse.getString("refresh_token"),
-					jsonResponse.getString("user_id"),
-					jsonResponse.getString("token_type"),
-					jsonResponse.getLong("expires_in")
+					access.asText(),
+					refresh.asText(),
+					id.asText(),
+					type.asText(),
+					expires.asLong()
 			);
 
-			return jsonResponse.getString("access_token");
+			return access.asText();
 
 		}
 		catch (IOException e) {
 			e.printStackTrace();
 			System.err.println("Internet Connection Error While Refreshing Login Info");
-		}
-		catch (ParseException e) {
-			e.printStackTrace();
-			System.err.println("Response Json Error in " + this.getClass().getName());
 		}
 
 		throw new RuntimeException(UNREACHABLE_MSG);
@@ -226,67 +241,44 @@ public class Client {
 	public Drive getDefaultDrive() {
 		checkExpired();
 
-		try {
-			HttpsResponse response = OneDriveRequest.doGet("/drive", accessToken);
-			JSONObject json = (JSONObject) parser.parse(response.getContentString());
+		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive", accessToken);
 
-			return Drive.parse(json);
-		}
-		catch (ParseException e) {
-			e.printStackTrace();
-			System.err.println("Wrong json response. It must be connection error");
-		}
-
-		throw new RuntimeException(UNREACHABLE_MSG);
+		return mapper.convertValue(jsonResponse, Drive.class);
 	}
 
 	@NotNull
 	public List<Drive> getAllDrive() {
-		ArrayList<Drive> list = new ArrayList<>();
+		checkExpired();
 
-		JSONObject json = OneDriveRequest.doGetJson("/drives", accessToken);
+		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drives", accessToken);
 
-		for (Object drive : json.getArray("value")) {
-			list.add(Drive.parse((JSONObject) drive));
-		}
-
-		return list;
+		return mapper.convertValue(jsonResponse, ArrayList.class);
 	}
 
 	@NotNull
 	public FolderItem getRootDir() {
-		JSONObject json = OneDriveRequest.doGetJson("/drive/root:/?expand=children", accessToken);
+		checkExpired();
 
-		return (FolderItem) FolderItem.parse(this, json);
+		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive/root:/?expand=children", accessToken);
+
+		return (FolderItem) mapper.convertValue(jsonResponse, BaseItem.class);
 	}
 
 	@NotNull
 	public FolderItem getFolder(@NotNull String id) {
-		try {
-			JSONObject json = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
+		checkExpired();
 
-			return (FolderItem) FolderItem.parse(this, json);
-		}
-		catch (ClassCastException e) {
-			e.printStackTrace();
-			System.err.println(id + " is not folder ID.");
-		}
+		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
 
-		throw new RuntimeException(UNREACHABLE_MSG);
+		return (FolderItem) mapper.convertValue(jsonResponse, BaseItem.class);
 	}
 
 	@NotNull
 	public FileItem getFile(@NotNull String id) {
-		try {
-			JSONObject json = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
+		checkExpired();
 
-			return (FileItem) FileItem.parse(this, json);
-		}
-		catch (ClassCastException e) {
-			e.printStackTrace();
-			System.err.println(id + " is not file ID.");
-		}
+		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
 
-		throw new RuntimeException(UNREACHABLE_MSG);
+		return (FileItem) mapper.convertValue(jsonResponse, BaseItem.class);
 	}
 }

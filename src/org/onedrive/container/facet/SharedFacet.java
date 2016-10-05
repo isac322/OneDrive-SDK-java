@@ -1,8 +1,8 @@
 package org.onedrive.container.facet;
 
-import com.sun.istack.internal.Nullable;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.json.simple.JSONObject;
 import org.onedrive.container.IdentitySet;
 
 /**
@@ -15,17 +15,10 @@ public class SharedFacet {
 	@Getter protected final IdentitySet owner;
 	@Getter protected final String scope;
 
-	protected SharedFacet(IdentitySet owner, String scope) {
+	@JsonCreator
+	protected SharedFacet(@JsonProperty("owner") IdentitySet owner,
+						  @JsonProperty("scope") String scope) {
 		this.owner = owner;
 		this.scope = scope;
-	}
-
-	@Nullable
-	public static SharedFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		return new SharedFacet(
-				IdentitySet.parse(json.getObject("owner")),
-				json.getString("scope"));
 	}
 }

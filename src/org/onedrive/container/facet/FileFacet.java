@@ -1,8 +1,11 @@
 package org.onedrive.container.facet;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sun.istack.internal.Nullable;
 import lombok.Getter;
-import org.json.simple.JSONObject;
+
+import java.util.LinkedHashMap;
 
 /**
  * https://dev.onedrive.com/facets/file_facet.htm
@@ -16,32 +19,17 @@ public class FileFacet {
 	@Getter @Nullable protected final String crc32Hash;
 	@Getter @Nullable protected final String quickXorHash;
 
-	protected FileFacet(String mimeType, String sha1Hash, String crc32Hash, String quickXorHash) {
+	@JsonCreator
+	protected FileFacet(@JsonProperty("mimeType") String mimeType,
+						@JsonProperty("hashes") LinkedHashMap<String, String> hashes) {
 		this.mimeType = mimeType;
-		this.sha1Hash = sha1Hash;
-		this.crc32Hash = crc32Hash;
-		this.quickXorHash = quickXorHash;
-	}
-
-	@Nullable
-	public static FileFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		if (json.containsKey("hashes")) {
-			JSONObject hashes = json.getObject("hashes");
-
-			return new FileFacet(
-					json.getString("mimeType"),
-					hashes.getString("crc32Hash"),
-					hashes.getString("sha1Hash"),
-					hashes.getString("quickXorHash")
-			);
+		if (hashes != null) {
+			this.sha1Hash = hashes.get("sha1Hash");
+			this.crc32Hash = hashes.get("crc32Hash");
+			this.quickXorHash = hashes.get("quickXorHash");
 		}
 		else {
-			return new FileFacet(
-					json.getString("mimeType"),
-					null, null, null
-			);
+			sha1Hash = crc32Hash = quickXorHash = null;
 		}
 	}
 }

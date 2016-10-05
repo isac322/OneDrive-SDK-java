@@ -1,7 +1,8 @@
 package org.onedrive.container.items;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.json.simple.JSONObject;
 
 /**
  * https://dev.onedrive.com/resources/itemReference.htm
@@ -14,19 +15,12 @@ public class ItemReference {
 	@Getter protected final String id;
 	@Getter protected final String path;
 
-	protected ItemReference(String driveId, String id, String path) {
+	@JsonCreator
+	protected ItemReference(@JsonProperty("driveId") String driveId,
+							@JsonProperty("id") String id,
+							@JsonProperty("path") String path) {
 		this.driveId = driveId;
 		this.id = id;
 		this.path = path;
-	}
-
-	public static ItemReference parse(JSONObject json) {
-		if (json == null) return null;
-
-		return new ItemReference(
-				json.getString("driveId"),
-				json.getString("id"),
-				json.getString("path")
-		);
 	}
 }

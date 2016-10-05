@@ -1,8 +1,9 @@
 package org.onedrive.container.facet;
 
-import com.sun.istack.internal.NotNull;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sun.istack.internal.Nullable;
 import lombok.Getter;
-import org.json.simple.JSONObject;
 
 /**
  * https://dev.onedrive.com/facets/image_facet.htm
@@ -11,19 +12,19 @@ import org.json.simple.JSONObject;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class ImageFacet {
-	@Getter @NotNull protected final long width;
-	@Getter @NotNull protected final long height;
+	@Getter @Nullable protected final long width;
+	@Getter @Nullable protected final long height;
 
-	protected ImageFacet(long width, long height) {
+	@JsonCreator
+	protected ImageFacet(@JsonProperty("width") Long width,
+						 @JsonProperty("height") Long height) {
+		if (width == null) {
+			throw new RuntimeException("\"width\" filed can not be null");
+		}
+		if (height == null) {
+			throw new RuntimeException("\"height\" filed can not be null");
+		}
 		this.width = width;
 		this.height = height;
-	}
-
-	public static ImageFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		return new ImageFacet(
-				json.getLong("width"),
-				json.getLong("height"));
 	}
 }

@@ -1,9 +1,9 @@
 package org.onedrive.container.facet;
 
-import com.sun.istack.internal.NotNull;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sun.istack.internal.Nullable;
 import lombok.Getter;
-import org.json.simple.JSONObject;
 
 /**
  * https://dev.onedrive.com/facets/audio_facet.htm
@@ -15,24 +15,37 @@ public class AudioFacet {
 	@Getter @Nullable protected final String album;
 	@Getter @Nullable protected final String albumArtist;
 	@Getter @Nullable protected final String artist;
-	@Getter @NotNull protected final long bitrate;
+	@Getter @Nullable protected final Long bitrate;
 	@Getter @Nullable protected final String composers;
 	@Getter @Nullable protected final String copyright;
 	@Getter @Nullable protected final Long disc;
 	@Getter @Nullable protected final Long discCount;
-	@Getter @NotNull protected final long duration;
+	@Getter @Nullable protected final Long duration;
 	@Getter @Nullable protected final String genre;
-	@Getter @NotNull protected final boolean hasDrm;
+	@Getter @Nullable protected final Boolean hasDrm;
 	@Getter @Nullable protected final Boolean isVariableBitrate;
 	@Getter @Nullable protected final String title;
 	@Getter @Nullable protected final Long track;
 	@Getter @Nullable protected final Long trackCount;
 	@Getter @Nullable protected final Long year;
 
-	protected AudioFacet(String album, String albumArtist, String artist, long bitrate, String composers,
-						 String copyright, Long disc, Long discCount, long duration, String genre,
-						 boolean hasDrm, Boolean isVariableBitrate, String title, Long track, Long trackCount,
-						 Long year) {
+	@JsonCreator
+	protected AudioFacet(@JsonProperty("album") String album,
+						 @JsonProperty("albumArtist") String albumArtist,
+						 @JsonProperty("artist") String artist,
+						 @JsonProperty("bitrate") Long bitrate,
+						 @JsonProperty("composers") String composers,
+						 @JsonProperty("copyright") String copyright,
+						 @JsonProperty("disc") Long disc,
+						 @JsonProperty("discCount") Long discCount,
+						 @JsonProperty("duration") Long duration,
+						 @JsonProperty("genre") String genre,
+						 @JsonProperty("hasDrm") Boolean hasDrm,
+						 @JsonProperty("isVariableBitrate") Boolean isVariableBitrate,
+						 @JsonProperty("title") String title,
+						 @JsonProperty("track") Long track,
+						 @JsonProperty("trackCount") Long trackCount,
+						 @JsonProperty("year") Long year) {
 		this.album = album;
 		this.albumArtist = albumArtist;
 		this.artist = artist;
@@ -49,29 +62,5 @@ public class AudioFacet {
 		this.track = track;
 		this.trackCount = trackCount;
 		this.year = year;
-	}
-
-	@Nullable
-	public static AudioFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		return new AudioFacet(
-				json.getString("album"),
-				json.getString("albumArtist"),
-				json.getString("artist"),
-				json.getLong("bitrate"),
-				json.getString("composers"),
-				json.getString("copyright"),
-				json.getLong("disc"),
-				json.getLong("discCount"),
-				json.getLong("duration"),
-				json.getString("genre"),
-				json.getBoolean("hasDrm"),
-				json.getBoolean("isVariableBitrate"),
-				json.getString("title"),
-				json.getLong("track"),
-				json.getLong("trackCount"),
-				json.getLong("year")
-		);
 	}
 }

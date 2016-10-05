@@ -1,26 +1,21 @@
 package org.onedrive.container.facet;
 
-import com.sun.istack.internal.Nullable;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.json.simple.JSONObject;
 
 /**
  * https://dev.onedrive.com/facets/jumpinfo_facet.htm
  * {@// TODO: Enhance javadoc}
+ * {@// TODO: merge with BaseItem if possible }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class SpecialFolderFacet {
 	@Getter protected final String name;
 
-	protected SpecialFolderFacet(String name) {
+	@JsonCreator
+	protected SpecialFolderFacet(@JsonProperty("name") String name) {
 		this.name = name;
-	}
-
-	@Nullable
-	public static SpecialFolderFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		return new SpecialFolderFacet(json.getString("name"));
 	}
 }

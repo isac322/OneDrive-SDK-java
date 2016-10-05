@@ -1,11 +1,11 @@
 package org.onedrive.container.facet;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sun.istack.internal.Nullable;
 import lombok.Getter;
-import org.json.simple.JSONObject;
+import org.onedrive.container.BaseContainer;
 
-import java.time.Instant;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
 /**
@@ -27,9 +27,16 @@ public class PhotoFacet {
 	@Getter @Nullable protected final Double focalLength;
 	@Getter @Nullable protected final Long iso;
 
-	protected PhotoFacet(ZonedDateTime takenDateTime, String cameraMake, String cameraModel, Double fNumber,
-						 Double exposureDenominator, Double exposureNumerator, Double focalLength, Long iso) {
-		this.takenDateTime = takenDateTime;
+	@JsonCreator
+	protected PhotoFacet(@JsonProperty("takenDateTime") String takenDateTime,
+						 @JsonProperty("cameraMake") String cameraMake,
+						 @JsonProperty("cameraModel") String cameraModel,
+						 @JsonProperty("fNumber") Double fNumber,
+						 @JsonProperty("exposureDenominator") Double exposureDenominator,
+						 @JsonProperty("exposureNumerator") Double exposureNumerator,
+						 @JsonProperty("focalLength") Double focalLength,
+						 @JsonProperty("iso") Long iso) {
+		this.takenDateTime = BaseContainer.parseDateTime(takenDateTime);
 		this.cameraMake = cameraMake;
 		this.cameraModel = cameraModel;
 		this.fNumber = fNumber;
@@ -37,24 +44,5 @@ public class PhotoFacet {
 		this.exposureNumerator = exposureNumerator;
 		this.focalLength = focalLength;
 		this.iso = iso;
-	}
-
-	@Nullable
-	public static PhotoFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		String timestamp = json.getString("takenDateTime");
-		ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.parse(timestamp), ZoneId.systemDefault());
-
-		return new PhotoFacet(
-				zonedDateTime,
-				json.getString("cameraMake"),
-				json.getString("cameraModel"),
-				json.getDouble("fNumber"),
-				json.getDouble("exposureDenominator"),
-				json.getDouble("exposureNumerator"),
-				json.getDouble("focalLength"),
-				json.getLong("iso")
-		);
 	}
 }

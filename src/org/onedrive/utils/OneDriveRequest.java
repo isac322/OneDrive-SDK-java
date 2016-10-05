@@ -1,13 +1,13 @@
 package org.onedrive.utils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.istack.internal.NotNull;
 import lombok.Getter;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.network.HttpsRequest;
 import org.network.HttpsResponse;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -18,11 +18,11 @@ import java.net.URL;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class OneDriveRequest {
+	public static final ObjectMapper mapper = new ObjectMapper();
 	/**
 	 * OneDrive API base URL.
 	 */
 	@Getter private static final String baseUrl = "https://api.onedrive.com/v1.0";
-	private static final JSONParser parser = new JSONParser();
 
 	/**
 	 * @deprecated {@link OneDriveRequest} is just static util class. Can not instantiations.
@@ -214,7 +214,7 @@ public class OneDriveRequest {
 	/**
 	 * <a href='https://dev.onedrive.com/items/get.htm'>https://dev.onedrive.com/items/get.htm</a>
 	 * <br><br>
-	 * Instantly send GET request to OneDrive with {@code api}, and return parsed JSON response.
+	 * Instantly send GET request to OneDrive with {@code api}, and return parsed JSON response object.
 	 * <br><br>
 	 * It is assured that the return value is always not {@code null}, if the response is successfully received.
 	 * (when 200 OK or even non-OK response like 404 NOT FOUND or something is received).
@@ -232,17 +232,18 @@ public class OneDriveRequest {
 	 * @param api         API to get. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
 	 *                    <tt>/drive/root:/{path}</tt>)
 	 * @param accessToken OneDrive access token.
-	 * @return {@link JSONObject} that parsed from HTTP GET's json response.
+	 * @return that parsed from HTTP GET's json response.
 	 * @throws RuntimeException If {@code api} form is incorrect or connection fails.
+	 * @see ObjectNode
 	 */
 	@NotNull
-	public static JSONObject doGetJson(@NotNull String api, @NotNull String accessToken) {
+	public static ObjectNode doGetJson(@NotNull String api, @NotNull String accessToken) {
 		HttpsResponse response = doGet(api, accessToken);
+
 		try {
-			// TODO: handling not 200 OK response.
-			return (JSONObject) parser.parse(response.getContentString());
+			return (ObjectNode) mapper.readTree(response.getContent());
 		}
-		catch (ParseException e) {
+		catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 		}
@@ -251,7 +252,7 @@ public class OneDriveRequest {
 	/**
 	 * <a href='https://dev.onedrive.com/items/get.htm'>https://dev.onedrive.com/items/get.htm</a>
 	 * <br><br>
-	 * Instantly send GET request to {@code url}, and return parsed JSON response.
+	 * Instantly send GET request to {@code url}, and return parsed JSON response object.
 	 * <br><br>
 	 * It is assured that the return value is always not {@code null}, if the response is successfully received.
 	 * (when 200 OK or even non-OK response like 404 NOT FOUND or something is received).
@@ -269,17 +270,18 @@ public class OneDriveRequest {
 	 * @param url         URL to request. It must contains full URL.
 	 *                    (for example <tt>https://api.onedrive.com/v1.0/drive</tt>).
 	 * @param accessToken OneDrive access token.
-	 * @return {@link JSONObject} that parsed from HTTP GET's json response.
+	 * @return Object that parsed from HTTP GET's json response.
 	 * @throws RuntimeException If {@code url} form is incorrect or connection fails.
+	 * @see ObjectNode
 	 */
 	@NotNull
-	public static JSONObject doGetJson(@NotNull URL url, @NotNull String accessToken) {
+	public static ObjectNode doGetJson(@NotNull URL url, @NotNull String accessToken) {
 		HttpsResponse response = doGet(url, accessToken);
+
 		try {
-			// TODO: handling not 200 OK response.
-			return (JSONObject) parser.parse(response.getContentString());
+			return (ObjectNode) mapper.readTree(response.getContent());
 		}
-		catch (ParseException e) {
+		catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 		}

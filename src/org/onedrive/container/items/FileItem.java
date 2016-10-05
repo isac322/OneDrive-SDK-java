@@ -1,11 +1,12 @@
 package org.onedrive.container.items;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import lombok.Getter;
-import org.json.simple.JSONObject;
 import org.network.HttpsResponse;
-import org.onedrive.Client;
 import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
@@ -15,13 +16,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.*;
-import java.time.ZonedDateTime;
 
 /**
  * {@// TODO: Enhance javadoc}
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
+@JsonDeserialize(as = FileItem.class)
 public class FileItem extends BaseItem {
 	@Getter @Nullable protected AudioFacet audio;
 	@NotNull protected FileFacet file;
@@ -30,18 +31,36 @@ public class FileItem extends BaseItem {
 	@Getter @Nullable protected PhotoFacet photo;
 	@Getter @Nullable protected VideoFacet video;
 
-	protected FileItem(Client client, String id, AudioFacet audio, IdentitySet createdBy,
-					   ZonedDateTime createdDateTime, String cTag, boolean deleted, String description, String eTag,
-					   FileFacet file, FileSystemInfoFacet fileSystemInfo, ImageFacet image,
-					   IdentitySet lastModifiedBy, ZonedDateTime lastModifiedDateTime, LocationFacet location,
-					   String name, ItemReference parentReference, PhotoFacet photo, RemoteItemFacet remoteItem,
-					   SearchResultFacet searchResult, SharedFacet shared, SharePointIdsFacet sharePointIds, long size,
-					   VideoFacet video, String webDavUrl, String webUrl) {
-		this.client = client;
+	@JsonCreator
+	protected FileItem(@JsonProperty("id") String id,
+					   @JsonProperty("audio") AudioFacet audio,
+					   @JsonProperty("createdBy") IdentitySet createdBy,
+					   @JsonProperty("createdDateTime") String createdDateTime,
+					   @JsonProperty("cTag") String cTag,
+					   @JsonProperty("deleted") boolean deleted,
+					   @JsonProperty("description") String description,
+					   @JsonProperty("eTag") String eTag,
+					   @JsonProperty("file") FileFacet file,
+					   @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
+					   @JsonProperty("image") ImageFacet image,
+					   @JsonProperty("lastModifiedBy") IdentitySet lastModifiedBy,
+					   @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime,
+					   @JsonProperty("location") LocationFacet location,
+					   @JsonProperty("name") String name,
+					   @JsonProperty("parentReference") ItemReference parentReference,
+					   @JsonProperty("photo") PhotoFacet photo,
+					   @JsonProperty("remoteItem") RemoteItemFacet remoteItem,
+					   @JsonProperty("searchResult") SearchResultFacet searchResult,
+					   @JsonProperty("shared") SharedFacet shared,
+					   @JsonProperty("sharePointIds") SharePointIdsFacet sharePointIds,
+					   @JsonProperty("size") long size,
+					   @JsonProperty("video") VideoFacet video,
+					   @JsonProperty("webDavUrl") String webDavUrl,
+					   @JsonProperty("webUrl") String webUrl) {
 		this.id = id;
 		this.audio = audio;
 		this.createdBy = createdBy;
-		this.createdDateTime = createdDateTime;
+		this.createdDateTime = BaseContainer.parseDateTime(createdDateTime);
 		this.cTag = cTag;
 		this.deleted = deleted;
 		this.description = description;
@@ -50,7 +69,7 @@ public class FileItem extends BaseItem {
 		this.fileSystemInfo = fileSystemInfo;
 		this.image = image;
 		this.lastModifiedBy = lastModifiedBy;
-		this.lastModifiedDateTime = lastModifiedDateTime;
+		this.lastModifiedDateTime = BaseContainer.parseDateTime(lastModifiedDateTime);
 		this.location = location;
 		this.name = name;
 		this.parentReference = parentReference;
@@ -63,40 +82,6 @@ public class FileItem extends BaseItem {
 		this.video = video;
 		this.webDavUrl = webDavUrl;
 		this.webUrl = webUrl;
-	}
-
-	@Nullable
-	static FileItem parseFile(Client client, JSONObject json) {
-		if (json == null) return null;
-
-		return new FileItem(
-				client,
-				json.getString("id"),
-				AudioFacet.parse(json.getObject("audio")),
-				IdentitySet.parse(json.getObject("createdBy")),
-				BaseContainer.parseDateTime(json.getString("createdDateTime")),
-				json.getString("cTag"),
-				json.getObject("deleted") != null,
-				json.getString("description"),
-				json.getString("eTag"),
-				FileFacet.parse(json.getObject("file")),
-				FileSystemInfoFacet.parse(json.getObject("fileSystemInfo")),
-				ImageFacet.parse(json.getObject("image")),
-				IdentitySet.parse(json.getObject("lastModifiedBy")),
-				BaseContainer.parseDateTime(json.getString("lastModifiedDateTime")),
-				LocationFacet.parse(json.getObject("location")),
-				json.getString("name"),
-				ItemReference.parse(json.getObject("parentReference")),
-				PhotoFacet.parse(json.getObject("photo")),
-				RemoteItemFacet.parse(json.getObject("remoteItem")),
-				SearchResultFacet.parse(json.getObject("searchResult")),
-				SharedFacet.parse(json.getObject("shared")),
-				SharePointIdsFacet.parse(json.getObject("sharepointIds")),
-				json.getLong("size"),
-				VideoFacet.parse(json.getObject("video")),
-				json.getString("webDavUrl"),
-				json.getString("webUrl")
-		);
 	}
 
 	public String getCRC32() {
