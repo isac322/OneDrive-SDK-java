@@ -1,4 +1,3 @@
-import com.eclipsesource.json.JsonObject;
 import junit.framework.TestCase;
 import org.json.simple.JSONObject;
 import org.network.HttpsResponse;
@@ -8,7 +7,6 @@ import org.onedrive.container.items.*;
 import org.onedrive.utils.OneDriveRequest;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
@@ -117,7 +115,8 @@ public class ClientTest extends TestCase {
 		System.out.println(rootDir.getETag());
 		System.out.println(rootDir.getName());
 		System.out.println(rootDir.getSize());
-		System.out.println(((FolderItem) (rootDir.getAllChildren().get(1))).getAllChildren().get(1).getParentReference()
+		System.out.println(((FolderItem) (rootDir.getAllChildren().get(1))).getAllChildren().get(1)
+				.getParentReference()
 				.getPath());
 	}
 
@@ -169,10 +168,56 @@ public class ClientTest extends TestCase {
 		}
 	}
 
+	private void printDFS(FolderItem folders, String tab) {
+		StringBuilder builder2 = new StringBuilder(tab).append(folders.getName()).append('\t');
+
+		if (folders.getRemoteItem() != null) builder2.append(" Remote Item");
+		if (folders.getSearchResult() != null) builder2.append(" Search result");
+		if (folders.getShared() != null) builder2.append(" Shared");
+
+		System.out.println(builder2.toString());
+
+		tab += '\t';
+		for (BaseItem item : folders) {
+			if (item instanceof FolderItem) {
+				FolderItem folder = (FolderItem) item;
+
+				assertNotNull(folder.getFolder());
+				assertNotNull(folder.getParentReference());
+				assertEquals(folder.childrenCount(), folder.getAllChildren().size());
+
+				printDFS(folder, tab);
+			}
+			else if (item instanceof FileItem) {
+				StringBuilder builder = new StringBuilder(tab).append(item.getName()).append('\t');
+
+				assertNotNull(item.getParentReference());
+
+				FileItem file = (FileItem) item;
+				if (file.getAudio() != null) builder.append(" Audio");
+				if (file.getImage() != null) builder.append(" Image");
+				if (file.getLocation() != null) builder.append(" has Location");
+				if (file.getPhoto() != null) builder.append(" Photo");
+				if (file.getVideo() != null) builder.append(" Video");
+				if (file.getRemoteItem() != null) builder.append(" Remote Item");
+				if (file.getSearchResult() != null) builder.append(" Search result");
+				if (file.getShared() != null) builder.append(" Shared");
+
+				System.out.println(builder.toString());
+			}
+			else if (item instanceof PackageItem) {
+				System.out.println(tab + item.getName() + "\tPackage");
+			}
+			else {
+				throw new RuntimeException("Unsupported type item.");
+			}
+		}
+	}
+
 	public void testRecursiveTravel() throws IOException, FileDownFailException {
 		getClient();
 
-		dfs(client.getRootDir(), "");
+		printDFS(client.getRootDir(), "");
 	}
 
 	public void testJson() {
