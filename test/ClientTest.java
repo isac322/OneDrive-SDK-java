@@ -1,18 +1,19 @@
+import com.eclipsesource.json.JsonObject;
 import junit.framework.TestCase;
+import org.json.simple.JSONObject;
 import org.network.HttpsResponse;
 import org.onedrive.Client;
 import org.onedrive.container.Drive;
-import org.onedrive.container.items.BaseItem;
-import org.onedrive.container.items.FileItem;
-import org.onedrive.container.items.FolderItem;
-import org.onedrive.container.items.PackageItem;
+import org.onedrive.container.items.*;
 import org.onedrive.utils.OneDriveRequest;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
 /**
  * TODO: add javadoc
- * Created by isac322 on 16. 10. 2.
  */
 public class ClientTest extends TestCase {
 	private static Client client;
@@ -78,6 +79,26 @@ public class ClientTest extends TestCase {
 		System.out.println(defaultDrive);
 	}
 
+	public void testPackage() {
+		getClient();
+
+		HttpsResponse response = OneDriveRequest.doGet("/drive/items/D4FD82CA6DF96A47!110?expand=children", client
+				.getAccessToken());
+		System.out.println(response.getCode());
+		System.out.println(response.getMessage());
+		System.out.println(response.getContentString());
+	}
+
+	public void testGetItem() {
+		getClient();
+
+		FolderItem folder = client.getFolder("D4FD82CA6DF96A47!14841");
+		System.out.println(folder.getName());
+		for (BaseItem item : folder) {
+			System.out.println(item.getName());
+		}
+	}
+
 	public void testRoot() {
 		getClient();
 
@@ -96,23 +117,51 @@ public class ClientTest extends TestCase {
 		System.out.println(rootDir.getETag());
 		System.out.println(rootDir.getName());
 		System.out.println(rootDir.getSize());
+		System.out.println(((FolderItem) (rootDir.getAllChildren().get(1))).getAllChildren().get(1).getParentReference()
+				.getPath());
 	}
 
-	private void dfs(FolderItem folder, String tab) {
-		System.out.print(tab);
-		System.out.println(folder.getName());
+	private void dfs(FolderItem folders, String tab) throws IOException, FileDownFailException {
+		StringBuilder builder2 = new StringBuilder(tab).append(folders.getName()).append('\t');
+
+		if (folders.getRemoteItem() != null) builder2.append(" Remote Item");
+		if (folders.getSearchResult() != null) builder2.append(" Search result");
+		if (folders.getShared() != null) builder2.append(" Shared");
+
+		System.out.println(builder2.toString());
 
 		tab += '\t';
-		for (BaseItem item : folder) {
+		for (BaseItem item : folders) {
 			if (item instanceof FolderItem) {
-				dfs((FolderItem) item, tab);
+				FolderItem folder = (FolderItem) item;
+
+				assertNotNull(folder.getFolder());
+				assertNotNull(folder.getParentReference());
+				assertEquals(folder.childrenCount(), folder.getAllChildren().size());
+				dfs(folder, tab);
 			}
 			else if (item instanceof FileItem) {
-				System.out.print(tab);
-				System.out.println(item.getName());
+				StringBuilder builder = new StringBuilder(tab).append(item.getName()).append('\t');
+				assertNotNull(item.getParentReference());
+
+				FileItem file = (FileItem) item;
+				if (file.getAudio() != null) builder.append(" Audio");
+				if (file.getImage() != null) builder.append(" Image");
+				if (file.getLocation() != null) builder.append(" has Location");
+				if (file.getPhoto() != null) builder.append(" Photo");
+				if (file.getVideo() != null) builder.append(" Video");
+				if (file.getRemoteItem() != null) builder.append(" Remote Item");
+				if (file.getSearchResult() != null) builder.append(" Search result");
+				if (file.getShared() != null) builder.append(" Shared");
+
+				System.out.println(builder.toString());
+
+				int idx = file.getParentReference().getPath().indexOf(':') + 2;
+				String path = file.getParentReference().getPath().substring(idx);
+				file.download(Paths.get(path, file.getName()));
 			}
 			else if (item instanceof PackageItem) {
-				System.out.println(item.getName());
+				System.out.println(tab + item.getName() + "\tPackage");
 			}
 			else {
 				throw new RuntimeException("Unsupported type item.");
@@ -120,9 +169,16 @@ public class ClientTest extends TestCase {
 		}
 	}
 
-	public void testRecursiveTravel() {
+	public void testRecursiveTravel() throws IOException, FileDownFailException {
 		getClient();
 
 		dfs(client.getRootDir(), "");
+	}
+
+	public void testJson() {
+		getClient();
+
+		JSONObject json = OneDriveRequest.doGetJson("/drive/root?expand=children", client.getAccessToken());
+		System.out.println(json);
 	}
 }

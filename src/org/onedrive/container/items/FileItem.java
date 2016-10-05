@@ -11,10 +11,10 @@ import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
 import org.onedrive.utils.OneDriveRequest;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.*;
 import java.time.ZonedDateTime;
 
 /**
@@ -112,11 +112,11 @@ public class FileItem extends BaseItem {
 	}
 
 	/**
-	 * @see FileItem#download(File)
+	 * @see FileItem#download(Path)
 	 */
 	@NotNull
 	public void download(@NotNull String path) throws IOException, FileDownFailException {
-		this.download(new File(path));
+		this.download(Paths.get(path));
 	}
 
 	/**
@@ -137,36 +137,25 @@ public class FileItem extends BaseItem {
 	 * @throws FileDownFailException      If fail to download with not 200 OK response.
 	 */
 	@NotNull
-	public void download(@NotNull File path) throws IOException, FileDownFailException {
-		File fullPath = path.getCanonicalFile();
-
-		if (!fullPath.isFile()) {
-			if (!fullPath.exists()) {
-				//
-				throw new FileAlreadyExistsException(fullPath.getAbsolutePath() + " is already exists.");
-			}
-
-			fullPath = new File(fullPath, this.getName());
-		}
-		else if (fullPath.exists()) {
-			throw new FileAlreadyExistsException(fullPath.getAbsolutePath() + " is already exists.");
-		}
+	public void download(@NotNull Path path) throws IOException, FileDownFailException {
+		path = path.toAbsolutePath();
+		Files.createDirectories(path.getParent());
 
 		HttpsResponse response = OneDriveRequest.doGet(
-				String.format("/drive/items/%s/content", id),
+				"/drive/items/" + id + "/content",
 				client.getAccessToken());
 
 		if (response.getCode() != 200) {
 			throw new FileDownFailException(
 					String.format("File download fails with %d %s", response.getCode(), response.getMessage()));
 		}
-		else if (!fullPath.getParentFile().mkdirs()) {
-			throw new IOException("Fail to create necessary parent directory.");
-		}
 
-		FileOutputStream file = new FileOutputStream(fullPath);
-		file.write(response.getContent());
-		file.flush();
-		file.close();
+		AsynchronousFileChannel fileChannel = AsynchronousFileChannel.open(path,
+				StandardOpenOption.CREATE,
+				StandardOpenOption.WRITE);
+
+		ByteBuffer contentBuf = ByteBuffer.wrap(response.getContent());
+
+		fileChannel.write(contentBuf, 0);
 	}
 }

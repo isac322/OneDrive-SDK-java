@@ -1,7 +1,5 @@
 package org.onedrive.container;
 
-import com.sun.istack.internal.NotNull;
-
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -10,12 +8,19 @@ import java.util.Map;
 
 /**
  * {@// TODO: Enhance javadoc}
+ *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 abstract public class BaseContainer {
+	public static ZonedDateTime parseDateTime(String timestamp) {
+		if (timestamp == null) return null;
+		return ZonedDateTime.ofInstant(Instant.parse(timestamp), ZoneId.systemDefault());
+	}
+
 	/**
 	 * Concat all member field as one {@code String}.
 	 * Only for debug.
+	 *
 	 * @return all member field.
 	 */
 	@Override
@@ -29,16 +34,13 @@ abstract public class BaseContainer {
 				if (object != null && !(object instanceof Map)) {
 					buffer.append(field.getName()).append(" : ").append(object).append(", ");
 				}
-			} catch (IllegalAccessException e) {
+			}
+			catch (IllegalAccessException e) {
 				e.printStackTrace();
 			}
 		}
 
 		buffer.deleteCharAt(buffer.length() - 1);
 		return buffer.toString();
-	}
-
-	public static ZonedDateTime parseDateTime(@NotNull String timestamp) {
-		return ZonedDateTime.ofInstant(Instant.parse(timestamp), ZoneId.systemDefault());
 	}
 }
