@@ -2,6 +2,8 @@ package org.onedrive.container.items;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 
 /**
@@ -11,9 +13,9 @@ import lombok.Getter;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class ItemReference {
-	@Getter protected final String driveId;
-	@Getter protected final String id;
-	@Getter protected final String path;
+	@Getter @NotNull protected final String driveId;
+	@Getter @Nullable protected final String id;
+	@Getter @Nullable protected final String path;
 
 	@JsonCreator
 	protected ItemReference(@JsonProperty("driveId") String driveId,

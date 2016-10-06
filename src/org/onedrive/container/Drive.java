@@ -96,9 +96,9 @@ public class Drive extends BaseContainer {
 			}
 			else {
 				JsonNode state = quota.get("state");
-				JsonNode totalCapacity = quota.get("totalCapacity");
+				JsonNode totalCapacity = quota.get("total");
 				JsonNode deleted = quota.get("deleted");
-				JsonNode usedCapacity = quota.get("usedCapacity");
+				JsonNode usedCapacity = quota.get("used");
 				JsonNode remaining = quota.get("remaining");
 
 				ret = new Drive(id.asText(), driveType.asText(), mapper.convertValue(identitySet, IdentitySet.class),

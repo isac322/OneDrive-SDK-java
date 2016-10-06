@@ -32,7 +32,6 @@ public class PackageItem extends BaseItem {
 					   @JsonProperty("name") String name,
 					   @JsonProperty("package") PackageFacet packages,
 					   @JsonProperty("parentReference") ItemReference parentReference,
-					   @JsonProperty("remoteItem") RemoteItemFacet remoteItem,
 					   @JsonProperty("searchResult") SearchResultFacet searchResult,
 					   @JsonProperty("shared") SharedFacet shared,
 					   @JsonProperty("sharePointIds") SharePointIdsFacet sharePointIds,
@@ -52,7 +51,6 @@ public class PackageItem extends BaseItem {
 		this.name = name;
 		this.packages = packages;
 		this.parentReference = parentReference;
-		this.remoteItem = remoteItem;
 		this.searchResult = searchResult;
 		this.shared = shared;
 		this.sharePointIds = sharePointIds;

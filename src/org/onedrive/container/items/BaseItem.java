@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.istack.internal.Nullable;
 import lombok.Getter;
@@ -13,7 +14,10 @@ import org.network.HttpsResponse;
 import org.onedrive.Client;
 import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
-import org.onedrive.container.facet.*;
+import org.onedrive.container.facet.FileSystemInfoFacet;
+import org.onedrive.container.facet.SearchResultFacet;
+import org.onedrive.container.facet.SharePointIdsFacet;
+import org.onedrive.container.facet.SharedFacet;
 import org.onedrive.utils.OneDriveRequest;
 
 import java.io.IOException;
@@ -25,6 +29,7 @@ import java.time.ZonedDateTime;
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
+@JsonDeserialize(using = BaseItem.ItemDeserializer.class)
 abstract public class BaseItem extends BaseContainer {
 	@Getter protected String id;
 	@Getter protected IdentitySet createdBy;
@@ -45,7 +50,6 @@ abstract public class BaseItem extends BaseContainer {
 	@Getter protected ZonedDateTime lastModifiedDateTime;
 	@Getter protected String name;
 	@Getter protected ItemReference parentReference;
-	@Getter @Nullable protected RemoteItemFacet remoteItem;
 	@Getter @Nullable protected SearchResultFacet searchResult;
 	@Getter protected SharedFacet shared;
 	@Getter @Nullable protected SharePointIdsFacet sharePointIds;
@@ -53,10 +57,6 @@ abstract public class BaseItem extends BaseContainer {
 	@Getter protected String webDavUrl;
 	@Getter protected String webUrl;
 	protected Client client;
-
-	public boolean isRemote() {
-		return remoteItem != null;
-	}
 
 	public void delete() throws IOException {
 		HttpsResponse response = OneDriveRequest.doDelete("/drive/items/" + id, client.getAccessToken());
@@ -67,45 +67,38 @@ abstract public class BaseItem extends BaseContainer {
 	}
 
 	public static class ItemDeserializer extends JsonDeserializer<BaseItem> {
-		private final Client client;
-
-		public ItemDeserializer(Client client) {
-			super();
-			this.client = client;
-		}
-
 		@Override
 		public BaseItem deserialize(JsonParser parser, DeserializationContext context) throws IOException {
 			ObjectMapper codec = (ObjectMapper) parser.getCodec();
 			ObjectNode node = codec.readTree(parser);
 
-			BaseItem ret;
-
 			if (node.has("file")) {
-				if (node.has("folder") || node.has("package")) {
+				if (node.has("folder") || node.has("package") || node.has("remoteItem")) {
 					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
-				ret = codec.convertValue(node, FileItem.class);
-				ret.client = client;
+				return codec.convertValue(node, FileItem.class);
 			}
 			else if (node.has("folder")) {
-				if (node.has("file") || node.has("package")) {
+				if (node.has("file") || node.has("package") || node.has("remoteItem")) {
 					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
-				ret = codec.convertValue(node, FolderItem.class);
+				return codec.convertValue(node, FolderItem.class);
 			}
 			else if (node.has("package")) {
-				if (node.has("folder") || node.has("file")) {
+				if (node.has("folder") || node.has("file") || node.has("remoteItem")) {
 					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
-				ret = codec.convertValue(node, PackageItem.class);
-				ret.client = client;
+				return codec.convertValue(node, PackageItem.class);
+			}
+			else if (node.has("remoteItem")) {
+				if (node.has("folder") || node.has("file") || node.has("file")) {
+					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
+				}
+				return codec.convertValue(node, RemoteFolderItem.class);
 			}
 			else {
 				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 			}
-
-			return ret;
 		}
 	}
 }

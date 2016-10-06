@@ -1,6 +1,8 @@
 package org.onedrive;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -20,8 +22,6 @@ import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -72,10 +72,18 @@ public class Client {
 		this.redirectURL = redirectURL;
 		if (autoLogin) login();
 
-		SimpleModule itemDeserializeModule = new SimpleModule();
-		itemDeserializeModule.addDeserializer(FolderItem.class, new FolderItem.FolderDeserializer(this));
-		itemDeserializeModule.addDeserializer(BaseItem.class, new BaseItem.ItemDeserializer(this));
-		mapper.registerModule(itemDeserializeModule);
+
+		InjectableValues.Std clientInjector = new InjectableValues.Std().addValue("OneDriveClient", this);
+		mapper.setInjectableValues(clientInjector);
+
+		/*
+		for resolve tricky issue of Jackson.
+		See:
+		https://github.com/FasterXML/jackson-databind/issues/1119
+		and
+		https://github.com/FasterXML/jackson-databind/issues/962
+		 */
+		mapper.registerModule(new SimpleModule().setMixInAnnotation(ObjectMapper.class, IgnoreMe.class));
 
 		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 	}
@@ -247,12 +255,12 @@ public class Client {
 	}
 
 	@NotNull
-	public List<Drive> getAllDrive() {
+	public Drive[] getAllDrive() {
 		checkExpired();
 
 		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drives", accessToken);
 
-		return mapper.convertValue(jsonResponse, ArrayList.class);
+		return mapper.convertValue(jsonResponse.get("value"), Drive[].class);
 	}
 
 	@NotNull
@@ -261,7 +269,7 @@ public class Client {
 
 		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive/root:/?expand=children", accessToken);
 
-		return (FolderItem) mapper.convertValue(jsonResponse, BaseItem.class);
+		return mapper.convertValue(jsonResponse, FolderItem.class);
 	}
 
 	@NotNull
@@ -270,7 +278,7 @@ public class Client {
 
 		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
 
-		return (FolderItem) mapper.convertValue(jsonResponse, BaseItem.class);
+		return mapper.convertValue(jsonResponse, FolderItem.class);
 	}
 
 	@NotNull
@@ -279,6 +287,9 @@ public class Client {
 
 		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
 
-		return (FileItem) mapper.convertValue(jsonResponse, BaseItem.class);
+		return mapper.convertValue(jsonResponse, FileItem.class);
 	}
+
+	@JsonIgnoreType
+	private static class IgnoreMe {}
 }

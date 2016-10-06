@@ -36,7 +36,7 @@ public class PhotoFacet {
 						 @JsonProperty("exposureNumerator") Double exposureNumerator,
 						 @JsonProperty("focalLength") Double focalLength,
 						 @JsonProperty("iso") Long iso) {
-		this.takenDateTime = BaseContainer.parseDateTime(takenDateTime);
+		this.takenDateTime = takenDateTime == null ? null : BaseContainer.parseDateTime(takenDateTime);
 		this.cameraMake = cameraMake;
 		this.cameraModel = cameraModel;
 		this.fNumber = fNumber;

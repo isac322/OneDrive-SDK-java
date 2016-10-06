@@ -109,7 +109,7 @@ public class HttpsRequest {
 			URL url = httpConnection.getURL();
 
 			ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-			BufferedInputStream body = null;
+			BufferedInputStream body;
 
 			if (code == 200) {
 				body = new BufferedInputStream(httpConnection.getInputStream());
@@ -128,12 +128,13 @@ public class HttpsRequest {
 
 			byteStream.close();
 			body.close();
-			httpConnection.disconnect();
 			return new HttpsResponse(url, code, message, header, byteStream.toByteArray());
 		}
 		catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(NETWORK_ERR_MSG);
+		} finally {
+			httpConnection.disconnect();
 		}
 	}
 }

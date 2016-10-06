@@ -1,12 +1,15 @@
 package org.onedrive.container.items;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 import org.network.HttpsResponse;
+import org.onedrive.Client;
 import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
@@ -32,12 +35,13 @@ public class FileItem extends BaseItem {
 	@Getter @Nullable protected VideoFacet video;
 
 	@JsonCreator
-	protected FileItem(@JsonProperty("id") String id,
+	protected FileItem(@JacksonInject("OneDriveClient") Client client,
+					   @JsonProperty("id") String id,
 					   @JsonProperty("audio") AudioFacet audio,
 					   @JsonProperty("createdBy") IdentitySet createdBy,
 					   @JsonProperty("createdDateTime") String createdDateTime,
 					   @JsonProperty("cTag") String cTag,
-					   @JsonProperty("deleted") boolean deleted,
+					   @JsonProperty("deleted") ObjectNode deleted,
 					   @JsonProperty("description") String description,
 					   @JsonProperty("eTag") String eTag,
 					   @JsonProperty("file") FileFacet file,
@@ -49,7 +53,6 @@ public class FileItem extends BaseItem {
 					   @JsonProperty("name") String name,
 					   @JsonProperty("parentReference") ItemReference parentReference,
 					   @JsonProperty("photo") PhotoFacet photo,
-					   @JsonProperty("remoteItem") RemoteItemFacet remoteItem,
 					   @JsonProperty("searchResult") SearchResultFacet searchResult,
 					   @JsonProperty("shared") SharedFacet shared,
 					   @JsonProperty("sharePointIds") SharePointIdsFacet sharePointIds,
@@ -57,12 +60,13 @@ public class FileItem extends BaseItem {
 					   @JsonProperty("video") VideoFacet video,
 					   @JsonProperty("webDavUrl") String webDavUrl,
 					   @JsonProperty("webUrl") String webUrl) {
+		this.client = client;
 		this.id = id;
 		this.audio = audio;
 		this.createdBy = createdBy;
 		this.createdDateTime = BaseContainer.parseDateTime(createdDateTime);
 		this.cTag = cTag;
-		this.deleted = deleted;
+		this.deleted = deleted != null;
 		this.description = description;
 		this.eTag = eTag;
 		this.file = file;
@@ -74,7 +78,6 @@ public class FileItem extends BaseItem {
 		this.name = name;
 		this.parentReference = parentReference;
 		this.photo = photo;
-		this.remoteItem = remoteItem;
 		this.searchResult = searchResult;
 		this.shared = shared;
 		this.sharePointIds = sharePointIds;

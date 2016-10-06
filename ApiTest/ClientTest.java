@@ -81,7 +81,17 @@ public class ClientTest extends TestCase {
 	public void testPackage() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/items/D4FD82CA6DF96A47!110?expand=children", client
+		HttpsResponse response = OneDriveRequest.doGet("/drive/items/485BEF1A80539148!115?expand=children", client
+				.getAccessToken());
+		System.out.println(response.getCode());
+		System.out.println(response.getMessage());
+		System.out.println(response.getContentString());
+	}
+
+	public void testRemoteItem() {
+		getClient();
+
+		HttpsResponse response = OneDriveRequest.doGet("/drives/485bef1a80539148/items/485BEF1A80539148!115?expand=children", client
 				.getAccessToken());
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
@@ -116,15 +126,16 @@ public class ClientTest extends TestCase {
 		System.out.println(rootDir.getETag());
 		System.out.println(rootDir.getName());
 		System.out.println(rootDir.getSize());
-		System.out.println(((FolderItem) (rootDir.getAllChildren().get(1))).getAllChildren().get(1)
+		System.out.println(rootDir.getFolderChildren().get(1).getAllChildren().get(0)
 				.getParentReference()
 				.getPath());
+		System.out.println(rootDir.getFolderChildren().get(1));
 	}
 
 	private void dfs(FolderItem folders, String tab) throws IOException, FileDownFailException {
 		StringBuilder builder2 = new StringBuilder(tab).append(folders.getName()).append('\t');
 
-		if (folders.getRemoteItem() != null) builder2.append(" Remote Item");
+		if (folders instanceof RemoteFolderItem) builder2.append(" Remote Item");
 		if (folders.getSearchResult() != null) builder2.append(" Search result");
 		if (folders.getShared() != null) builder2.append(" Shared");
 
@@ -150,7 +161,6 @@ public class ClientTest extends TestCase {
 				if (file.getLocation() != null) builder.append(" has Location");
 				if (file.getPhoto() != null) builder.append(" Photo");
 				if (file.getVideo() != null) builder.append(" Video");
-				if (file.getRemoteItem() != null) builder.append(" Remote Item");
 				if (file.getSearchResult() != null) builder.append(" Search result");
 				if (file.getShared() != null) builder.append(" Shared");
 
@@ -169,10 +179,58 @@ public class ClientTest extends TestCase {
 		}
 	}
 
+	private void printDFS(FolderItem folders, String tab) throws IOException, FileDownFailException {
+		StringBuilder builder2 = new StringBuilder(tab).append(folders.getName()).append('\t');
+
+		if (folders instanceof RemoteFolderItem) builder2.append(" Remote Item");
+		if (folders.getSearchResult() != null) builder2.append(" Search result");
+		if (folders.getShared() != null) builder2.append(" Shared");
+
+		System.out.println(builder2.toString());
+
+		tab += '\t';
+		for (BaseItem item : folders) {
+			if (item instanceof FolderItem) {
+				FolderItem folder = (FolderItem) item;
+
+				printDFS(folder, tab);
+			}
+			else if (item instanceof FileItem) {
+				StringBuilder builder = new StringBuilder(tab).append(item.getName()).append('\t');
+
+				FileItem file = (FileItem) item;
+				if (file.getAudio() != null) builder.append(" Audio");
+				if (file.getImage() != null) builder.append(" Image");
+				if (file.getLocation() != null) builder.append(" has Location");
+				if (file.getPhoto() != null) builder.append(" Photo");
+				if (file.getVideo() != null) builder.append(" Video");
+				if (file.getSearchResult() != null) builder.append(" Search result");
+				if (file.getShared() != null) builder.append(" Shared");
+
+				System.out.println(builder.toString());
+			}
+			else if (item instanceof PackageItem) {
+				System.out.println(tab + item.getName() + "\tPackage");
+			}
+			else {
+				throw new RuntimeException("Unsupported type item.");
+			}
+		}
+	}
+
 	public void testRecursiveTravel() throws IOException, FileDownFailException {
 		getClient();
 
-		dfs(client.getRootDir(), "");
+		printDFS(client.getRootDir(), "");
+	}
+
+	public void testSearch() {
+		getClient();
+
+		HttpsResponse response = OneDriveRequest.doGet("/drive/root/view.search?q=Gone%20in%20Six%20Characters", client.getAccessToken());
+		System.out.println(response.getCode());
+		System.out.println(response.getMessage());
+		System.out.println(response.getContentString());
 	}
 
 	public void testJson() throws IOException {
