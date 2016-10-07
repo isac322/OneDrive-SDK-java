@@ -15,7 +15,6 @@ import org.onedrive.Client;
 import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
-import org.onedrive.utils.OneDriveRequest;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -106,7 +105,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		while (true) {
 			for (JsonNode child : array) {
 				if (child.isObject()) {
-					BaseItem item = client.getMapper().convertValue(child, BaseItem.class);
+					BaseItem item = client.getRequestTool().makeObjectFromJson(child, BaseItem.class);
 
 					if (item instanceof FolderItem) {
 						folder.add((FolderItem) item);
@@ -131,7 +130,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			if (nextLink == null) break;
 
 			try {
-				ObjectNode json = OneDriveRequest.doGetJson(new URL(nextLink), client.getAccessToken());
+				ObjectNode json = client.getRequestTool().doGetJson(new URL(nextLink), client.getAccessToken());
 
 				if (json.has("@odata.nextLink")) {
 					nextLink = json.get("@odata.nextLink").asText();
@@ -163,7 +162,8 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	}
 
 	protected void fetchChildren() {
-		ObjectNode content = OneDriveRequest.doGetJson("/drive/items/" + id + "/children", client.getAccessToken());
+		ObjectNode content = client.getRequestTool().doGetJson(
+				"/drive/items/" + id + "/children", client.getAccessToken());
 
 		allChildren = new ArrayList<>();
 		folderChildren = new ArrayList<>();

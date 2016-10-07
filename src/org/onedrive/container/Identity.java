@@ -73,8 +73,8 @@ public class Identity extends BaseContainer {
 				JsonNode displayName = rootNode.get("displayName");
 				JsonNode thumbnails = rootNode.get("thumbnails");
 
-				identity = new Identity(id.asText(),
-						displayName == null ? null : displayName.asText(),
+				identity = new Identity(displayName == null ? null : displayName.asText(),
+						id.asText(),
 						thumbnails == null ? null : (ObjectNode) thumbnails);
 
 				identitySet.put(id.asText(), identity);

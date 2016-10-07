@@ -13,7 +13,6 @@ import org.network.HttpsRequest;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
-import org.onedrive.utils.OneDriveRequest;
 
 import java.util.ArrayList;
 
@@ -63,7 +62,7 @@ public class RemoteFolderItem extends FolderItem {
 
 	@Override
 	protected void fetchChildren() {
-		ObjectNode content = OneDriveRequest.doGetJson(
+		ObjectNode content = client.getRequestTool().doGetJson(
 				String.format("/drives/%s/items/%s/children",
 						remoteItem.getParentReference().driveId, remoteItem.getId()),
 				client.getAccessToken());

@@ -56,8 +56,27 @@ public class ClientTest extends TestCase {
 	public void testItem() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/root?expand=children", client.getAccessToken());
+		HttpsResponse response = OneDriveRequest.doGet("/drive/shared?select=id", client.getAccessToken());
 		System.out.println(response.getContentString());
+	}
+
+	public void testGetFileItem() {
+		getClient();
+
+		FileItem file = client.getFile("D4FD82CA6DF96A47!22159");
+		System.out.println(file.getName());
+		System.out.println(file.getId());
+	}
+
+	public void testSharedItem() {
+		getClient();
+
+		BaseItem[] shared = client.getShared();
+
+		for (BaseItem item : shared) {
+			System.out.println(item.getId());
+			System.out.println(item.getName());
+		}
 	}
 
 	public void testDrives() {
@@ -101,6 +120,7 @@ public class ClientTest extends TestCase {
 	public void testGetItem() {
 		getClient();
 
+		// BOJ
 		FolderItem folder = client.getFolder("D4FD82CA6DF96A47!14841");
 		System.out.println(folder.getName());
 		for (BaseItem item : folder) {

@@ -1,15 +1,18 @@
 package org.onedrive.utils;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.istack.internal.NotNull;
 import lombok.Getter;
 import org.network.HttpsRequest;
 import org.network.HttpsResponse;
+import org.onedrive.Client;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 /**
  * {@// TODO: Enhance javadoc}
@@ -18,17 +21,17 @@ import java.net.URL;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class OneDriveRequest {
-	public static final ObjectMapper mapper = new ObjectMapper();
 	/**
 	 * OneDrive API base URL.
 	 */
 	@Getter private static final String baseUrl = "https://api.onedrive.com/v1.0";
+	private final ObjectMapper mapper;
+	@Getter private final Client client;
 
-	/**
-	 * @deprecated {@link OneDriveRequest} is just static util class. Can not instantiations.
-	 */
-	@Deprecated
-	private OneDriveRequest() {
+
+	public OneDriveRequest(@NotNull Client client, @NotNull ObjectMapper mapper) {
+		this.client = client;
+		this.mapper = mapper;
 	}
 
 
@@ -91,6 +94,26 @@ public class OneDriveRequest {
 	@NotNull
 	public static HttpsResponse doGet(@NotNull URL url, @NotNull String accessToken) {
 		return newOneDriveRequest(url, accessToken).doGet();
+	}
+
+	@NotNull
+	public static HttpsResponse doPost(@NotNull String api, @NotNull String accessToken, @NotNull byte[] content) {
+		return newOneDriveRequest(api, accessToken).doPost(content);
+	}
+
+	@NotNull
+	public static HttpsResponse doPost(@NotNull String api, @NotNull String accessToken, @NotNull String content) {
+		return newOneDriveRequest(api, accessToken).doPost(content);
+	}
+
+	@NotNull
+	public static HttpsResponse doPost(@NotNull URL url, @NotNull String accessToken, @NotNull byte[] content) {
+		return newOneDriveRequest(url, accessToken).doPost(content);
+	}
+
+	@NotNull
+	public static HttpsResponse doPost(@NotNull URL url, @NotNull String accessToken, @NotNull String content) {
+		return newOneDriveRequest(url, accessToken).doPost(content);
 	}
 
 
@@ -237,8 +260,44 @@ public class OneDriveRequest {
 	 * @see ObjectNode
 	 */
 	@NotNull
-	public static ObjectNode doGetJson(@NotNull String api, @NotNull String accessToken) {
+	public ObjectNode doGetJson(@NotNull String api, @NotNull String accessToken) {
 		HttpsResponse response = doGet(api, accessToken);
+
+		try {
+			return (ObjectNode) mapper.readTree(response.getContent());
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+		}
+	}
+
+	@NotNull
+	public ObjectNode doPostJson(@NotNull String api, @NotNull String accessToken, @NotNull String content) {
+		return doPostJson(api, accessToken, content.getBytes(StandardCharsets.UTF_8));
+	}
+
+	@NotNull
+	public ObjectNode doPostJson(@NotNull String api, @NotNull String accessToken, @NotNull byte[] content) {
+		HttpsResponse response = doPost(api, accessToken, content);
+
+		try {
+			return (ObjectNode) mapper.readTree(response.getContent());
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+		}
+	}
+
+	@NotNull
+	public ObjectNode doPostJson(@NotNull URL url, @NotNull String accessToken, @NotNull String content) {
+		return doPostJson(url, accessToken, content.getBytes(StandardCharsets.UTF_8));
+	}
+
+	@NotNull
+	public ObjectNode doPostJson(@NotNull URL url, @NotNull String accessToken, @NotNull byte[] content) {
+		HttpsResponse response = doPost(url, accessToken, content);
 
 		try {
 			return (ObjectNode) mapper.readTree(response.getContent());
@@ -275,7 +334,7 @@ public class OneDriveRequest {
 	 * @see ObjectNode
 	 */
 	@NotNull
-	public static ObjectNode doGetJson(@NotNull URL url, @NotNull String accessToken) {
+	public ObjectNode doGetJson(@NotNull URL url, @NotNull String accessToken) {
 		HttpsResponse response = doGet(url, accessToken);
 
 		try {
@@ -285,5 +344,23 @@ public class OneDriveRequest {
 			e.printStackTrace();
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 		}
+	}
+
+	@NotNull
+	public <T> T doGetObject(@NotNull String api, @NotNull String accessToken, Class<T> classType) {
+		HttpsResponse response = doGet(api, accessToken);
+
+		try {
+			return mapper.readValue(response.getContent(), classType);
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Can't convert response to " + classType + ".");
+		}
+	}
+
+	@NotNull
+	public <T> T makeObjectFromJson(@NotNull JsonNode json, Class<T> classType) {
+		return mapper.convertValue(json, classType);
 	}
 }

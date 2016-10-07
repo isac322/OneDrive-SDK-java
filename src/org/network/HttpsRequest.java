@@ -50,15 +50,21 @@ public class HttpsRequest {
 
 	@NotNull
 	public HttpsResponse doPost(String content) {
+		byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+
+		return doPost(bytes);
+	}
+
+	@NotNull
+	public HttpsResponse doPost(byte[] content) {
 		try {
 			httpConnection.setDoOutput(true);
 			httpConnection.setRequestMethod("POST");
 
-			byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
-			httpConnection.setFixedLengthStreamingMode(bytes.length);
+			httpConnection.setFixedLengthStreamingMode(content.length);
 
 			OutputStream out = httpConnection.getOutputStream();
-			out.write(bytes);
+			out.write(content);
 			out.flush();
 			out.close();
 
@@ -111,7 +117,7 @@ public class HttpsRequest {
 			ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 			BufferedInputStream body;
 
-			if (code == 200) {
+			if (code < 400) {
 				body = new BufferedInputStream(httpConnection.getInputStream());
 			}
 			else {

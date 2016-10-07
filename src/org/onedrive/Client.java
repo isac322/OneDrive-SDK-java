@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.istack.internal.NotNull;
 import lombok.Getter;
@@ -18,8 +19,10 @@ import org.onedrive.container.items.FolderItem;
 import org.onedrive.utils.AuthServer;
 import org.onedrive.utils.OneDriveRequest;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.Semaphore;
@@ -30,8 +33,8 @@ import java.util.concurrent.Semaphore;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class Client {
-	private static final String UNREACHABLE_MSG = "Unreachable Area. Check stack stace above";
-	@Getter private final ObjectMapper mapper = new ObjectMapper();
+	@Getter private final OneDriveRequest requestTool;
+	private final ObjectMapper mapper;
 	private long lastRefresh;
 	@Getter private long expirationTime;
 	@Getter private String tokenType;
@@ -70,8 +73,8 @@ public class Client {
 		this.clientId = clientId;
 		this.clientSecret = clientSecret;
 		this.redirectURL = redirectURL;
-		if (autoLogin) login();
 
+		mapper = new ObjectMapper();
 
 		InjectableValues.Std clientInjector = new InjectableValues.Std().addValue("OneDriveClient", this);
 		mapper.setInjectableValues(clientInjector);
@@ -83,9 +86,15 @@ public class Client {
 		and
 		https://github.com/FasterXML/jackson-databind/issues/962
 		 */
-		mapper.registerModule(new SimpleModule().setMixInAnnotation(ObjectMapper.class, IgnoreMe.class));
+		mapper.registerModule(
+				new SimpleModule().setMixInAnnotation(ObjectMapper.class, Client.IgnoreMe.class));
 
 		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+
+		requestTool = new OneDriveRequest(this, mapper);
+
+		if (autoLogin) login();
 	}
 
 	/**
@@ -131,13 +140,12 @@ public class Client {
 		}
 		catch (IOException | URISyntaxException e) {
 			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 		}
 		catch (InterruptedException e) {
 			e.printStackTrace();
-			System.err.println("Lock Error In " + this.getClass().getName());
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Lock Error In " + this.getClass().getName());
 		}
-
-		throw new RuntimeException(UNREACHABLE_MSG);
 	}
 
 	private String redeemToken() {
@@ -189,10 +197,9 @@ public class Client {
 		}
 		catch (IOException e) {
 			e.printStackTrace();
-			System.err.println("Internet Connection Error While Refreshing Login Info");
+			throw new RuntimeException(
+					HttpsRequest.NETWORK_ERR_MSG + " Internet Connection Error While Refreshing Login Info");
 		}
-
-		throw new RuntimeException(UNREACHABLE_MSG);
 	}
 
 	private void saveToken(String accessToken, String refreshToken, String userId, String type, long expirationTime) {
@@ -226,14 +233,19 @@ public class Client {
 			// TODO
 			HttpsResponse response = request.doGet();
 
+			if (response.getCode() != HttpsURLConnection.HTTP_MOVED_TEMP) {
+				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Fail to logout.");
+			}
+
 			authCode = null;
 			accessToken = null;
 			userId = null;
 			refreshToken = null;
 			expirationTime = 0;
 		}
-		catch (IOException e) {
+		catch (MalformedURLException e) {
 			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Code Fail : Wrong URL.");
 		}
 	}
 
@@ -249,16 +261,14 @@ public class Client {
 	public Drive getDefaultDrive() {
 		checkExpired();
 
-		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive", accessToken);
-
-		return mapper.convertValue(jsonResponse, Drive.class);
+		return requestTool.doGetObject("/drive", accessToken, Drive.class);
 	}
 
 	@NotNull
 	public Drive[] getAllDrive() {
 		checkExpired();
 
-		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drives", accessToken);
+		ObjectNode jsonResponse = requestTool.doGetJson("/drives", accessToken);
 
 		return mapper.convertValue(jsonResponse.get("value"), Drive[].class);
 	}
@@ -267,29 +277,46 @@ public class Client {
 	public FolderItem getRootDir() {
 		checkExpired();
 
-		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive/root:/?expand=children", accessToken);
-
-		return mapper.convertValue(jsonResponse, FolderItem.class);
+		return requestTool.doGetObject("/drive/root:/?expand=children", accessToken, FolderItem.class);
 	}
 
 	@NotNull
 	public FolderItem getFolder(@NotNull String id) {
 		checkExpired();
 
-		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
-
-		return mapper.convertValue(jsonResponse, FolderItem.class);
+		return requestTool.doGetObject("/drive/items/" + id + "?expand=children", accessToken, FolderItem.class);
 	}
 
 	@NotNull
 	public FileItem getFile(@NotNull String id) {
 		checkExpired();
 
-		ObjectNode jsonResponse = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
+		return requestTool.doGetObject("/drive/items/" + id, accessToken, FileItem.class);
+	}
 
-		return mapper.convertValue(jsonResponse, FileItem.class);
+	@NotNull
+	public BaseItem[] getShared() {
+		checkExpired();
+
+		ArrayNode values = (ArrayNode) requestTool.doGetJson("/drive/shared", accessToken).get("value");
+
+		int size = values.size();
+		BaseItem[] items = new BaseItem[size];
+
+
+		ObjectNode jsonResponse;
+		for (int i = 0; i < size; i++) {
+			jsonResponse = requestTool.doGetJson(
+					"/drive/items/" + values.get(i).get("id").asText() + "?expand=children",
+					accessToken);
+
+			items[i] = mapper.convertValue(jsonResponse, BaseItem.class);
+		}
+
+		return items;
 	}
 
 	@JsonIgnoreType
-	private static class IgnoreMe {}
+	private static class IgnoreMe {
+	}
 }
