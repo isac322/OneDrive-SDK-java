@@ -1,10 +1,11 @@
 package org.onedrive.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sun.istack.internal.NotNull;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
 import org.network.HttpsRequest;
 import org.network.HttpsResponse;
 import org.onedrive.Client;
@@ -272,42 +273,6 @@ public class OneDriveRequest {
 		}
 	}
 
-	@NotNull
-	public ObjectNode doPostJson(@NotNull String api, @NotNull String accessToken, @NotNull String content) {
-		return doPostJson(api, accessToken, content.getBytes(StandardCharsets.UTF_8));
-	}
-
-	@NotNull
-	public ObjectNode doPostJson(@NotNull String api, @NotNull String accessToken, @NotNull byte[] content) {
-		HttpsResponse response = doPost(api, accessToken, content);
-
-		try {
-			return (ObjectNode) mapper.readTree(response.getContent());
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
-		}
-	}
-
-	@NotNull
-	public ObjectNode doPostJson(@NotNull URL url, @NotNull String accessToken, @NotNull String content) {
-		return doPostJson(url, accessToken, content.getBytes(StandardCharsets.UTF_8));
-	}
-
-	@NotNull
-	public ObjectNode doPostJson(@NotNull URL url, @NotNull String accessToken, @NotNull byte[] content) {
-		HttpsResponse response = doPost(url, accessToken, content);
-
-		try {
-			return (ObjectNode) mapper.readTree(response.getContent());
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
-		}
-	}
-
 	/**
 	 * <a href='https://dev.onedrive.com/items/get.htm'>https://dev.onedrive.com/items/get.htm</a>
 	 * <br><br>
@@ -347,6 +312,42 @@ public class OneDriveRequest {
 	}
 
 	@NotNull
+	public ObjectNode doPostJson(@NotNull String api, @NotNull String accessToken, @NotNull String content) {
+		return doPostJson(api, accessToken, content.getBytes(StandardCharsets.UTF_8));
+	}
+
+	@NotNull
+	public ObjectNode doPostJson(@NotNull String api, @NotNull String accessToken, @NotNull byte[] content) {
+		HttpsResponse response = doPost(api, accessToken, content);
+
+		try {
+			return (ObjectNode) mapper.readTree(response.getContent());
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+		}
+	}
+
+	@NotNull
+	public ObjectNode doPostJson(@NotNull URL url, @NotNull String accessToken, @NotNull String content) {
+		return doPostJson(url, accessToken, content.getBytes(StandardCharsets.UTF_8));
+	}
+
+	@NotNull
+	public ObjectNode doPostJson(@NotNull URL url, @NotNull String accessToken, @NotNull byte[] content) {
+		HttpsResponse response = doPost(url, accessToken, content);
+
+		try {
+			return (ObjectNode) mapper.readTree(response.getContent());
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+		}
+	}
+
+	@NotNull
 	public <T> T doGetObject(@NotNull String api, @NotNull String accessToken, Class<T> classType) {
 		HttpsResponse response = doGet(api, accessToken);
 
@@ -360,7 +361,10 @@ public class OneDriveRequest {
 	}
 
 	@NotNull
-	public <T> T makeObjectFromJson(@NotNull JsonNode json, Class<T> classType) {
-		return mapper.convertValue(json, classType);
+	public HttpsResponse postMetadata(@NotNull String api, @NotNull String accessToken, byte[] content) {
+		HttpsRequest request = newOneDriveRequest(api, accessToken);
+		request.setHeader("Content-Type", "application/json");
+		request.setHeader("Prefer", "respond-async");
+		return request.doPost(content);
 	}
 }

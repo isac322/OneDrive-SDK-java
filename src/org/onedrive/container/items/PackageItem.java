@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
@@ -16,7 +18,7 @@ import org.onedrive.container.facet.*;
  */
 @JsonDeserialize(as = PackageItem.class)
 public class PackageItem extends BaseItem {
-	@Getter protected PackageFacet packages;
+	@Getter @NotNull protected PackageFacet packages;
 
 	@JsonCreator
 	public PackageItem(@JsonProperty("id") String id,
@@ -30,11 +32,11 @@ public class PackageItem extends BaseItem {
 					   @JsonProperty("lastModifiedBy") IdentitySet lastModifiedBy,
 					   @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime,
 					   @JsonProperty("name") String name,
-					   @JsonProperty("package") PackageFacet packages,
-					   @JsonProperty("parentReference") ItemReference parentReference,
-					   @JsonProperty("searchResult") SearchResultFacet searchResult,
-					   @JsonProperty("shared") SharedFacet shared,
-					   @JsonProperty("sharePointIds") SharePointIdsFacet sharePointIds,
+					   @JsonProperty("package") @NotNull PackageFacet packages,
+					   @JsonProperty("parentReference") @NotNull ItemReference parentReference,
+					   @JsonProperty("searchResult") @Nullable SearchResultFacet searchResult,
+					   @JsonProperty("shared") @Nullable SharedFacet shared,
+					   @JsonProperty("sharePointIds") @Nullable SharePointIdsFacet sharePointIds,
 					   @JsonProperty("size") Long size,
 					   @JsonProperty("webDavUrl") String webDavUrl,
 					   @JsonProperty("webUrl") String webUrl) {
@@ -57,5 +59,11 @@ public class PackageItem extends BaseItem {
 		this.size = size;
 		this.webDavUrl = webDavUrl;
 		this.webUrl = webUrl;
+	}
+
+	@Override
+	@NotNull
+	public ItemReference newReference() {
+		return new ItemReference(parentReference.driveId, id, parentReference.rawPath + '/' + name);
 	}
 }

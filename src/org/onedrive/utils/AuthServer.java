@@ -3,6 +3,7 @@ package org.onedrive.utils;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -46,6 +47,7 @@ public final class AuthServer {
 		if (server != null) server.start();
 	}
 
+	@Nullable
 	public String close() {
 		if (server != null) {
 			server.stop(0);

@@ -2,8 +2,8 @@ package org.onedrive.container.facet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sun.istack.internal.Nullable;
 import lombok.Getter;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 
@@ -20,8 +20,8 @@ public class FileFacet {
 	@Getter @Nullable protected final String quickXorHash;
 
 	@JsonCreator
-	protected FileFacet(@JsonProperty("mimeType") String mimeType,
-						@JsonProperty("hashes") LinkedHashMap<String, String> hashes) {
+	protected FileFacet(@Nullable @JsonProperty("mimeType") String mimeType,
+						@Nullable @JsonProperty("hashes") LinkedHashMap<String, String> hashes) {
 		this.mimeType = mimeType;
 		if (hashes != null) {
 			this.sha1Hash = hashes.get("sha1Hash");

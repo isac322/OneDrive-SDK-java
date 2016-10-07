@@ -1,10 +1,11 @@
 package org.onedrive.container.items;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sun.istack.internal.NotNull;
-import com.sun.istack.internal.Nullable;
+ import org.jetbrains.annotations.NotNull;
 import lombok.Getter;
+import org.jetbrains.annotations.Nullable;
 import org.network.HttpsRequest;
 
 import java.io.UnsupportedEncodingException;
@@ -19,21 +20,21 @@ import java.net.URLDecoder;
 public class ItemReference {
 	@Getter @NotNull protected final String driveId;
 	@Getter @Nullable protected final String id;
-	@Getter @Nullable protected final String path;
-	@Getter @NotNull protected final String rawPath;
+	@Getter(onMethod = @__(@JsonIgnore)) @Nullable protected final String path;
+	@Getter @Nullable @JsonProperty("path") protected final String rawPath;
 
 	@JsonCreator
-	protected ItemReference(@JsonProperty("driveId") String driveId,
-							@JsonProperty("id") String id,
-							@JsonProperty("path") String path) {
+	protected ItemReference(@JsonProperty("driveId") @NotNull String driveId,
+							@JsonProperty("id") @Nullable String id,
+							@JsonProperty("path") @Nullable String rawPath) {
 		this.driveId = driveId;
 		this.id = id;
-		this.rawPath = path;
+		this.rawPath = rawPath;
 
-		if (path != null) {
+		if (rawPath != null) {
 			String decoded;
 			try {
-				decoded = URLDecoder.decode(path, "UTF-8");
+				decoded = URLDecoder.decode(rawPath, "UTF-8");
 			}
 			catch (UnsupportedEncodingException e) {
 				e.printStackTrace();

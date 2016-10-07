@@ -7,8 +7,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sun.istack.internal.NotNull;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
 import org.network.HttpsRequest;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
@@ -27,7 +27,7 @@ public class RemoteFolderItem extends FolderItem {
 
 	@JsonCreator
 	protected RemoteFolderItem(@JacksonInject("OneDriveClient") Client client,
-							   @JsonProperty("id") String id,
+							   @JsonProperty("id") @NotNull String id,
 							   @JsonProperty("createdBy") IdentitySet createdBy,
 							   @JsonProperty("createdDateTime") String createdDateTime,
 							   @JsonProperty("cTag") String cTag,
@@ -37,9 +37,9 @@ public class RemoteFolderItem extends FolderItem {
 							   @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
 							   @JsonProperty("lastModifiedBy") IdentitySet lastModifiedBy,
 							   @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime,
-							   @JsonProperty("name") String name,
+							   @JsonProperty("name") @NotNull String name,
 							   @JsonProperty("parentReference") ItemReference parentReference,
-							   @JsonProperty("remoteItem") RemoteItemFacet remoteItem,
+							   @JsonProperty("remoteItem") @NotNull RemoteItemFacet remoteItem,
 							   @JsonProperty("root") ObjectNode root,
 							   @JsonProperty("searchResult") SearchResultFacet searchResult,
 							   @JsonProperty("shared") SharedFacet shared,
@@ -54,7 +54,9 @@ public class RemoteFolderItem extends FolderItem {
 				remoteItem.getFolder(), lastModifiedBy, lastModifiedDateTime, name, parentReference, root,
 				searchResult, shared, sharePointIds, remoteItem.getSize(), specialFolder, webDavUrl, webUrl, nextLink,
 				children);
+
 		this.remoteItem = remoteItem;
+
 		if (size != null) {
 			throw new RuntimeException("DEV: Size facet is exist in RemoteItem!!!!");
 		}

@@ -13,7 +13,9 @@ import static java.util.stream.Collectors.toList;
  * original: http://stackoverflow.com/a/13592567
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
+ * @deprecated
  */
+@Deprecated
 public class URLQueryParser {
 	public static Map<String, List<String>> splitQuery(URI url) {
 		return Arrays.stream(url.getQuery().split("&"))

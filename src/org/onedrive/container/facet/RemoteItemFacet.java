@@ -2,9 +2,9 @@ package org.onedrive.container.facet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sun.istack.internal.NotNull;
-import com.sun.istack.internal.Nullable;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.items.ItemReference;
 
 /**
@@ -19,17 +19,17 @@ public class RemoteItemFacet {
 	@Getter @Nullable protected final FolderFacet folder;
 	@Getter @Nullable protected final FileFacet file;
 	@Getter @Nullable protected final FileSystemInfoFacet fileSystemInfo;
-	@Getter @NotNull protected final long size;
-	@Getter @NotNull protected final String name;
+	@Getter protected final long size;
+	@Getter @Nullable protected final String name;
 
 	@JsonCreator
-	protected RemoteItemFacet(@JsonProperty("id") String id,
-							  @JsonProperty("parentReference") ItemReference parentReference,
-							  @JsonProperty("folder") FolderFacet folder,
-							  @JsonProperty("file") FileFacet file,
-							  @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
+	protected RemoteItemFacet(@NotNull @JsonProperty("id") String id,
+							  @NotNull @JsonProperty("parentReference") ItemReference parentReference,
+							  @Nullable @JsonProperty("folder") FolderFacet folder,
+							  @Nullable @JsonProperty("file") FileFacet file,
+							  @Nullable @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
 							  @JsonProperty("size") Long size,
-							  @JsonProperty("name") String name) {
+							  @Nullable @JsonProperty("name") String name) {
 		if (size == null) {
 			throw new RuntimeException("\"size\" filed can not be null");
 		}

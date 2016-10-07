@@ -2,8 +2,8 @@ package org.onedrive.container.facet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sun.istack.internal.Nullable;
 import lombok.Getter;
+import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.BaseContainer;
 
 import java.time.ZonedDateTime;
@@ -28,14 +28,14 @@ public class PhotoFacet {
 	@Getter @Nullable protected final Long iso;
 
 	@JsonCreator
-	protected PhotoFacet(@JsonProperty("takenDateTime") String takenDateTime,
-						 @JsonProperty("cameraMake") String cameraMake,
-						 @JsonProperty("cameraModel") String cameraModel,
-						 @JsonProperty("fNumber") Double fNumber,
-						 @JsonProperty("exposureDenominator") Double exposureDenominator,
-						 @JsonProperty("exposureNumerator") Double exposureNumerator,
-						 @JsonProperty("focalLength") Double focalLength,
-						 @JsonProperty("iso") Long iso) {
+	protected PhotoFacet(@Nullable @JsonProperty("takenDateTime") String takenDateTime,
+						 @Nullable @JsonProperty("cameraMake") String cameraMake,
+						 @Nullable @JsonProperty("cameraModel") String cameraModel,
+						 @Nullable @JsonProperty("fNumber") Double fNumber,
+						 @Nullable @JsonProperty("exposureDenominator") Double exposureDenominator,
+						 @Nullable @JsonProperty("exposureNumerator") Double exposureNumerator,
+						 @Nullable @JsonProperty("focalLength") Double focalLength,
+						 @Nullable @JsonProperty("iso") Long iso) {
 		this.takenDateTime = takenDateTime == null ? null : BaseContainer.parseDateTime(takenDateTime);
 		this.cameraMake = cameraMake;
 		this.cameraModel = cameraModel;

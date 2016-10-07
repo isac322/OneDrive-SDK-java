@@ -7,9 +7,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sun.istack.internal.NotNull;
-import com.sun.istack.internal.Nullable;
-import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.network.HttpsRequest;
 import org.onedrive.Client;
 import org.onedrive.container.BaseContainer;
@@ -29,11 +28,11 @@ import java.util.List;
  */
 @JsonDeserialize(as = FolderItem.class)
 public class FolderItem extends BaseItem implements Iterable<BaseItem> {
-	@Getter protected FolderFacet folder;
+	@NotNull protected FolderFacet folder;
 	@Nullable protected SpecialFolderFacet specialFolder;
-	@NotNull protected List<FolderItem> folderChildren;
-	@NotNull protected List<FileItem> fileChildren;
-	@NotNull protected List<BaseItem> allChildren;
+	@Nullable protected List<FolderItem> folderChildren;
+	@Nullable protected List<FileItem> fileChildren;
+	@Nullable protected List<BaseItem> allChildren;
 	protected boolean root;
 
 
@@ -47,22 +46,23 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 						 @JsonProperty("description") String description,
 						 @JsonProperty("eTag") String eTag,
 						 @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
-						 @JsonProperty("folder") FolderFacet folder,
+						 @JsonProperty("folder") @NotNull FolderFacet folder,
 						 @JsonProperty("lastModifiedBy") IdentitySet lastModifiedBy,
 						 @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime,
-						 @JsonProperty("name") String name,
-						 @JsonProperty("parentReference") ItemReference parentReference,
+						 @JsonProperty("name") @NotNull String name,
+						 @JsonProperty("parentReference") @Nullable ItemReference parentReference,
 						 @JsonProperty("root") ObjectNode root,
-						 @JsonProperty("searchResult") SearchResultFacet searchResult,
-						 @JsonProperty("shared") SharedFacet shared,
-						 @JsonProperty("sharePointIds") SharePointIdsFacet sharePointIds,
+						 @JsonProperty("searchResult") @Nullable SearchResultFacet searchResult,
+						 @JsonProperty("shared") @Nullable SharedFacet shared,
+						 @JsonProperty("sharePointIds") @Nullable SharePointIdsFacet sharePointIds,
 						 @JsonProperty("size") Long size,
-						 @JsonProperty("specialFolder") SpecialFolderFacet specialFolder,
+						 @JsonProperty("specialFolder") @Nullable SpecialFolderFacet specialFolder,
 						 @JsonProperty("webDavUrl") String webDavUrl,
 						 @JsonProperty("webUrl") String webUrl,
-						 @JsonProperty("children@odata.nextLink") String nextLink,
-						 @JsonProperty("children") ArrayNode children) {
+						 @JsonProperty("children@odata.nextLink") @Nullable String nextLink,
+						 @JsonProperty("children") @Nullable ArrayNode children) {
 		this.client = client;
+
 		this.id = id;
 		this.createdBy = createdBy;
 		this.createdDateTime = createdDateTime == null ? null : BaseContainer.parseDateTime(createdDateTime);
@@ -97,6 +97,10 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			fileChildren = null;
 			allChildren = null;
 		}
+
+		if (!this.root && parentReference == null) {
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " parentReference is missing!");
+		}
 	}
 
 	protected static void parseChildren(@NotNull Client client, @NotNull JsonNode array, @Nullable String nextLink,
@@ -105,7 +109,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		while (true) {
 			for (JsonNode child : array) {
 				if (child.isObject()) {
-					BaseItem item = client.getRequestTool().makeObjectFromJson(child, BaseItem.class);
+					BaseItem item = client.getMapper().convertValue(child, BaseItem.class);
 
 					if (item instanceof FolderItem) {
 						folder.add((FolderItem) item);
@@ -153,6 +157,13 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		}
 	}
 
+	@Override
+	@NotNull
+	public ItemReference newReference() {
+		return new ItemReference(root ? id : parentReference.driveId, id,
+				root ? "/drive/root:" : parentReference.rawPath + '/' + name);
+	}
+
 	public boolean isRoot() {
 		return root;
 	}
@@ -190,29 +201,31 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		return specialFolder != null;
 	}
 
+	@SuppressWarnings("ConstantConditions")
 	@NotNull
 	public List<BaseItem> getAllChildren() {
 		if (!isChildrenFetched()) fetchChildren();
 		return allChildren;
 	}
 
+	@SuppressWarnings("ConstantConditions")
 	@NotNull
 	public List<FolderItem> getFolderChildren() {
 		if (!isChildrenFetched()) fetchChildren();
 		return folderChildren;
 	}
 
+	@SuppressWarnings("ConstantConditions")
 	@NotNull
 	public List<FileItem> getFileChildren() {
 		if (!isChildrenFetched()) fetchChildren();
 		return fileChildren;
 	}
 
-	@Override
 	@NotNull
+	@Override
 	public Iterator<BaseItem> iterator() {
-		if (!isChildrenFetched()) fetchChildren();
-		return new ChildrenIterator(allChildren.iterator());
+		return new ChildrenIterator(getAllChildren().iterator());
 	}
 
 	private class ChildrenIterator implements Iterator<BaseItem> {

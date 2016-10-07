@@ -2,8 +2,8 @@ package org.onedrive.container.facet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sun.istack.internal.Nullable;
 import lombok.Getter;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * https://dev.onedrive.com/facets/audio_facet.htm
@@ -30,22 +30,22 @@ public class AudioFacet {
 	@Getter @Nullable protected final Long year;
 
 	@JsonCreator
-	protected AudioFacet(@JsonProperty("album") String album,
-						 @JsonProperty("albumArtist") String albumArtist,
-						 @JsonProperty("artist") String artist,
-						 @JsonProperty("bitrate") Long bitrate,
-						 @JsonProperty("composers") String composers,
-						 @JsonProperty("copyright") String copyright,
-						 @JsonProperty("disc") Long disc,
-						 @JsonProperty("discCount") Long discCount,
-						 @JsonProperty("duration") Long duration,
-						 @JsonProperty("genre") String genre,
-						 @JsonProperty("hasDrm") Boolean hasDrm,
-						 @JsonProperty("isVariableBitrate") Boolean isVariableBitrate,
-						 @JsonProperty("title") String title,
-						 @JsonProperty("track") Long track,
-						 @JsonProperty("trackCount") Long trackCount,
-						 @JsonProperty("year") Long year) {
+	protected AudioFacet(@Nullable @JsonProperty("album") String album,
+						 @Nullable @JsonProperty("albumArtist") String albumArtist,
+						 @Nullable @JsonProperty("artist") String artist,
+						 @Nullable @JsonProperty("bitrate") Long bitrate,
+						 @Nullable @JsonProperty("composers") String composers,
+						 @Nullable @JsonProperty("copyright") String copyright,
+						 @Nullable @JsonProperty("disc") Long disc,
+						 @Nullable @JsonProperty("discCount") Long discCount,
+						 @Nullable @JsonProperty("duration") Long duration,
+						 @Nullable @JsonProperty("genre") String genre,
+						 @Nullable @JsonProperty("hasDrm") Boolean hasDrm,
+						 @Nullable @JsonProperty("isVariableBitrate") Boolean isVariableBitrate,
+						 @Nullable @JsonProperty("title") String title,
+						 @Nullable @JsonProperty("track") Long track,
+						 @Nullable @JsonProperty("trackCount") Long trackCount,
+						 @Nullable @JsonProperty("year") Long year) {
 		this.album = album;
 		this.albumArtist = albumArtist;
 		this.artist = artist;

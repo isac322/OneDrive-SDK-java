@@ -7,8 +7,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sun.istack.internal.Nullable;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -23,7 +24,7 @@ import java.util.Map;
 public class Drive extends BaseContainer {
 	protected static Map<String, Drive> containerSet = new LinkedHashMap<>();
 
-	@Getter @Nullable protected final String id;
+	@Getter @NotNull protected final String id;
 	@Getter @Nullable protected final String driveType;
 	@Getter @Nullable protected final IdentitySet identitySet;
 	@Getter @Nullable protected final String state;
@@ -32,7 +33,7 @@ public class Drive extends BaseContainer {
 	@Getter @Nullable protected final Long usedCapacity;
 	@Getter @Nullable protected final Long remaining;
 
-	protected Drive(String id, String driveType, IdentitySet identitySet) {
+	protected Drive(@NotNull String id, @Nullable String driveType, @Nullable IdentitySet identitySet) {
 		this.id = id;
 		this.driveType = driveType;
 		this.identitySet = identitySet;
@@ -40,8 +41,9 @@ public class Drive extends BaseContainer {
 		totalCapacity = deleted = usedCapacity = remaining = null;
 	}
 
-	protected Drive(String id, String driveType, IdentitySet identitySet, String state, Long totalCapacity,
-					Long deleted, Long usedCapacity, Long remaining) {
+	protected Drive(@NotNull String id, @Nullable String driveType, @Nullable IdentitySet identitySet,
+					@Nullable String state, @Nullable Long totalCapacity, @Nullable Long deleted,
+					@Nullable Long usedCapacity, @Nullable Long remaining) {
 		this.id = id;
 		this.driveType = driveType;
 		this.identitySet = identitySet;
@@ -74,6 +76,7 @@ public class Drive extends BaseContainer {
 	public boolean equals(Object obj) {
 		return obj instanceof Drive && id.equals(((Drive) obj).getId());
 	}
+
 
 	static class DriveDeserializer extends JsonDeserializer<Drive> {
 		@Override

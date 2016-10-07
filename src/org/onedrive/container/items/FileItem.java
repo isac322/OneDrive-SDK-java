@@ -5,9 +5,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sun.istack.internal.NotNull;
-import com.sun.istack.internal.Nullable;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.network.HttpsResponse;
 import org.onedrive.Client;
 import org.onedrive.container.BaseContainer;
@@ -37,30 +37,31 @@ public class FileItem extends BaseItem {
 	@JsonCreator
 	protected FileItem(@JacksonInject("OneDriveClient") Client client,
 					   @JsonProperty("id") String id,
-					   @JsonProperty("audio") AudioFacet audio,
+					   @JsonProperty("audio") @Nullable AudioFacet audio,
 					   @JsonProperty("createdBy") IdentitySet createdBy,
 					   @JsonProperty("createdDateTime") String createdDateTime,
 					   @JsonProperty("cTag") String cTag,
 					   @JsonProperty("deleted") ObjectNode deleted,
 					   @JsonProperty("description") String description,
 					   @JsonProperty("eTag") String eTag,
-					   @JsonProperty("file") FileFacet file,
+					   @JsonProperty("file") @NotNull FileFacet file,
 					   @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
-					   @JsonProperty("image") ImageFacet image,
+					   @JsonProperty("image") @Nullable ImageFacet image,
 					   @JsonProperty("lastModifiedBy") IdentitySet lastModifiedBy,
 					   @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime,
-					   @JsonProperty("location") LocationFacet location,
-					   @JsonProperty("name") String name,
-					   @JsonProperty("parentReference") ItemReference parentReference,
-					   @JsonProperty("photo") PhotoFacet photo,
-					   @JsonProperty("searchResult") SearchResultFacet searchResult,
-					   @JsonProperty("shared") SharedFacet shared,
-					   @JsonProperty("sharePointIds") SharePointIdsFacet sharePointIds,
+					   @JsonProperty("location") @Nullable LocationFacet location,
+					   @JsonProperty("name") @NotNull String name,
+					   @JsonProperty("parentReference") @NotNull ItemReference parentReference,
+					   @JsonProperty("photo") @Nullable PhotoFacet photo,
+					   @JsonProperty("searchResult") @Nullable SearchResultFacet searchResult,
+					   @JsonProperty("shared") @Nullable SharedFacet shared,
+					   @JsonProperty("sharePointIds") @Nullable SharePointIdsFacet sharePointIds,
 					   @JsonProperty("size") long size,
-					   @JsonProperty("video") VideoFacet video,
+					   @JsonProperty("video") @Nullable VideoFacet video,
 					   @JsonProperty("webDavUrl") String webDavUrl,
 					   @JsonProperty("webUrl") String webUrl) {
 		this.client = client;
+
 		this.id = id;
 		this.audio = audio;
 		this.createdBy = createdBy;
@@ -87,6 +88,12 @@ public class FileItem extends BaseItem {
 		this.webUrl = webUrl;
 	}
 
+	@Override
+	@NotNull
+	public ItemReference newReference() {
+		return new ItemReference(parentReference.driveId, id, parentReference.rawPath + '/' + name);
+	}
+
 	public String getCRC32() {
 		return this.file.getCrc32Hash();
 	}
@@ -102,7 +109,6 @@ public class FileItem extends BaseItem {
 	/**
 	 * @see FileItem#download(Path)
 	 */
-	@NotNull
 	public void download(@NotNull String path) throws IOException, FileDownFailException {
 		this.download(Paths.get(path));
 	}
@@ -124,14 +130,11 @@ public class FileItem extends BaseItem {
 	 * @throws FileAlreadyExistsException If {@code path} is file path and already exists.
 	 * @throws FileDownFailException      If fail to download with not 200 OK response.
 	 */
-	@NotNull
 	public void download(@NotNull Path path) throws IOException, FileDownFailException {
 		path = path.toAbsolutePath();
 		Files.createDirectories(path.getParent());
 
-		HttpsResponse response = OneDriveRequest.doGet(
-				"/drive/items/" + id + "/content",
-				client.getAccessToken());
+		HttpsResponse response = OneDriveRequest.doGet("/drive/items/" + id + "/content", client.getAccessToken());
 
 		if (response.getCode() != 200) {
 			throw new FileDownFailException(

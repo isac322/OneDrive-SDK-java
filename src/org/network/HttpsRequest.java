@@ -1,6 +1,6 @@
 package org.network;
 
-import com.sun.istack.internal.NotNull;
+import org.jetbrains.annotations.NotNull;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedInputStream;
@@ -124,7 +124,7 @@ public class HttpsRequest {
 				// TODO: should be tested about not 4XX response code.
 				body = new BufferedInputStream(httpConnection.getErrorStream());
 				// TODO: for debug
-				throw new RuntimeException("Not 200 OK response received.");
+				// throw new RuntimeException("4XX response received.");
 			}
 
 			int bytes;
@@ -139,7 +139,8 @@ public class HttpsRequest {
 		catch (IOException e) {
 			e.printStackTrace();
 			throw new RuntimeException(NETWORK_ERR_MSG);
-		} finally {
+		}
+		finally {
 			httpConnection.disconnect();
 		}
 	}

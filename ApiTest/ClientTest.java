@@ -1,3 +1,4 @@
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import junit.framework.TestCase;
 import org.network.HttpsResponse;
@@ -16,6 +17,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ClientTest extends TestCase {
 	private static Client client;
+	ObjectMapper mapper = new ObjectMapper();
 
 	private static Client getClient() {
 
@@ -110,8 +112,9 @@ public class ClientTest extends TestCase {
 	public void testRemoteItem() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drives/485bef1a80539148/items/485BEF1A80539148!115?expand=children", client
-				.getAccessToken());
+		HttpsResponse response = OneDriveRequest.doGet
+				("/drives/485bef1a80539148/items/485BEF1A80539148!115?expand=children", client
+						.getAccessToken());
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -166,7 +169,6 @@ public class ClientTest extends TestCase {
 			if (item instanceof FolderItem) {
 				FolderItem folder = (FolderItem) item;
 
-				assertNotNull(folder.getFolder());
 				assertNotNull(folder.getParentReference());
 				assertEquals(folder.childrenCount(), folder.getAllChildren().size());
 				dfs(folder, tab);
@@ -247,10 +249,22 @@ public class ClientTest extends TestCase {
 	public void testSearch() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/root/view.search?q=Gone%20in%20Six%20Characters", client.getAccessToken());
+		HttpsResponse response = OneDriveRequest.doGet("/drive/root/view.search?q=Gone%20in%20Six%20Characters",
+				client.getAccessToken());
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
+	}
+
+	public void testJacksonWrite() throws JsonProcessingException {
+		getClient();
+
+		BaseItem item = ((FolderItem) client.getRootDir().getAllChildren().get(1)).getAllChildren().get(0);
+
+
+		ObjectMapper mapper = new ObjectMapper();
+		String string = mapper.writeValueAsString(item.getParentReference());
+		System.out.println(string);
 	}
 
 	public void testJson() throws IOException {
@@ -273,8 +287,34 @@ public class ClientTest extends TestCase {
 				"  \"year\": 2014\n" +
 				"}";
 
-		ObjectMapper mapper = new ObjectMapper();
 		AudioFacet audio = mapper.readValue(json, AudioFacet.class);
 		System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(audio));
+	}
+
+	public void testCopy() throws JsonProcessingException {
+		getClient();
+
+		FileItem file = client.getFile("D4FD82CA6DF96A47%2124988");
+		FolderItem folder = client.getFolder("D4FD82CA6DF96A47!110");
+
+		file.copyToPath("/drive/root:/test folder");
+	}
+
+	public void testCopy2() {
+		getClient();
+
+		byte[] content = ("{\"parentReference\":{\"driveId\":\"D4FD82CA6DF96A47!107\",\"id\":\"D4FD82CA6DF96A47!107\"," +
+				"\"path\":\"/drive/root:\"}}").getBytes();
+
+		System.out.println(new String(content));
+		System.out.println(String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!14649"));
+
+		HttpsResponse response = client.getRequestTool().postMetadata(
+				String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!14649"),
+				client.getAccessToken(), content);
+
+		System.out.println(response.getCode());
+		System.out.println(response.getMessage());
+		System.out.println(response.getContentString());
 	}
 }

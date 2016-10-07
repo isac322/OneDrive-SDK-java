@@ -2,7 +2,6 @@ package org.onedrive.container.facet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 
 /**
@@ -12,8 +11,8 @@ import lombok.Getter;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class ImageFacet {
-	@Getter @Nullable protected final long width;
-	@Getter @Nullable protected final long height;
+	@Getter protected final long width;
+	@Getter protected final long height;
 
 	@JsonCreator
 	protected ImageFacet(@JsonProperty("width") Long width,

@@ -1,7 +1,7 @@
 package org.network;
 
-import com.sun.istack.internal.NotNull;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
 
 import java.net.URL;
 import java.nio.charset.StandardCharsets;

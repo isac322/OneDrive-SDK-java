@@ -8,8 +8,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sun.istack.internal.NotNull;
+import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.network.HttpsRequest;
 import org.network.HttpsResponse;
 import org.onedrive.container.Drive;
@@ -33,19 +35,35 @@ import java.util.concurrent.Semaphore;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class Client {
-	@Getter private final OneDriveRequest requestTool;
-	private final ObjectMapper mapper;
+	/*
+	for resolve tricky issue of Jackson.
+	See:
+	https://github.com/FasterXML/jackson-databind/issues/1119
+	and
+	https://github.com/FasterXML/jackson-databind/issues/962
+	*/
+	private static final SimpleModule jacksonIsTricky =
+			new SimpleModule().setMixInAnnotation(ObjectMapper.class, Client.IgnoreMe.class);
+
+
+	/**
+	 * Only one {@code mapper} per a {@code Client} object.<br>
+	 * It makes possible to multi client usage
+	 */
+	@Getter private final ObjectMapper mapper;
+	@Getter @NotNull private final OneDriveRequest requestTool;
+
 	private long lastRefresh;
 	@Getter private long expirationTime;
-	@Getter private String tokenType;
-	@Getter private String accessToken;
-	@Getter private String userId;
-	@Getter private String refreshToken;
-	@Getter private String[] scopes;
-	@Getter private String clientId;
-	@Getter private String clientSecret;
-	@Getter private String redirectURL;
-	@Getter private String authCode;
+	@Nullable private String authCode;
+	@Nullable private String tokenType;
+	@Nullable private String accessToken;
+	@Nullable private String userId;
+	@Nullable private String refreshToken;
+	@Getter @NotNull private String[] scopes;
+	@Getter @NotNull private String clientId;
+	@Getter @NotNull private String clientSecret;
+	@Getter @NotNull private String redirectURL;
 
 	/**
 	 * Construct with auto login.
@@ -56,7 +74,8 @@ public class Client {
 	 *                     one!
 	 * @param clientSecret Client secret key that MS gave to programmer.
 	 */
-	public Client(String clientId, String[] scope, String redirectURL, String clientSecret) {
+	public Client(@NotNull String clientId, @NotNull String[] scope,
+				  @NotNull String redirectURL, @NotNull String clientSecret) {
 		this(clientId, scope, redirectURL, clientSecret, true);
 	}
 
@@ -68,7 +87,8 @@ public class Client {
 	 * @param clientSecret Client secret key that MS gave to programmer.
 	 * @param autoLogin    if {@code true} construct with auto login.
 	 */
-	public Client(String clientId, String[] scope, String redirectURL, String clientSecret, boolean autoLogin) {
+	public Client(@NotNull String clientId, @NotNull String[] scope, @NotNull String redirectURL,
+				  @NotNull String clientSecret, boolean autoLogin) {
 		this.scopes = scope;
 		this.clientId = clientId;
 		this.clientSecret = clientSecret;
@@ -86,15 +106,22 @@ public class Client {
 		and
 		https://github.com/FasterXML/jackson-databind/issues/962
 		 */
-		mapper.registerModule(
-				new SimpleModule().setMixInAnnotation(ObjectMapper.class, Client.IgnoreMe.class));
+		mapper.registerModule(jacksonIsTricky);
+		mapper.registerModule(new AfterburnerModule());
+
 
 		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
 
 		requestTool = new OneDriveRequest(this, mapper);
 
 		if (autoLogin) login();
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull
+	public String getAuthCode() {
+		checkExpired();
+		return authCode;
 	}
 
 	/**
@@ -117,6 +144,7 @@ public class Client {
 	 * @return <b>Access Code</b>({@code this.accessToken}) if successful. Otherwise throw {@link RuntimeException}.
 	 * @throws RuntimeException if getting <b>Access Code</b> is unsuccessful.
 	 */
+	@NotNull
 	private String getCode() {
 		String url = String.format("https://login.live.com/oauth20_authorize.srf" +
 						"?client_id=%s&scope=%s&response_type=code&redirect_uri=%s",
@@ -136,6 +164,10 @@ public class Client {
 			String code = server.close();
 			answerLock.release();
 
+			if (code == null) {
+				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+			}
+
 			return code;
 		}
 		catch (IOException | URISyntaxException e) {
@@ -148,12 +180,14 @@ public class Client {
 		}
 	}
 
+	@NotNull
 	private String redeemToken() {
 		return getToken(
 				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&code=%s&grant_type=authorization_code",
 						clientId, redirectURL, clientSecret, authCode));
 	}
 
+	@NotNull
 	public String refreshToken() {
 		if (!isLogin()) {
 			throw new RuntimeException("Do login first!!");
@@ -165,6 +199,7 @@ public class Client {
 						clientId, redirectURL, clientSecret, refreshToken));
 	}
 
+	@NotNull
 	private String getToken(String httpBody) {
 		try {
 			HttpsRequest request = new HttpsRequest("https://login.live.com/oauth20_token.srf");
@@ -212,6 +247,10 @@ public class Client {
 	}
 
 	private void checkExpired() {
+		if (!isLogin()) {
+			throw new RuntimeException("Do login first!!");
+		}
+
 		if (isExpired()) {
 			refreshToken();
 		}
@@ -229,9 +268,7 @@ public class Client {
 			String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
 					clientId, redirectURL);
 
-			HttpsRequest request = new HttpsRequest(url);
-			// TODO
-			HttpsResponse response = request.doGet();
+			HttpsResponse response = new HttpsRequest(url).doGet();
 
 			if (response.getCode() != HttpsURLConnection.HTTP_MOVED_TEMP) {
 				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Fail to logout.");
@@ -315,6 +352,39 @@ public class Client {
 
 		return items;
 	}
+
+
+	/*
+	=============================================================
+	Custom Getter
+	=============================================================
+	 */
+
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getTokenType() {
+		checkExpired();
+		return tokenType;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getAccessToken() {
+		checkExpired();
+		return accessToken;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getUserId() {
+		checkExpired();
+		return userId;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getRefreshToken() {
+		checkExpired();
+		return refreshToken;
+	}
+
 
 	@JsonIgnoreType
 	private static class IgnoreMe {

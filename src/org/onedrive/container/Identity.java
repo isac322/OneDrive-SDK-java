@@ -7,9 +7,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sun.istack.internal.NotNull;
-import com.sun.istack.internal.Nullable;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -28,7 +28,7 @@ public class Identity extends BaseContainer {
 	@Getter @Nullable protected final String displayName;
 	@Getter @Nullable protected final ObjectNode thumbnails;
 
-	protected Identity(String name, String id, ObjectNode thumbnails) {
+	protected Identity(@Nullable String name, @NotNull String id, @Nullable ObjectNode thumbnails) {
 		this.displayName = name;
 		this.id = id;
 		this.thumbnails = thumbnails;

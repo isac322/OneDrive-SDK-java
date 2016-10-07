@@ -2,7 +2,6 @@ package org.onedrive.container.facet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sun.istack.internal.NotNull;
 import lombok.Getter;
 
 /**
@@ -12,7 +11,7 @@ import lombok.Getter;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class FolderFacet {
-	@Getter @NotNull protected final long childCount;
+	@Getter protected final long childCount;
 
 	@JsonCreator
 	protected FolderFacet(@JsonProperty("childCount") Long childCount) {
