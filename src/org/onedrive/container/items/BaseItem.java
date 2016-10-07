@@ -63,44 +63,54 @@ abstract public class BaseItem extends BaseContainer {
 	public void delete() throws IOException {
 		HttpsResponse response = OneDriveRequest.doDelete("/drive/items/" + id, client.getAccessToken());
 
-		if (response.getCode() != 200) {
+		// 204 No Content
+		if (response.getCode() != HttpsURLConnection.HTTP_NO_CONTENT) {
 			throw new BadRequestException("Bad request. It must be already deleted item or wrong ID.");
 		}
 	}
 
-	public void copyTo(@NotNull FolderItem folder) {
-		this.copyToId(folder.id, null);
+	@NotNull
+	public String copyTo(@NotNull FolderItem folder) {
+		return this.copyToId(folder.id, null);
 	}
 
-	public void copyTo(@NotNull FolderItem folder, @NotNull String newName) {
-		this.copyToId(folder.id, newName);
+	@NotNull
+	public String copyTo(@NotNull FolderItem folder, @NotNull String newName) {
+		if (folder instanceof RemoteFolderItem) {
+			throw new RuntimeException("Any file or folder can not copy to Remote Folder.");
+		}
+		return this.copyToId(folder.id, newName);
 	}
 
-	public void copyTo(@NotNull ItemReference folder) {
+	@NotNull
+	public String copyTo(@NotNull ItemReference folder) {
 		if (folder.id != null)
-			this.copyToId(folder.id, null);
+			return this.copyToId(folder.id, null);
 		else if (folder.path != null)
-			this.copyToPath(folder.path, null);
+			return this.copyToPath(folder.path, null);
 		else
 			throw new RuntimeException(
 					"Because folder's id and path both are null, can not address destination folder.");
 	}
 
-	public void copyTo(@NotNull ItemReference folder, @NotNull String newName) {
+	@NotNull
+	public String copyTo(@NotNull ItemReference folder, @NotNull String newName) {
 		if (folder.id != null)
-			this.copyToId(folder.id, newName);
+			return this.copyToId(folder.id, newName);
 		else if (folder.path != null)
-			this.copyToPath(folder.path, newName);
+			return this.copyToPath(folder.path, newName);
 		else
 			throw new RuntimeException(
 					"Because folder's id and path both are null, can not address destination folder.");
 	}
 
-	public void copyToPath(@NotNull String path) {
-		this.copyToPath(path, null);
+	@NotNull
+	public String copyToPath(@NotNull String path) {
+		return this.copyToPath(path, null);
 	}
 
-	public void copyToPath(@NotNull String path, @Nullable String newName) {
+	@NotNull
+	public String copyToPath(@NotNull String path, @Nullable String newName) {
 		byte[] prefix = "{\"parentReference\":{\"path\":\"".getBytes();
 		byte[] middle = path.getBytes();
 		byte[] suffix;
@@ -115,14 +125,16 @@ abstract public class BaseItem extends BaseContainer {
 		System.arraycopy(middle, 0, content, prefix.length, middle.length);
 		System.arraycopy(suffix, 0, content, prefix.length + middle.length, suffix.length);
 
-		this.copyTo(content);
+		return this.copyTo(content);
 	}
 
-	public void copyToId(@NotNull String id) {
-		this.copyToId(id, null);
+	@NotNull
+	public String copyToId(@NotNull String id) {
+		return this.copyToId(id, null);
 	}
 
-	public void copyToId(@NotNull String id, @Nullable String newName) {
+	@NotNull
+	public String copyToId(@NotNull String id, @Nullable String newName) {
 		byte[] prefix = "{\"parentReference\":{\"id\":\"".getBytes();
 		byte[] middle = id.getBytes();
 		byte[] suffix;
@@ -137,10 +149,20 @@ abstract public class BaseItem extends BaseContainer {
 		System.arraycopy(middle, 0, content, prefix.length, middle.length);
 		System.arraycopy(suffix, 0, content, prefix.length + middle.length, suffix.length);
 
-		this.copyTo(content);
+		return this.copyTo(content);
 	}
 
-	protected void copyTo(byte[] content) {
+	/**
+	 * {@// TODO: Enhance javadoc }
+	 * <p>
+	 * Implementation of <a href'https://dev.onedrive.com/items/copy.htm'>detail</a>
+	 *
+	 * @param content Http body content.
+	 * @return URL that can monitor status of coping process.
+	 * @throws RuntimeException If you trying to copy root itself or fail to copy.
+	 */
+	@NotNull
+	protected String copyTo(byte[] content) {
 		// ensure that only root item can have null parentReference.
 		if (parentReference == null) {
 			if (this instanceof FolderItem) {
@@ -157,11 +179,14 @@ abstract public class BaseItem extends BaseContainer {
 				String.format("/drives/%s/items/%s/action.copy", parentReference.driveId, this.id),
 				client.getAccessToken(), content);
 
+		// if not 202 Accepted
 		if (response.getCode() != HttpsURLConnection.HTTP_ACCEPTED) {
 			throw new RuntimeException(
 					"Copy failed with : " + response.getCode() + " " + response.getMessage() +
 							" " + response.getContentString());
 		}
+
+		return response.getHeader().get("Location").get(0);
 	}
 
 	@NotNull

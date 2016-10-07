@@ -1,7 +1,5 @@
 package org.onedrive.utils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
@@ -312,12 +310,12 @@ public class OneDriveRequest {
 	}
 
 	@NotNull
-	public ObjectNode doPostJson(@NotNull String api, @NotNull String accessToken, @NotNull String content) {
-		return doPostJson(api, accessToken, content.getBytes(StandardCharsets.UTF_8));
+	public ObjectNode doPostJsonResponse(@NotNull String api, @NotNull String accessToken, @NotNull String content) {
+		return doPostJsonResponse(api, accessToken, content.getBytes(StandardCharsets.UTF_8));
 	}
 
 	@NotNull
-	public ObjectNode doPostJson(@NotNull String api, @NotNull String accessToken, @NotNull byte[] content) {
+	public ObjectNode doPostJsonResponse(@NotNull String api, @NotNull String accessToken, @NotNull byte[] content) {
 		HttpsResponse response = doPost(api, accessToken, content);
 
 		try {
@@ -330,12 +328,12 @@ public class OneDriveRequest {
 	}
 
 	@NotNull
-	public ObjectNode doPostJson(@NotNull URL url, @NotNull String accessToken, @NotNull String content) {
-		return doPostJson(url, accessToken, content.getBytes(StandardCharsets.UTF_8));
+	public ObjectNode doPostJsonResponse(@NotNull URL url, @NotNull String accessToken, @NotNull String content) {
+		return doPostJsonResponse(url, accessToken, content.getBytes(StandardCharsets.UTF_8));
 	}
 
 	@NotNull
-	public ObjectNode doPostJson(@NotNull URL url, @NotNull String accessToken, @NotNull byte[] content) {
+	public ObjectNode doPostJsonResponse(@NotNull URL url, @NotNull String accessToken, @NotNull byte[] content) {
 		HttpsResponse response = doPost(url, accessToken, content);
 
 		try {

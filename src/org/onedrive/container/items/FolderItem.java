@@ -10,11 +10,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.network.HttpsRequest;
+import org.network.HttpsResponse;
 import org.onedrive.Client;
 import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
 
+import javax.net.ssl.HttpsURLConnection;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -160,7 +163,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	@Override
 	@NotNull
 	public ItemReference newReference() {
-		return new ItemReference(root ? id : parentReference.driveId, id,
+		return new ItemReference(root ? this.id.split("!")[0] : parentReference.driveId, id,
 				root ? "/drive/root:" : parentReference.rawPath + '/' + name);
 	}
 
@@ -200,6 +203,59 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	public boolean isSpecial() {
 		return specialFolder != null;
 	}
+
+	/**
+	 * Implementation of <a href='https://dev.onedrive.com/items/create.htm'>detail</a>.
+	 * <p>
+	 * {@// TODO: Enhance javadoc }
+	 * {@// TODO: Implement '@name.conflictBehavior' }
+	 *
+	 * @param name New folder name.
+	 * @return New folder's ID.
+	 * @throws RuntimeException If creating folder or converting response is fails.
+	 */
+	@NotNull
+	public String createFolder(@NotNull String name) {
+		byte[] prefix = "{\"name\":\"".getBytes();
+		byte[] middle = name.getBytes();
+		byte[] suffix = "\",\"folder\":{}}".getBytes();
+
+		byte[] content = new byte[prefix.length + middle.length + suffix.length];
+
+		System.arraycopy(prefix, 0, content, 0, prefix.length);
+		System.arraycopy(middle, 0, content, prefix.length, middle.length);
+		System.arraycopy(suffix, 0, content, prefix.length + middle.length, suffix.length);
+
+		HttpsResponse response = client.getRequestTool().postMetadata(
+				String.format(
+						"/drives/%s/items/%s/children",
+						root ? this.id.split("!")[0] : parentReference.driveId,
+						this.id),
+				client.getAccessToken(),
+				content);
+
+		// 201 Created
+		if (response.getCode() != HttpsURLConnection.HTTP_CREATED) {
+			throw new RuntimeException("Create folder " + name + " fails.");
+		}
+
+
+		try {
+			return client.getMapper().readTree(response.getContent()).get("id").asText();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Converting response to json is fail.");
+		}
+	}
+
+
+	/*
+	=============================================================
+	Custom Getter
+	=============================================================
+	 */
+
 
 	@SuppressWarnings("ConstantConditions")
 	@NotNull

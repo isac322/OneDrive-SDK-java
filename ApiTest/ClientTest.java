@@ -1,6 +1,8 @@
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import junit.framework.TestCase;
+import org.jetbrains.annotations.NotNull;
 import org.network.HttpsResponse;
 import org.onedrive.Client;
 import org.onedrive.container.Drive;
@@ -9,6 +11,8 @@ import org.onedrive.container.items.*;
 import org.onedrive.utils.OneDriveRequest;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
@@ -243,7 +247,7 @@ public class ClientTest extends TestCase {
 	public void testRecursiveTravel() throws IOException, FileDownFailException {
 		getClient();
 
-		printDFS(client.getRootDir(), "");
+		dfs(client.getRootDir(), "");
 	}
 
 	public void testSearch() {
@@ -300,21 +304,38 @@ public class ClientTest extends TestCase {
 		file.copyToPath("/drive/root:/test folder");
 	}
 
-	public void testCopy2() {
+	public void testCopy2() throws MalformedURLException, JsonProcessingException {
 		getClient();
 
-		byte[] content = ("{\"parentReference\":{\"driveId\":\"D4FD82CA6DF96A47!107\",\"id\":\"D4FD82CA6DF96A47!107\"," +
-				"\"path\":\"/drive/root:\"}}").getBytes();
+		byte[] content = ("{\"parentReference\":{\"driveId\":\"D4FD82CA6DF96A47!107\"," +
+				"\"id\":\"D4FD82CA6DF96A47!107\"}}").getBytes();
 
 		System.out.println(new String(content));
-		System.out.println(String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!14649"));
+		System.out.println(String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!10375"));
 
 		HttpsResponse response = client.getRequestTool().postMetadata(
-				String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!14649"),
+				String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!10375"),
 				client.getAccessToken(), content);
 
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
+		System.out.println(response.getHeader().get("Location"));
+
+		String url = response.getHeader().get("Location").get(0);
+
+		for (int i = 0; i < 100; i++) {
+			ObjectNode jsonNodes = client.getRequestTool().doGetJson(new URL(url), client.getAccessToken());
+			System.out.println(mapper.writeValueAsString(jsonNodes));
+		}
+	}
+
+	public void testFolder() {
+		getClient();
+
+		FolderItem rootDir = client.getRootDir();
+
+		@NotNull String test = rootDir.createFolder("test");
+		System.out.println(test);
 	}
 }
