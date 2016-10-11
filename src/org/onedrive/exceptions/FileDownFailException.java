@@ -1,4 +1,4 @@
-package org.onedrive.container.items;
+package org.onedrive.exceptions;
 
 import org.jetbrains.annotations.NotNull;
 

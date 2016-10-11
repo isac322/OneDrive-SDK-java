@@ -1,4 +1,4 @@
-package org.network;
+package org.onedrive.network.legacy;
 
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;

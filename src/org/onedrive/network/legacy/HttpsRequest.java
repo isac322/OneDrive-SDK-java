@@ -1,5 +1,6 @@
-package org.network;
+package org.onedrive.network.legacy;
 
+import lombok.val;
 import org.jetbrains.annotations.NotNull;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -58,8 +59,36 @@ public class HttpsRequest {
 	@NotNull
 	public HttpsResponse doPost(byte[] content) {
 		try {
-			httpConnection.setDoOutput(true);
 			httpConnection.setRequestMethod("POST");
+			return sendContent(content);
+		}
+		catch (ProtocolException e) {
+			e.printStackTrace();
+			throw new RuntimeException("Can not use \"POST\" method.");
+		}
+	}
+
+	@NotNull
+	public HttpsResponse doPatch(String content) {
+		byte[] bytes = content.getBytes();
+		return doPatch(bytes);
+	}
+
+	@NotNull
+	public HttpsResponse doPatch(byte[] content) {
+		try {
+			httpConnection.setRequestMethod("PATCH");
+			return sendContent(content);
+		}
+		catch (ProtocolException e) {
+			e.printStackTrace();
+			throw new RuntimeException("Can not use \"PATCH\" method.");
+		}
+	}
+
+	public HttpsResponse sendContent(byte[] content) {
+		try {
+			httpConnection.setDoOutput(true);
 
 			httpConnection.setFixedLengthStreamingMode(content.length);
 
@@ -114,7 +143,7 @@ public class HttpsRequest {
 			Map<String, List<String>> header = httpConnection.getHeaderFields();
 			URL url = httpConnection.getURL();
 
-			ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+			val byteStream = new ByteArrayOutputStream();
 			BufferedInputStream body;
 
 			if (code < 400) {

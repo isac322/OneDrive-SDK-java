@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
-import org.network.HttpsRequest;
+import org.onedrive.network.legacy.HttpsRequest;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
@@ -62,12 +62,21 @@ public class RemoteFolderItem extends FolderItem {
 		}
 	}
 
+	@NotNull
+	public String getReadDriveID() {
+		return remoteItem.getParentReference().driveId;
+	}
+
+	@NotNull
+	public String getReadID() {
+		return remoteItem.getId();
+	}
+
 	@Override
 	protected void fetchChildren() {
 		ObjectNode content = client.getRequestTool().doGetJson(
-				String.format("/drives/%s/items/%s/children",
-						remoteItem.getParentReference().driveId, remoteItem.getId()),
-				client.getAccessToken());
+				String.format("/drives/%s/items/%s/children", getReadDriveID(), getReadID())
+		);
 
 		allChildren = new ArrayList<>();
 		folderChildren = new ArrayList<>();

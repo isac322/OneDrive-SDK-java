@@ -3,10 +3,10 @@ package org.onedrive.container.items;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
- import org.jetbrains.annotations.NotNull;
 import lombok.Getter;
+import lombok.SneakyThrows;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.network.HttpsRequest;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -24,6 +24,7 @@ public class ItemReference {
 	@Getter @Nullable @JsonProperty("path") protected final String rawPath;
 
 	@JsonCreator
+	@SneakyThrows(UnsupportedEncodingException.class)
 	protected ItemReference(@JsonProperty("driveId") @NotNull String driveId,
 							@JsonProperty("id") @Nullable String id,
 							@JsonProperty("path") @Nullable String rawPath) {
@@ -32,17 +33,7 @@ public class ItemReference {
 		this.rawPath = rawPath;
 
 		if (rawPath != null) {
-			String decoded;
-			try {
-				decoded = URLDecoder.decode(rawPath, "UTF-8");
-			}
-			catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-				this.path = null;
-				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Bad encoding on path");
-			}
-
-			this.path = decoded;
+			this.path = URLDecoder.decode(rawPath, "UTF-8");
 		}
 		else this.path = null;
 	}

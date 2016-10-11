@@ -3,7 +3,7 @@ package org.onedrive.container.facet;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.network.HttpsRequest;
+import org.onedrive.network.legacy.HttpsRequest;
 
 /**
  * https://dev.onedrive.com/facets/video_facet.htm

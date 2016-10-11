@@ -1,6 +1,8 @@
 package org.onedrive.container.items;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,11 +11,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.network.BadRequestException;
-import org.network.HttpsRequest;
-import org.network.HttpsResponse;
+import org.onedrive.network.legacy.BadRequestException;
+import org.onedrive.network.legacy.HttpsRequest;
+import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.Client;
-import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.FileSystemInfoFacet;
 import org.onedrive.container.facet.SearchResultFacet;
@@ -23,7 +24,6 @@ import org.onedrive.utils.OneDriveRequest;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
-import java.time.ZonedDateTime;
 
 /**
  * https://dev.onedrive.com/resources/item.htm
@@ -32,15 +32,17 @@ import java.time.ZonedDateTime;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 @JsonDeserialize(using = BaseItem.ItemDeserializer.class)
-abstract public class BaseItem extends BaseContainer {
+abstract public class BaseItem {
+	@JsonIgnore @NotNull protected Client client;
+
 	@Getter @NotNull protected String id;
 	@Getter protected IdentitySet createdBy;
-	@Getter protected ZonedDateTime createdDateTime;
+	@Getter protected String createdDateTime;
 	/**
 	 * The {@code cTag} value is modified when content or metadata of any descendant of the folder is changed.
 	 */
 	@Getter protected String cTag;
-	@Getter protected boolean deleted;
+	@Getter protected ObjectNode deleted;
 	@Getter protected String description;
 	/**
 	 * The {@code eTag} value is only modified when the folder's properties are changed, except for properties that are
@@ -49,7 +51,7 @@ abstract public class BaseItem extends BaseContainer {
 	@Getter protected String eTag;
 	@Getter protected FileSystemInfoFacet fileSystemInfo;
 	@Getter protected IdentitySet lastModifiedBy;
-	@Getter protected ZonedDateTime lastModifiedDateTime;
+	@Getter protected String lastModifiedDateTime;
 	@Getter @NotNull protected String name;
 	@Getter @Nullable protected ItemReference parentReference;
 	@Getter @Nullable protected SearchResultFacet searchResult;
@@ -58,14 +60,67 @@ abstract public class BaseItem extends BaseContainer {
 	@Getter protected long size;
 	@Getter protected String webDavUrl;
 	@Getter protected String webUrl;
-	@NotNull protected Client client;
+
+
+	protected BaseItem(@NotNull Client client, @NotNull String id, IdentitySet createdBy, String createdDateTime,
+					   String cTag, ObjectNode deleted, String description, String eTag,
+					   FileSystemInfoFacet fileSystemInfo, IdentitySet lastModifiedBy, String lastModifiedDateTime,
+					   @NotNull String name, @Nullable ItemReference parentReference,
+					   @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
+					   @Nullable SharePointIdsFacet sharePointIds, long size, String webDavUrl, String webUrl) {
+		this.client = client;
+		this.id = id;
+		this.createdBy = createdBy;
+		this.createdDateTime = createdDateTime;
+		this.cTag = cTag;
+		this.deleted = deleted;
+		this.description = description;
+		this.eTag = eTag;
+		this.fileSystemInfo = fileSystemInfo;
+		this.lastModifiedBy = lastModifiedBy;
+		this.lastModifiedDateTime = lastModifiedDateTime;
+		this.name = name;
+		this.parentReference = parentReference;
+		this.searchResult = searchResult;
+		this.shared = shared;
+		this.sharePointIds = sharePointIds;
+		this.size = size;
+		this.webDavUrl = webDavUrl;
+		this.webUrl = webUrl;
+	}
 
 	public void delete() throws IOException {
-		HttpsResponse response = OneDriveRequest.doDelete("/drive/items/" + id, client.getAccessToken());
+		HttpsResponse response = OneDriveRequest.doDelete("/drive/items/" + id, client.getFullToken());
 
 		// 204 No Content
 		if (response.getCode() != HttpsURLConnection.HTTP_NO_CONTENT) {
 			throw new BadRequestException("Bad request. It must be already deleted item or wrong ID.");
+		}
+	}
+
+	/**
+	 * Upload changes of metadata to server. And update this object with correspond response.
+	 */
+	public void update() {
+		try {
+			byte[] bytes = client.getMapper().writeValueAsBytes(this);
+
+			@NotNull
+			HttpsResponse response =
+					client.getRequestTool().patchMetadata("/drive/items/" + id, bytes);
+
+			BaseItem item = client.getMapper().readValue(response.getContent(), BaseItem.class);
+			System.out.println(response.getContentString());
+
+			// TODO: solve 'java.net.ProtocolException: Invalid HTTP method: PATCH' problem.
+		}
+		catch (JsonProcessingException e) {
+			e.printStackTrace();
+			throw new RuntimeException("DEV: Can't serialize object. Contact author.");
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException("DEV: Can't deserialize response. Contact author.");
 		}
 	}
 
@@ -177,7 +232,7 @@ abstract public class BaseItem extends BaseContainer {
 
 		HttpsResponse response = client.getRequestTool().postMetadata(
 				String.format("/drives/%s/items/%s/action.copy", parentReference.driveId, this.id),
-				client.getAccessToken(), content);
+				content);
 
 		// if not 202 Accepted
 		if (response.getCode() != HttpsURLConnection.HTTP_ACCEPTED) {
@@ -189,8 +244,25 @@ abstract public class BaseItem extends BaseContainer {
 		return response.getHeader().get("Location").get(0);
 	}
 
+
 	@NotNull
-	abstract public ItemReference newReference();
+	public final ItemReference newReference() {
+		return new ItemReference(getDriveId(), id, getPath());
+	}
+
+
+	/*
+	=============================================================
+	Custom Getter
+	=============================================================
+	 */
+
+	@NotNull
+	abstract public String getDriveId();
+
+	@Nullable
+	abstract public String getPath();
+
 
 	public static class ItemDeserializer extends JsonDeserializer<BaseItem> {
 		@Override

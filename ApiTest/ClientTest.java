@@ -1,19 +1,34 @@
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import junit.framework.TestCase;
+import lombok.val;
 import org.jetbrains.annotations.NotNull;
-import org.network.HttpsResponse;
 import org.onedrive.Client;
 import org.onedrive.container.Drive;
 import org.onedrive.container.facet.AudioFacet;
 import org.onedrive.container.items.*;
+import org.onedrive.exceptions.FileDownFailException;
+import org.onedrive.network.AsyncHttpsResponseHandler;
+import org.onedrive.network.HttpsClientHandler;
+import org.onedrive.network.legacy.HttpsRequest;
+import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.utils.OneDriveRequest;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -24,7 +39,6 @@ public class ClientTest extends TestCase {
 	ObjectMapper mapper = new ObjectMapper();
 
 	private static Client getClient() {
-
 			client = new Client(clientId, scope, redirectURL, clientSecret);
 		}
 
@@ -34,7 +48,7 @@ public class ClientTest extends TestCase {
 	public void testLogin() {
 		getClient();
 
-		assertNotNull(client.getAccessToken());
+		assertNotNull(client.getFullToken());
 		assertNotNull(client.getAuthCode());
 		assertNotNull(client.getRefreshToken());
 
@@ -62,7 +76,7 @@ public class ClientTest extends TestCase {
 	public void testItem() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/shared?select=id", client.getAccessToken());
+		HttpsResponse response = OneDriveRequest.doGet("/drive/shared?select=id", client.getFullToken());
 		System.out.println(response.getContentString());
 	}
 
@@ -107,7 +121,7 @@ public class ClientTest extends TestCase {
 		getClient();
 
 		HttpsResponse response = OneDriveRequest.doGet("/drive/items/485BEF1A80539148!115?expand=children", client
-				.getAccessToken());
+				.getFullToken());
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -118,7 +132,7 @@ public class ClientTest extends TestCase {
 
 		HttpsResponse response = OneDriveRequest.doGet
 				("/drives/485bef1a80539148/items/485BEF1A80539148!115?expand=children", client
-						.getAccessToken());
+						.getFullToken());
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -138,7 +152,7 @@ public class ClientTest extends TestCase {
 	public void testRoot() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/root:/?expand=children", client.getAccessToken());
+		HttpsResponse response = OneDriveRequest.doGet("/drive/root:/?expand=children", client.getFullToken());
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -254,7 +268,7 @@ public class ClientTest extends TestCase {
 		getClient();
 
 		HttpsResponse response = OneDriveRequest.doGet("/drive/root/view.search?q=Gone%20in%20Six%20Characters",
-				client.getAccessToken());
+				client.getFullToken());
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -315,7 +329,7 @@ public class ClientTest extends TestCase {
 
 		HttpsResponse response = client.getRequestTool().postMetadata(
 				String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!10375"),
-				client.getAccessToken(), content);
+				content);
 
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
@@ -325,7 +339,7 @@ public class ClientTest extends TestCase {
 		String url = response.getHeader().get("Location").get(0);
 
 		for (int i = 0; i < 100; i++) {
-			ObjectNode jsonNodes = client.getRequestTool().doGetJson(new URL(url), client.getAccessToken());
+			ObjectNode jsonNodes = client.getRequestTool().doGetJson(new URL(url));
 			System.out.println(mapper.writeValueAsString(jsonNodes));
 		}
 	}
@@ -337,5 +351,118 @@ public class ClientTest extends TestCase {
 
 		@NotNull String test = rootDir.createFolder("test");
 		System.out.println(test);
+	}
+
+	public void testFields() throws JsonProcessingException {
+		getClient();
+
+		FolderItem root = client.getRootDir();
+
+		root.update();
+	}
+
+	public void testNetty() throws URISyntaxException, InterruptedException {
+		getClient();
+
+
+		long allBefore = System.currentTimeMillis();
+		System.out.println("Netty");
+		EventLoopGroup group = new NioEventLoopGroup();
+		ArrayList<ChannelFuture> futures = new ArrayList<>();
+
+		for (int i = 0; i < 50; i++) {
+			final long before = System.currentTimeMillis();
+			HttpsClientHandler httpsClientHandler =
+					client.getRequestTool().doAsync("/drive/root:?expand=children", HttpMethod.GET);
+			httpsClientHandler.addCloseListener(new AsyncHttpsResponseHandler() {
+				@Override
+				public void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response) {
+					try {
+						FolderItem root = client.getMapper().readValue(resultStream, FolderItem.class);
+					}
+					catch (IOException e) {
+						e.printStackTrace();
+					}
+					System.out.println("Netty takes " + (System.currentTimeMillis() - before));
+				}
+			});
+
+			futures.add(httpsClientHandler.getBlockingCloseFuture());
+		}
+		for (ChannelFuture future : futures) {
+			future.sync();
+		}
+		System.out.println("total : " + (System.currentTimeMillis() - allBefore));
+		System.out.println();
+
+		long sum = 0, now;
+		System.out.println("Legacy:");
+		for (int i = 0; i < 50; i++) {
+			long before = System.currentTimeMillis();
+
+			HttpsResponse httpsResponse =
+					OneDriveRequest.doGet("/drive/root:?expand=children", client.getFullToken());
+
+			try {
+				FolderItem root = client.getMapper().readValue(httpsResponse.getContent(), FolderItem.class);
+				now = System.currentTimeMillis();
+				sum += (now - before);
+				System.out.println("Legacy takes " + (now - before));
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		System.out.println("total : " + sum);
+		System.out.println();
+	}
+
+	public void testBOJLegacy() throws JsonProcessingException, MalformedURLException {
+		getClient();
+
+		HttpsRequest httpsRequest = new HttpsRequest(new URL("https://api.onedrive" +
+				".com/v1.0/drive/items/D4FD82CA6DF96A47!14841?expand=children"));
+
+		httpsRequest.setHeader("Authorization", client.getFullToken());
+
+		HttpsResponse httpsResponse = httpsRequest.doGet();
+		Map<String, List<String>> header = httpsResponse.getHeader();
+		for (val entry : header.entrySet()) {
+			System.out.println(entry.getKey() + " : " + entry.getValue());
+		}
+
+		System.out.println(httpsResponse.getContentString());
+	}
+
+	public void testChunk() throws URISyntaxException, InterruptedException {
+		getClient();
+
+		long before = System.currentTimeMillis();
+		System.out.println("send begin");
+
+		final FolderItem[] items = new FolderItem[1];
+		HttpsClientHandler clientHandler =
+				client.getRequestTool().doAsync("/drive/items/D4FD82CA6DF96A47!14841?expand=children", HttpMethod.GET,
+						new AsyncHttpsResponseHandler() {
+							@Override
+							public void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response) {
+								try {
+									items[0] = client.getMapper().readValue(resultStream, FolderItem.class);
+								}
+								catch (IOException e) {
+									e.printStackTrace();
+								}
+							}
+						});
+
+		System.out.println("send done. " + (System.currentTimeMillis() - before));
+
+		clientHandler.getBlockingCloseFuture().sync();
+
+		System.out.println(items[0].isRoot());
+		System.out.println(items[0].getId());
+		System.out.println(items[0].getName());
+		System.out.println(items[0].childrenCount());
+		System.out.println(items[0].getAllChildren().size());
 	}
 }

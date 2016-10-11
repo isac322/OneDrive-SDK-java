@@ -6,13 +6,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
+import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.network.HttpsResponse;
+import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.Client;
-import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
+import org.onedrive.exceptions.FileDownFailException;
 import org.onedrive.utils.OneDriveRequest;
 
 import java.io.IOException;
@@ -60,38 +61,31 @@ public class FileItem extends BaseItem {
 					   @JsonProperty("video") @Nullable VideoFacet video,
 					   @JsonProperty("webDavUrl") String webDavUrl,
 					   @JsonProperty("webUrl") String webUrl) {
-		this.client = client;
+		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
+				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
+				size, webDavUrl, webUrl);
 
-		this.id = id;
 		this.audio = audio;
-		this.createdBy = createdBy;
-		this.createdDateTime = BaseContainer.parseDateTime(createdDateTime);
-		this.cTag = cTag;
-		this.deleted = deleted != null;
-		this.description = description;
-		this.eTag = eTag;
 		this.file = file;
-		this.fileSystemInfo = fileSystemInfo;
 		this.image = image;
-		this.lastModifiedBy = lastModifiedBy;
-		this.lastModifiedDateTime = BaseContainer.parseDateTime(lastModifiedDateTime);
 		this.location = location;
-		this.name = name;
-		this.parentReference = parentReference;
 		this.photo = photo;
-		this.searchResult = searchResult;
-		this.shared = shared;
-		this.sharePointIds = sharePointIds;
-		this.size = size;
 		this.video = video;
-		this.webDavUrl = webDavUrl;
-		this.webUrl = webUrl;
 	}
 
-	@Override
 	@NotNull
-	public ItemReference newReference() {
-		return new ItemReference(parentReference.driveId, id, parentReference.rawPath + '/' + name);
+	@Override
+	public String getDriveId() {
+		assert parentReference != null;
+		return parentReference.driveId;
+	}
+
+	@Nullable
+	@Override
+	public String getPath() {
+		assert parentReference != null;
+		if (parentReference.path == null) return null;
+		return parentReference.path + '/' + name;
 	}
 
 	public String getCRC32() {
@@ -134,14 +128,14 @@ public class FileItem extends BaseItem {
 		path = path.toAbsolutePath();
 		Files.createDirectories(path.getParent());
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/items/" + id + "/content", client.getAccessToken());
+		HttpsResponse response = OneDriveRequest.doGet("/drive/items/" + id + "/content", client.getFullToken());
 
 		if (response.getCode() != 200) {
 			throw new FileDownFailException(
 					String.format("File download fails with %d %s", response.getCode(), response.getMessage()));
 		}
 
-		AsynchronousFileChannel fileChannel = AsynchronousFileChannel.open(path,
+		val fileChannel = AsynchronousFileChannel.open(path,
 				StandardOpenOption.CREATE,
 				StandardOpenOption.WRITE);
 

@@ -4,9 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.container.BaseContainer;
-
-import java.time.ZonedDateTime;
 
 /**
  * https://dev.onedrive.com/facets/photo_facet.htm
@@ -18,7 +15,7 @@ public class PhotoFacet {
 	/**
 	 * Always ensure local date time.
 	 */
-	@Getter @Nullable protected final ZonedDateTime takenDateTime;
+	@Getter @Nullable protected final String takenDateTime;
 	@Getter @Nullable protected final String cameraMake;
 	@Getter @Nullable protected final String cameraModel;
 	@Getter @Nullable protected final Double fNumber;
@@ -36,7 +33,7 @@ public class PhotoFacet {
 						 @Nullable @JsonProperty("exposureNumerator") Double exposureNumerator,
 						 @Nullable @JsonProperty("focalLength") Double focalLength,
 						 @Nullable @JsonProperty("iso") Long iso) {
-		this.takenDateTime = takenDateTime == null ? null : BaseContainer.parseDateTime(takenDateTime);
+		this.takenDateTime = takenDateTime;
 		this.cameraMake = cameraMake;
 		this.cameraModel = cameraModel;
 		this.fNumber = fNumber;

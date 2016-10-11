@@ -1,6 +1,7 @@
 package org.onedrive;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,14 +11,15 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.network.HttpsRequest;
-import org.network.HttpsResponse;
 import org.onedrive.container.Drive;
 import org.onedrive.container.items.BaseItem;
 import org.onedrive.container.items.FileItem;
 import org.onedrive.container.items.FolderItem;
+import org.onedrive.network.legacy.HttpsRequest;
+import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.utils.AuthServer;
 import org.onedrive.utils.OneDriveRequest;
 
@@ -27,6 +29,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -35,6 +39,9 @@ import java.util.concurrent.Semaphore;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class Client {
+	public static final ExecutorService threadPool =
+			Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
 	/*
 	for resolve tricky issue of Jackson.
 	See:
@@ -44,8 +51,6 @@ public class Client {
 	*/
 	private static final SimpleModule jacksonIsTricky =
 			new SimpleModule().setMixInAnnotation(ObjectMapper.class, Client.IgnoreMe.class);
-
-
 	/**
 	 * Only one {@code mapper} per a {@code Client} object.<br>
 	 * It makes possible to multi client usage
@@ -60,6 +65,7 @@ public class Client {
 	@Nullable private String accessToken;
 	@Nullable private String userId;
 	@Nullable private String refreshToken;
+	@Nullable private String fullToken;
 	@Getter @NotNull private String[] scopes;
 	@Getter @NotNull private String clientId;
 	@Getter @NotNull private String clientSecret;
@@ -112,16 +118,12 @@ public class Client {
 
 		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
+		// in serialization, ignore null values.
+		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
 		requestTool = new OneDriveRequest(this, mapper);
 
 		if (autoLogin) login();
-	}
-
-	@SuppressWarnings("ConstantConditions")
-	@NotNull
-	public String getAuthCode() {
-		checkExpired();
-		return authCode;
 	}
 
 	/**
@@ -244,6 +246,7 @@ public class Client {
 		this.refreshToken = refreshToken;
 		this.expirationTime = expirationTime * 1000;
 		this.lastRefresh = System.currentTimeMillis();
+		this.fullToken = type + ' ' + accessToken;
 	}
 
 	private void checkExpired() {
@@ -261,29 +264,25 @@ public class Client {
 	 *
 	 * @throws RuntimeException if it isn't login when called.
 	 */
+	@SneakyThrows(MalformedURLException.class)
 	public void logout() {
 		if (!isLogin()) throw new RuntimeException("Already Logout!!");
 
-		try {
-			String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
-					clientId, redirectURL);
+		String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
+				clientId, redirectURL);
 
-			HttpsResponse response = new HttpsRequest(url).doGet();
+		HttpsResponse response = new HttpsRequest(url).doGet();
 
-			if (response.getCode() != HttpsURLConnection.HTTP_MOVED_TEMP) {
-				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Fail to logout.");
-			}
-
-			authCode = null;
-			accessToken = null;
-			userId = null;
-			refreshToken = null;
-			expirationTime = 0;
+		if (response.getCode() != HttpsURLConnection.HTTP_MOVED_TEMP) {
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Fail to logout.");
 		}
-		catch (MalformedURLException e) {
-			e.printStackTrace();
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Code Fail : Wrong URL.");
-		}
+
+		authCode = null;
+		accessToken = null;
+		userId = null;
+		refreshToken = null;
+		expirationTime = 0;
+		fullToken = null;
 	}
 
 	public boolean isExpired() {
@@ -298,14 +297,14 @@ public class Client {
 	public Drive getDefaultDrive() {
 		checkExpired();
 
-		return requestTool.doGetObject("/drive", accessToken, Drive.class);
+		return requestTool.doGetObject("/drive", Drive.class);
 	}
 
 	@NotNull
 	public Drive[] getAllDrive() {
 		checkExpired();
 
-		ObjectNode jsonResponse = requestTool.doGetJson("/drives", accessToken);
+		ObjectNode jsonResponse = requestTool.doGetJson("/drives");
 
 		return mapper.convertValue(jsonResponse.get("value"), Drive[].class);
 	}
@@ -314,28 +313,28 @@ public class Client {
 	public FolderItem getRootDir() {
 		checkExpired();
 
-		return requestTool.doGetObject("/drive/root:/?expand=children", accessToken, FolderItem.class);
+		return requestTool.doGetObject("/drive/root:/?expand=children", FolderItem.class);
 	}
 
 	@NotNull
 	public FolderItem getFolder(@NotNull String id) {
 		checkExpired();
 
-		return requestTool.doGetObject("/drive/items/" + id + "?expand=children", accessToken, FolderItem.class);
+		return requestTool.doGetObject("/drive/items/" + id + "?expand=children", FolderItem.class);
 	}
 
 	@NotNull
 	public FileItem getFile(@NotNull String id) {
 		checkExpired();
 
-		return requestTool.doGetObject("/drive/items/" + id, accessToken, FileItem.class);
+		return requestTool.doGetObject("/drive/items/" + id, FileItem.class);
 	}
 
 	@NotNull
 	public BaseItem[] getShared() {
 		checkExpired();
 
-		ArrayNode values = (ArrayNode) requestTool.doGetJson("/drive/shared", accessToken).get("value");
+		ArrayNode values = (ArrayNode) requestTool.doGetJson("/drive/shared").get("value");
 
 		int size = values.size();
 		BaseItem[] items = new BaseItem[size];
@@ -344,8 +343,8 @@ public class Client {
 		ObjectNode jsonResponse;
 		for (int i = 0; i < size; i++) {
 			jsonResponse = requestTool.doGetJson(
-					"/drive/items/" + values.get(i).get("id").asText() + "?expand=children",
-					accessToken);
+					"/drive/items/" + values.get(i).get("id").asText() + "?expand=children"
+			);
 
 			items[i] = mapper.convertValue(jsonResponse, BaseItem.class);
 		}
@@ -383,6 +382,18 @@ public class Client {
 	@NotNull public String getRefreshToken() {
 		checkExpired();
 		return refreshToken;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getAuthCode() {
+		checkExpired();
+		return authCode;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getFullToken() {
+		checkExpired();
+		return fullToken;
 	}
 
 
