@@ -76,14 +76,14 @@ public class ClientTest extends TestCase {
 	public void testItem() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/shared?select=id", client.getFullToken());
+		HttpsResponse response = OneDriveRequest.doGet("/drive/items/D4FD82CA6DF96A47!22627", client.getFullToken());
 		System.out.println(response.getContentString());
 	}
 
 	public void testGetFileItem() {
 		getClient();
 
-		FileItem file = client.getFile("D4FD82CA6DF96A47!22159");
+		BaseItem file = client.getItem("D4FD82CA6DF96A47!22159");
 		System.out.println(file.getName());
 		System.out.println(file.getId());
 	}
@@ -208,7 +208,7 @@ public class ClientTest extends TestCase {
 
 				int idx = file.getParentReference().getPath().indexOf(':') + 2;
 				String path = file.getParentReference().getPath().substring(idx);
-				file.download(Paths.get(path, file.getName()));
+				file.download(Paths.get(path));
 			}
 			else if (item instanceof PackageItem) {
 				System.out.println(tab + item.getName() + "\tPackage");

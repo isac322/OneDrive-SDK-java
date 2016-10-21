@@ -108,7 +108,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 				else if (item instanceof FileItem) {
 					file.add((FileItem) item);
 				}
-				else {
+				else if (!(item instanceof PackageItem)) {
 					// if child is neither FolderItem nor FileItem nor PackageItem.
 					throw new UnsupportedOperationException("Children object must file or folder of package");
 				}
@@ -209,9 +209,10 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		System.arraycopy(middle, 0, content, prefix.length, middle.length);
 		System.arraycopy(suffix, 0, content, prefix.length + middle.length, suffix.length);
 
-		HttpsResponse response = client.getRequestTool().postMetadata(
-				String.format("/drives/%s/items/%s/children", getDriveId(), this.id),
-				content);
+		HttpsResponse response =
+				client.getRequestTool().postMetadata(
+						String.format("/drives/%s/items/%s/children", getDriveId(), this.id),
+						content);
 
 		// 201 Created
 		if (response.getCode() != HttpsURLConnection.HTTP_CREATED) {

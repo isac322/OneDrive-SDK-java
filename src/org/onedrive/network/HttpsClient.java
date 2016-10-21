@@ -28,21 +28,15 @@ public final class HttpsClient {
 	@NotNull protected final DefaultFullHttpRequest request;
 	@Nullable @Getter @Setter protected AsyncHttpsResponseHandler onComplete;
 
+
 	public HttpsClient(@NotNull EventLoopGroup group, @NotNull String url, @NotNull HttpMethod method)
 			throws URISyntaxException {
-		this(group, new URI(url), method);
+		this(group, new URI(url), method, null);
 	}
 
 	public HttpsClient(@NotNull EventLoopGroup group, @NotNull URI uri, @NotNull HttpMethod method) {
-		this.group = group;
-		this.uri = uri;
-		this.method = method;
-		this.request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, uri.getRawPath());
-		this.request.setUri(uri.toASCIIString());
-		this.request.headers().set(HttpHeaderNames.HOST, uri.getHost());
-		this.request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP_DEFLATE);
+		this(group, uri, method, null);
 	}
-
 
 	public HttpsClient(@NotNull EventLoopGroup group, @NotNull String url,
 					   @NotNull HttpMethod method, @Nullable AsyncHttpsResponseHandler onComplete)

@@ -9,17 +9,20 @@ import lombok.Getter;
 import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
 import org.onedrive.exceptions.FileDownFailException;
+import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.utils.OneDriveRequest;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 /**
  * {@// TODO: Enhance javadoc}
@@ -88,14 +91,17 @@ public class FileItem extends BaseItem {
 		return parentReference.path + '/' + name;
 	}
 
+	@Nullable
 	public String getCRC32() {
 		return this.file.getCrc32Hash();
 	}
 
+	@Nullable
 	public String getSHA1() {
 		return this.file.getSha1Hash();
 	}
 
+	@Nullable
 	public String getQuickXorHash() {
 		return this.file.getQuickXorHash();
 	}
@@ -108,25 +114,49 @@ public class FileItem extends BaseItem {
 	}
 
 	/**
+	 * @see FileItem#download(Path, String)
+	 */
+	public void download(@NotNull String path, @NotNull String newName) throws IOException, FileDownFailException {
+		this.download(Paths.get(path), newName);
+	}
+
+	/**
 	 * Download file from OneDrive to {@code path}.<br>
 	 * It could be relative path (like . or ..).<br>
-	 * If {@code path} is just directory path, automatically naming as {@code getName()}.<br>
-	 * <br>
-	 * If {@code path} is file path and already exists, it will throw {@link FileAlreadyExistsException}.
+	 * Downloaded file will automatically name as {@code getName()}.<br>
 	 *
-	 * @param path File or folder path. It could be either parent folder(without filename) for download
-	 *             or specific file path (with filename).
-	 * @throws IOException                If an I/O error occurs, which is possible because the construction of the
-	 *                                    canonical pathname may require filesystem queries
-	 * @throws SecurityException          If a required system property value cannot be accessed, or if a security
-	 *                                    manager exists and its SecurityManager.checkRead method denies read access to
-	 *                                    the file
-	 * @throws FileAlreadyExistsException If {@code path} is file path and already exists.
-	 * @throws FileDownFailException      If fail to download with not 200 OK response.
+	 * @param path Folder path. It always treated as folder even if it contains extension.
+	 * @throws SecurityException        If a required system property value cannot be accessed, or if a security
+	 *                                  manager exists and its SecurityManager.checkRead method denies read access to
+	 *                                  the file
+	 * @throws FileDownFailException    If fail to download with not 200 OK response.
+	 * @throws IllegalArgumentException If {@code path} is exists and is not directory.
 	 */
 	public void download(@NotNull Path path) throws IOException, FileDownFailException {
-		path = path.toAbsolutePath();
-		Files.createDirectories(path.getParent());
+		download(path, this.getName());
+	}
+
+	/**
+	 * Download file from OneDrive to {@code path} with {@code newName}.<br>
+	 * It could be relative path (like . or ..).<br>
+	 * If {@code newName} is already exists in {@code path} or {@code path} is not folder,
+	 * it will throw {@link IllegalArgumentException}.
+	 *
+	 * @param path    Folder path. It always treated as folder even if it contains extension.
+	 * @param newName new file name.
+	 * @throws SecurityException        If a required system property value cannot be accessed, or if a security
+	 *                                  manager exists and its SecurityManager.checkRead method denies read access to
+	 *                                  the file
+	 * @throws FileDownFailException    If fail to download with not 200 OK response.
+	 * @throws IllegalArgumentException If {@code path} is exists and is not directory.
+	 */
+	public void download(@NotNull Path path, String newName) throws IOException, FileDownFailException {
+		Path parent = path.toAbsolutePath();
+		path = parent.resolve(newName);
+		if (Files.exists(parent) && !Files.isDirectory(parent))
+			throw new IllegalArgumentException("path argument must pointing directory.");
+
+		Files.createDirectories(parent);
 
 		HttpsResponse response = OneDriveRequest.doGet("/drive/items/" + id + "/content", client.getFullToken());
 
@@ -135,7 +165,8 @@ public class FileItem extends BaseItem {
 					String.format("File download fails with %d %s", response.getCode(), response.getMessage()));
 		}
 
-		val fileChannel = AsynchronousFileChannel.open(path,
+		val fileChannel = AsynchronousFileChannel.open(
+				path,
 				StandardOpenOption.CREATE,
 				StandardOpenOption.WRITE);
 

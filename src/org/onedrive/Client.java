@@ -148,6 +148,7 @@ public class Client {
 	 */
 	@NotNull
 	private String getCode() {
+		// FIXME: string.join() is a Java 8 method.
 		String url = String.format("https://login.live.com/oauth20_authorize.srf" +
 						"?client_id=%s&scope=%s&response_type=code&redirect_uri=%s",
 				clientId,
@@ -316,6 +317,12 @@ public class Client {
 		return requestTool.doGetObject("/drive/root:/?expand=children", FolderItem.class);
 	}
 
+	/**
+	 * {@// TODO: handling error if `id`'s item isn't folder item. }
+	 *
+	 * @param id folder id.
+	 * @return folder object
+	 */
 	@NotNull
 	public FolderItem getFolder(@NotNull String id) {
 		checkExpired();
@@ -323,11 +330,24 @@ public class Client {
 		return requestTool.doGetObject("/drive/items/" + id + "?expand=children", FolderItem.class);
 	}
 
+	/**
+	 * {@// TODO: handling error if `id`'s item isn't folder item. }
+	 *
+	 * @param id file id.
+	 * @return file object
+	 */
 	@NotNull
 	public FileItem getFile(@NotNull String id) {
 		checkExpired();
 
 		return requestTool.doGetObject("/drive/items/" + id, FileItem.class);
+	}
+
+	@NotNull
+	public BaseItem getItem(@NotNull String id) {
+		checkExpired();
+
+		return requestTool.doGetObject("/drive/items/" + id, BaseItem.class);
 	}
 
 	@NotNull
