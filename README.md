@@ -25,7 +25,7 @@
 
 ### 1. Construct `Client` object
 
-- All OneDrive jobs are performed by `Client` object.
+- All OneDrive jobs are performed via `Client` object.
 - A program can contain multiple different `Client` object.
 - Basically `Client` object check expiration and refresh authorization automatically. but it can be done manually.
 - All parameters that pass to `Client`'s constructor can obtain if you fallow [OneDrive app instruction of authentication](https://dev.onedrive.com/app-registration.htm). 
@@ -46,7 +46,7 @@ client.login();
 
 ### 2. Folder, file fetch
 
-- For now, it can conduct by only ID.
+- For now, it can conduct via only ID.
 - `FolderItem` and `FileItem` are represent folder and file respectively.
 - `FolderItem` and `FileItem` are child class of `BaseItem`.
 
@@ -86,7 +86,7 @@ List<FileItem> fileChildren = root.getFileChildren();
 
 ### 4. Create folder
 
-- For now, it can only create by parent's `FolderItem` object.
+- For now, it can only create via parent's `FolderItem` object.
 
 ```java
 // assume that Client object is already obtained
@@ -98,7 +98,7 @@ String newId = root.createFolder("test");
 
 ### 5. Copy folder or file
 
-- For now, it can only copy by source item's object.
+- For now, it can only copy via source item's object.
 
 ```java
 // assume that Client object is already obtained
@@ -133,7 +133,7 @@ item.copyToId(destination.getId(), "newName");
 
 ### 6. Download file
 
-- For now, it can only download by file item's object.
+- For now, it can only download via file item's object.
 - For now, only supports synchronous way. (async way will support soon)
 
 ```java
