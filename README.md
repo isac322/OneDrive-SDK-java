@@ -60,10 +60,10 @@ FolderItem root = client.getRootDir();
 FolderItem folder = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
 
 // get file by ID
-FileItem folder = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
+FileItem file = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
 
 // or if you don't know whether ID is file or folder
-BaseItem folder = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
+BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 ```
 
 
