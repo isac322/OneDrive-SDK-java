@@ -172,7 +172,7 @@ item.copyToId(destination.getId(), "newName");
 ### 6. 파일 다운로드
 
 - 현재까지는 다운로드 받고싶은 아이템의 객치를 통해서만 가능.
-- 현재까지는 synchronous한 방식으로만 가능. (sync도 조만간 완료)
+- 현재까지는 synchronous한 방식으로만 가능. (async도 조만간 완료)
 
 ```java
 import java.nio.file.Paths;
