@@ -27,7 +27,7 @@
 
 - All OneDrive jobs are performed by `Client` object.
 - A program can contain multiple different `Client` object.
-- Basically `Client` object check expiration and refresh authorization. but it can done manually.
+- Basically `Client` object check expiration and refresh authorization automatically. but it can done manually.
 - All parameters that pass to `Client`'s constructor can obtain if you fallow [OneDrive app instruction of authentication](https://dev.onedrive.com/app-registration.htm). 
 
 ```java
