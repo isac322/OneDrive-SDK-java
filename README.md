@@ -133,7 +133,7 @@ item.copyToId(destination.getId(), "newName");
 
 ### 6. Download file
 
-- For now, it can only download via file item's object.
+- For now, it can only download via `FileItem`'s object.
 - For now, only supports synchronous way. (async way will support soon)
 
 ```java
