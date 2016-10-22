@@ -1,11 +1,9 @@
 package org.onedrive.container.facet;
 
-import com.sun.istack.internal.Nullable;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.json.simple.JSONObject;
-import org.onedrive.container.BaseContainer;
-
-import java.time.ZonedDateTime;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * https://dev.onedrive.com/facets/filesysteminfo_facet.htm
@@ -14,21 +12,13 @@ import java.time.ZonedDateTime;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class FileSystemInfoFacet {
-	@Getter protected final ZonedDateTime createdDateTime;
-	@Getter protected final ZonedDateTime lastModifiedDateTime;
+	@Getter @NotNull protected final String createdDateTime;
+	@Getter @NotNull protected final String lastModifiedDateTime;
 
-	protected FileSystemInfoFacet(ZonedDateTime createdDateTime, ZonedDateTime lastModifiedDateTime) {
+	@JsonCreator
+	protected FileSystemInfoFacet(@NotNull @JsonProperty("createdDateTime") String createdDateTime,
+								  @NotNull @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime) {
 		this.createdDateTime = createdDateTime;
 		this.lastModifiedDateTime = lastModifiedDateTime;
-	}
-
-	@Nullable
-	public static FileSystemInfoFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		return new FileSystemInfoFacet(
-				BaseContainer.parseDateTime(json.getString("createdDateTime")),
-				BaseContainer.parseDateTime(json.getString("lastModifiedDateTime"))
-		);
 	}
 }

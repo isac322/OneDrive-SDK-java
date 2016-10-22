@@ -1,8 +1,8 @@
 package org.onedrive.container.facet;
 
-import com.sun.istack.internal.Nullable;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.json.simple.JSONObject;
 
 /**
  * https://dev.onedrive.com/facets/sharepointIds_facet.htm
@@ -17,24 +17,19 @@ public class SharePointIdsFacet {
 	@Getter protected final long listItemId;
 	@Getter protected final String listItemUniqueId;
 
-	protected SharePointIdsFacet(String siteId, String webId, String listId, long listItemId, String listItemUniqueId) {
+	@JsonCreator
+	protected SharePointIdsFacet(@JsonProperty("siteId") String siteId,
+								 @JsonProperty("webId") String webId,
+								 @JsonProperty("listId") String listId,
+								 @JsonProperty("listItemId") Long listItemId,
+								 @JsonProperty("listItemUniqueId") String listItemUniqueId) {
+		if (listItemId == null) {
+			throw new RuntimeException("\"listItemId\" filed can not be null");
+		}
 		this.siteId = siteId;
 		this.webId = webId;
 		this.listId = listId;
 		this.listItemId = listItemId;
 		this.listItemUniqueId = listItemUniqueId;
-	}
-
-	@Nullable
-	public static SharePointIdsFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		return new SharePointIdsFacet(
-				json.getString("siteId"),
-				json.getString("webId"),
-				json.getString("listId"),
-				json.getLong("listItemId"),
-				json.getString("listItemUniqueId")
-		);
 	}
 }

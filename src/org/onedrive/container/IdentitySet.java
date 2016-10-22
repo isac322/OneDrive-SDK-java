@@ -1,8 +1,9 @@
 package org.onedrive.container;
 
-import com.sun.istack.internal.Nullable;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.json.simple.JSONObject;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * https://dev.onedrive.com/resources/identitySet.htm
@@ -16,22 +17,15 @@ public class IdentitySet {
 	@Getter @Nullable protected final Identity device;
 	@Getter @Nullable protected final Identity organization;
 
-	protected IdentitySet(Identity user, Identity app, Identity device, Identity org) {
+	@JsonCreator
+	protected IdentitySet(@Nullable @JsonProperty("user") Identity user,
+						  @Nullable @JsonProperty("application") Identity application,
+						  @Nullable @JsonProperty("device") Identity device,
+						  @Nullable @JsonProperty("organization") Identity organization) {
 		this.user = user;
-		this.application = app;
+		this.application = application;
 		this.device = device;
-		this.organization = org;
-	}
-
-	@Nullable
-	public static IdentitySet parse(JSONObject json) {
-		if (json == null) return null;
-
-		return new IdentitySet(
-				Identity.parse(json.getObject("user")),
-				Identity.parse(json.getObject("application")),
-				Identity.parse(json.getObject("device")),
-				Identity.parse(json.getObject("organization")));
+		this.organization = organization;
 	}
 
 	@Override

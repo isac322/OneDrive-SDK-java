@@ -1,12 +1,9 @@
 package org.onedrive.container.facet;
 
-import com.sun.istack.internal.Nullable;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.json.simple.JSONObject;
-
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * https://dev.onedrive.com/facets/photo_facet.htm
@@ -18,7 +15,7 @@ public class PhotoFacet {
 	/**
 	 * Always ensure local date time.
 	 */
-	@Getter @Nullable protected final ZonedDateTime takenDateTime;
+	@Getter @Nullable protected final String takenDateTime;
 	@Getter @Nullable protected final String cameraMake;
 	@Getter @Nullable protected final String cameraModel;
 	@Getter @Nullable protected final Double fNumber;
@@ -27,8 +24,15 @@ public class PhotoFacet {
 	@Getter @Nullable protected final Double focalLength;
 	@Getter @Nullable protected final Long iso;
 
-	protected PhotoFacet(ZonedDateTime takenDateTime, String cameraMake, String cameraModel, Double fNumber,
-						 Double exposureDenominator, Double exposureNumerator, Double focalLength, Long iso) {
+	@JsonCreator
+	protected PhotoFacet(@Nullable @JsonProperty("takenDateTime") String takenDateTime,
+						 @Nullable @JsonProperty("cameraMake") String cameraMake,
+						 @Nullable @JsonProperty("cameraModel") String cameraModel,
+						 @Nullable @JsonProperty("fNumber") Double fNumber,
+						 @Nullable @JsonProperty("exposureDenominator") Double exposureDenominator,
+						 @Nullable @JsonProperty("exposureNumerator") Double exposureNumerator,
+						 @Nullable @JsonProperty("focalLength") Double focalLength,
+						 @Nullable @JsonProperty("iso") Long iso) {
 		this.takenDateTime = takenDateTime;
 		this.cameraMake = cameraMake;
 		this.cameraModel = cameraModel;
@@ -37,24 +41,5 @@ public class PhotoFacet {
 		this.exposureNumerator = exposureNumerator;
 		this.focalLength = focalLength;
 		this.iso = iso;
-	}
-
-	@Nullable
-	public static PhotoFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		String timestamp = json.getString("takenDateTime");
-		ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.parse(timestamp), ZoneId.systemDefault());
-
-		return new PhotoFacet(
-				zonedDateTime,
-				json.getString("cameraMake"),
-				json.getString("cameraModel"),
-				json.getDouble("fNumber"),
-				json.getDouble("exposureDenominator"),
-				json.getDouble("exposureNumerator"),
-				json.getDouble("focalLength"),
-				json.getLong("iso")
-		);
 	}
 }

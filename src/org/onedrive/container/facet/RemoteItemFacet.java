@@ -1,8 +1,10 @@
 package org.onedrive.container.facet;
 
-import com.sun.istack.internal.Nullable;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.json.simple.JSONObject;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.items.ItemReference;
 
 /**
@@ -12,16 +14,25 @@ import org.onedrive.container.items.ItemReference;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class RemoteItemFacet {
-	@Getter protected final String id;
-	@Getter protected final ItemReference parentReference;
-	@Getter protected final FolderFacet folder;
-	@Getter protected final FileFacet file;
-	@Getter protected final FileSystemInfoFacet fileSystemInfo;
+	@Getter @NotNull protected final String id;
+	@Getter @NotNull protected final ItemReference parentReference;
+	@Getter @Nullable protected final FolderFacet folder;
+	@Getter @Nullable protected final FileFacet file;
+	@Getter @Nullable protected final FileSystemInfoFacet fileSystemInfo;
 	@Getter protected final long size;
-	@Getter protected final String name;
+	@Getter @Nullable protected final String name;
 
-	protected RemoteItemFacet(String id, ItemReference parentReference, FolderFacet folder, FileFacet file,
-							  FileSystemInfoFacet fileSystemInfo, long size, String name) {
+	@JsonCreator
+	protected RemoteItemFacet(@NotNull @JsonProperty("id") String id,
+							  @NotNull @JsonProperty("parentReference") ItemReference parentReference,
+							  @Nullable @JsonProperty("folder") FolderFacet folder,
+							  @Nullable @JsonProperty("file") FileFacet file,
+							  @Nullable @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
+							  @JsonProperty("size") Long size,
+							  @Nullable @JsonProperty("name") String name) {
+		if (size == null) {
+			throw new RuntimeException("\"size\" filed can not be null");
+		}
 		this.id = id;
 		this.parentReference = parentReference;
 		this.folder = folder;
@@ -29,20 +40,5 @@ public class RemoteItemFacet {
 		this.fileSystemInfo = fileSystemInfo;
 		this.size = size;
 		this.name = name;
-	}
-
-	@Nullable
-	public static RemoteItemFacet parse(JSONObject json) {
-		if (json == null) return null;
-
-		return new RemoteItemFacet(
-				json.getString("id"),
-				ItemReference.parse(json.getObject("parentReference")),
-				FolderFacet.parse(json.getObject("folder")),
-				FileFacet.parse(json.getObject("file")),
-				FileSystemInfoFacet.parse(json.getObject("fileSystemInfo")),
-				json.getLong("size"),
-				json.getString("name")
-		);
 	}
 }

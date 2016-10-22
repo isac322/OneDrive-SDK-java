@@ -1,222 +1,315 @@
 package org.onedrive.container.items;
 
-import com.sun.istack.internal.NotNull;
-import com.sun.istack.internal.Nullable;
-import lombok.Getter;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.network.HttpsRequest;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import lombok.SneakyThrows;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.onedrive.Client;
-import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
-import org.onedrive.utils.OneDriveRequest;
+import org.onedrive.network.AsyncHttpsResponseHandler;
+import org.onedrive.network.HttpsClientHandler;
+import org.onedrive.network.legacy.HttpsRequest;
+import org.onedrive.network.legacy.HttpsResponse;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
+import javax.net.ssl.HttpsURLConnection;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * {@// TODO: Enhance javadoc}
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
+@JsonDeserialize(as = FolderItem.class)
 public class FolderItem extends BaseItem implements Iterable<BaseItem> {
-	@Getter protected FolderFacet folder;
-	@Nullable protected SpecialFolderFacet specialFolder;
-	@NotNull protected List<FolderItem> folderChildren;
-	@NotNull protected List<FileItem> fileChildren;
-	@NotNull protected List<BaseItem> allChildren;
-	protected boolean root;
+	@NotNull protected FolderFacet folder;
+	@Nullable @JsonProperty protected SpecialFolderFacet specialFolder;
+	@Nullable @JsonIgnore protected List<FolderItem> folderChildren;
+	@Nullable @JsonIgnore protected List<FileItem> fileChildren;
+	@Nullable @JsonIgnore protected List<BaseItem> allChildren;
+	@Nullable @JsonProperty protected ObjectNode root;
 
 
-	protected FolderItem(Client client, String id, IdentitySet createdBy, ZonedDateTime createdDateTime, String cTag,
-						 boolean deleted, String description, String eTag, FileSystemInfoFacet fileSystemInfo,
-						 FolderFacet folder, IdentitySet lastModifiedBy, ZonedDateTime lastModifiedDateTime,
-						 String name, ItemReference parentReference, RemoteItemFacet remoteItem,
-						 SearchResultFacet searchResult, SharedFacet shared, SharePointIdsFacet sharePointIds,
-						 Long size, SpecialFolderFacet specialFolder, String webDavUrl, String webUrl, boolean root,
-						 List<FolderItem> folderChildren, List<FileItem> fileChildren, List<BaseItem> allChildren) {
-		this.client = client;
-		this.id = id;
-		this.createdBy = createdBy;
-		this.createdDateTime = createdDateTime;
-		this.cTag = cTag;
-		this.deleted = deleted;
-		this.description = description;
-		this.eTag = eTag;
-		this.fileSystemInfo = fileSystemInfo;
+	@JsonCreator
+	protected FolderItem(@JacksonInject("OneDriveClient") Client client,
+						 @JsonProperty("id") String id,
+						 @JsonProperty("createdBy") IdentitySet createdBy,
+						 @JsonProperty("createdDateTime") String createdDateTime,
+						 @JsonProperty("cTag") String cTag,
+						 @JsonProperty("deleted") ObjectNode deleted,
+						 @JsonProperty("description") String description,
+						 @JsonProperty("eTag") String eTag,
+						 @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
+						 @JsonProperty("folder") @NotNull FolderFacet folder,
+						 @JsonProperty("lastModifiedBy") IdentitySet lastModifiedBy,
+						 @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime,
+						 @JsonProperty("name") @NotNull String name,
+						 @JsonProperty("parentReference") @Nullable ItemReference parentReference,
+						 @JsonProperty("root") @Nullable ObjectNode root,
+						 @JsonProperty("searchResult") @Nullable SearchResultFacet searchResult,
+						 @JsonProperty("shared") @Nullable SharedFacet shared,
+						 @JsonProperty("sharePointIds") @Nullable SharePointIdsFacet sharePointIds,
+						 @JsonProperty("size") Long size,
+						 @JsonProperty("specialFolder") @Nullable SpecialFolderFacet specialFolder,
+						 @JsonProperty("webDavUrl") String webDavUrl,
+						 @JsonProperty("webUrl") String webUrl,
+						 @JsonProperty("children@odata.nextLink") @Nullable String nextLink,
+						 @JsonProperty("children") @Nullable ArrayNode children) {
+		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
+				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
+				size, webDavUrl, webUrl);
+
 		this.folder = folder;
-		this.lastModifiedBy = lastModifiedBy;
-		this.lastModifiedDateTime = lastModifiedDateTime;
-		this.name = name;
-		this.parentReference = parentReference;
-		this.remoteItem = remoteItem;
-		this.searchResult = searchResult;
-		this.shared = shared;
-		this.sharePointIds = sharePointIds;
-		this.size = size;
 		this.specialFolder = specialFolder;
-		this.webDavUrl = webDavUrl;
-		this.webUrl = webUrl;
 		this.root = root;
-		this.folderChildren = folderChildren;
-		this.fileChildren = fileChildren;
-		this.allChildren = allChildren;
+
+		if (children != null) {
+			this.folderChildren = new CopyOnWriteArrayList<>();
+			this.fileChildren = new CopyOnWriteArrayList<>();
+			this.allChildren = new CopyOnWriteArrayList<>();
+
+			parseChildren(client, children, nextLink, allChildren, folderChildren, fileChildren);
+		}
+		else {
+			folderChildren = null;
+			fileChildren = null;
+			allChildren = null;
+		}
+
+		if (!isRoot() && parentReference == null) {
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " parentReference is missing!");
+		}
 	}
 
-	protected static void parseChildren(Client client, JSONArray array, @Nullable String nextLink,
-										List<BaseItem> all, List<FolderItem> folder, List<FileItem> file) {
-		while (true) {
-			for (Object item : array) {
-				if (item instanceof JSONObject) {
-					BaseItem child = BaseItem.parse(client, (JSONObject) item);
+	protected static void addChildren(@NotNull Client client, @NotNull JsonNode array, @NotNull List<BaseItem> all,
+									  @NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
+		for (JsonNode child : array) {
+			if (child.isObject()) {
+				BaseItem item = client.getMapper().convertValue(child, BaseItem.class);
 
-					if (child instanceof FolderItem) {
-						folder.add((FolderItem) child);
-					}
-					else if (child instanceof FileItem) {
-						file.add((FileItem) child);
-					}
-					else if (child instanceof PackageItem) {
-						// TODO: Handling Package (https://dev.onedrive.com/facets/package_facet.htm).
-					}
-					else {
-						// if child is neither FolderItem nor FileItem nor PackageItem.
-						throw new UnsupportedOperationException("Children object must file or folder of package");
-					}
-					all.add(child);
+				if (item instanceof FolderItem) {
+					folder.add((FolderItem) item);
 				}
-				else throw new UnsupportedOperationException("Wrong Children type.");
+				else if (item instanceof FileItem) {
+					file.add((FileItem) item);
+				}
+				else if (!(item instanceof PackageItem)) {
+					// if child is neither FolderItem nor FileItem nor PackageItem.
+					throw new UnsupportedOperationException("Children object must file or folder of package");
+				}
+				all.add(item);
+			}
+			// if child is neither FolderItem nor FileItem nor PackageItem.
+			else
+				throw new UnsupportedOperationException("Children object must file or folder of package");
+		}
+	}
+
+	@SneakyThrows(URISyntaxException.class)
+	protected static void parseChildren(@NotNull final Client client, @NotNull JsonNode array,
+										@Nullable String nextLink, @NotNull List<BaseItem> all,
+										@NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
+		final ObjectNode jsonObject[] = new ObjectNode[1];
+		while (nextLink != null) {
+			@NotNull
+			HttpsClientHandler httpsHandler =
+					client.getRequestTool().doAsync(new URI(nextLink), HttpMethod.GET, new AsyncHttpsResponseHandler
+							() {
+						@Override
+						public void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response) {
+							try {
+								jsonObject[0] = (ObjectNode) client.getMapper().readTree(resultStream);
+							}
+							catch (IOException e) {
+								e.printStackTrace();
+								throw new RuntimeException(
+										HttpsRequest.NETWORK_ERR_MSG + " Can not convert response to JSON");
+							}
+						}
+					});
+
+			addChildren(client, array, all, folder, file);
+			try {
+				httpsHandler.getBlockingCloseFuture().sync();
+			}
+			catch (InterruptedException e) {
+				e.printStackTrace();
 			}
 
-			if (nextLink == null) break;
+			if (jsonObject[0].has("@odata.nextLink")) {
+				nextLink = jsonObject[0].get("@odata.nextLink").asText();
+			}
+			else nextLink = null;
+
+			if (jsonObject[0].has("value")) {
+				array = jsonObject[0].get("value");
+			}
 			else {
-				/*
-				if children list is larger than 200, it will split into 200-size response.
-				see "skipToken" in
-				https://dev.onedrive.com/odata/optional-query-parameters.htm#optional-odata-query-parameters
-		 		*/
-				try {
-					JSONObject response = OneDriveRequest.doGetJson(new URL(nextLink), client.getAccessToken());
-					array = response.getArray("value");
-					nextLink = response.getString("@odata.nextLink");
-				}
-				catch (MalformedURLException e) {
-					e.printStackTrace();
-					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
-				}
+				throw new UnsupportedOperationException("Children object must file or folder of package");
 			}
 		}
+
+		addChildren(client, array, all, folder, file);
 	}
 
-	@Nullable
-	static FolderItem parseFolder(Client client, JSONObject json) {
-		if (json == null) return null;
+	protected void fetchChildren() {
+		ObjectNode content = client.getRequestTool().doGetJson("/drive/items/" + id + "/children");
 
-		List<BaseItem> all = null;
-		List<FolderItem> folder = null;
-		List<FileItem> file = null;
+		allChildren = new CopyOnWriteArrayList<>();
+		folderChildren = new CopyOnWriteArrayList<>();
+		fileChildren = new CopyOnWriteArrayList<>();
 
-		// make items of children recursively.
-		if (json.containsKey("children")) {
-			all = new ArrayList<>();
-			folder = new ArrayList<>();
-			file = new ArrayList<>();
+		JsonNode value = content.get("value");
+		JsonNode nextLink = content.get("@odata.nextLink");
 
-			parseChildren(client, json.getArray("children"), json.getString("children@odata.nextLink"),
-					all, folder, file);
+		if (!value.isArray() || (nextLink != null && !nextLink.isTextual())) {
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 		}
 
-		return new FolderItem(
-				client,
-				json.getString("id"),
-				IdentitySet.parse(json.getObject("createdBy")),
-				BaseContainer.parseDateTime(json.getString("createdDateTime")),
-				json.getString("cTag"),
-				json.getObject("deleted") != null,
-				json.getString("description"),
-				json.getString("eTag"),
-				FileSystemInfoFacet.parse(json.getObject("fileSystemInfo")),
-				FolderFacet.parse(json.getObject("folder")),
-				IdentitySet.parse(json.getObject("lastModifiedBy")),
-				BaseContainer.parseDateTime(json.getString("lastModifiedDateTime")),
-				json.getString("name"),
-				ItemReference.parse(json.getObject("parentReference")),
-				RemoteItemFacet.parse(json.getObject("remoteItem")),
-				SearchResultFacet.parse(json.getObject("searchResult")),
-				SharedFacet.parse(json.getObject("shared")),
-				SharePointIdsFacet.parse(json.getObject("sharepointIds")),
-				json.getLong("size"),
-				SpecialFolderFacet.parse(json.getObject("specialFolder")),
-				json.getString("webDavUrl"),
-				json.getString("webUrl"),
-				json.getObject("root") != null,
-				folder,
-				file,
-				all
-		);
+		// TODO: if-none-match request header handling.
+		// TODO: not 200 OK response handling.
+		parseChildren(client, value, nextLink == null ? null : nextLink.asText(),
+				allChildren, folderChildren, fileChildren);
 	}
 
+	/**
+	 * Implementation of <a href='https://dev.onedrive.com/items/create.htm'>detail</a>.
+	 * <p>
+	 * {@// TODO: Enhance javadoc }
+	 * {@// TODO: Implement '@name.conflictBehavior' }
+	 *
+	 * @param name New folder name.
+	 * @return New folder's ID.
+	 * @throws RuntimeException If creating folder or converting response is fails.
+	 */
+	@NotNull
+	public String createFolder(@NotNull String name) {
+		byte[] prefix = "{\"name\":\"".getBytes();
+		byte[] middle = name.getBytes();
+		byte[] suffix = "\",\"folder\":{}}".getBytes();
+
+		byte[] content = new byte[prefix.length + middle.length + suffix.length];
+
+		System.arraycopy(prefix, 0, content, 0, prefix.length);
+		System.arraycopy(middle, 0, content, prefix.length, middle.length);
+		System.arraycopy(suffix, 0, content, prefix.length + middle.length, suffix.length);
+
+		HttpsResponse response =
+				client.getRequestTool().postMetadata(
+						String.format("/drives/%s/items/%s/children", getDriveId(), this.id),
+						content);
+
+		// 201 Created
+		if (response.getCode() != HttpsURLConnection.HTTP_CREATED) {
+			throw new RuntimeException("Create folder " + name + " fails.");
+		}
+
+
+		try {
+			return client.getMapper().readTree(response.getContent()).get("id").asText();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Converting response to json is fail.");
+		}
+	}
+
+
+	/*
+	=============================================================
+	Custom Getter
+	=============================================================
+	 */
+
+
+	@JsonIgnore
 	public boolean isRoot() {
-		return root;
+		return root != null;
+	}
+
+	@JsonIgnore
+	public boolean isChildrenFetched() {
+		return allChildren != null && folderChildren != null && fileChildren != null;
+	}
+
+	@JsonIgnore
+	public boolean isSpecial() {
+		return specialFolder != null;
 	}
 
 	public long childrenCount() {
 		return folder.getChildCount();
 	}
 
-	private void fetchChildren() {
-		JSONObject json = OneDriveRequest.doGetJson(
-				"/drive/items/" + id + "/children", client.getAccessToken());
 
-		allChildren = new ArrayList<>();
-		folderChildren = new ArrayList<>();
-		fileChildren = new ArrayList<>();
-
-		// TODO: if-none-match request header handling.
-		// TODO: not 200 OK response handling.
-		parseChildren(client, json.getArray("value"), json.getString("@odata.nextLink"),
-				allChildren, folderChildren, fileChildren);
+	@NotNull
+	@Override
+	public String getDriveId() {
+		if (isRoot()) return id.split("!")[0];
+		assert parentReference != null;
+		return parentReference.driveId;
 	}
 
-	public boolean isChildrenFetched() {
-		return allChildren != null && folderChildren != null && fileChildren != null;
+	@Nullable
+	@Override
+	public String getPath() {
+		if (isRoot()) return "/drive/root:";
+		assert parentReference != null;
+		if (parentReference.path == null) return null;
+		return parentReference.path + '/' + name;
 	}
 
-	public boolean isSpecial() {
-		return specialFolder != null;
-	}
-
+	@SuppressWarnings("ConstantConditions")
 	@NotNull
 	public List<BaseItem> getAllChildren() {
 		if (!isChildrenFetched()) fetchChildren();
 		return allChildren;
 	}
 
+	@SuppressWarnings("ConstantConditions")
 	@NotNull
 	public List<FolderItem> getFolderChildren() {
 		if (!isChildrenFetched()) fetchChildren();
 		return folderChildren;
 	}
 
+	@SuppressWarnings("ConstantConditions")
 	@NotNull
 	public List<FileItem> getFileChildren() {
 		if (!isChildrenFetched()) fetchChildren();
 		return fileChildren;
 	}
 
-	@Override
+
+	/*
+	=============================================================
+	Custom Iterator
+	=============================================================
+	 */
+
+
 	@NotNull
+	@Override
 	public Iterator<BaseItem> iterator() {
-		if (!isChildrenFetched()) fetchChildren();
-		return new ChildrenIterator(allChildren.iterator());
+		return new ChildrenIterator(getAllChildren().iterator());
 	}
 
-	class ChildrenIterator implements Iterator<BaseItem> {
+	private class ChildrenIterator implements Iterator<BaseItem> {
 		private final Iterator<BaseItem> itemIterator;
 
 		ChildrenIterator(Iterator<BaseItem> iterator) {
@@ -231,6 +324,11 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		@Override
 		public BaseItem next() {
 			return itemIterator.next();
+		}
+
+		@Override
+		public void remove() {
+			itemIterator.remove();
 		}
 	}
 }

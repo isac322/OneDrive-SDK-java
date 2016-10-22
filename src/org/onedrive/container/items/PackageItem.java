@@ -1,79 +1,72 @@
 package org.onedrive.container.items;
 
-import com.sun.istack.internal.Nullable;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonFilter;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
-import org.json.simple.JSONObject;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.onedrive.Client;
-import org.onedrive.container.BaseContainer;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
 
-import java.time.ZonedDateTime;
-
 /**
- * https://dev.onedrive.com/facets/package_facet.htm
+ * <a href='https://dev.onedrive.com/facets/package_facet.htm'>https://dev.onedrive.com/facets/package_facet.htm</a>
+ * <p>
+ * Because there is only one package type item in OneDrive now, this class inherits {@link FileItem}.
+ * <p>
  * {@// TODO: enhance javadoc}
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
+@JsonFilter("PackageItem")
+@JsonDeserialize(as = PackageItem.class)
 public class PackageItem extends BaseItem {
-	@Getter protected PackageFacet packages;
+	@Getter @NotNull protected PackageFacet packages;
 
-	public PackageItem(Client client, String id, IdentitySet createdBy, ZonedDateTime createdDateTime, String cTag,
-					   boolean deleted, String description, String eTag, FileSystemInfoFacet fileSystemInfo,
-					   IdentitySet lastModifiedBy, ZonedDateTime lastModifiedDateTime, String name,
-					   PackageFacet packages, ItemReference parentReference, RemoteItemFacet remoteItem,
-					   SearchResultFacet searchResult, SharedFacet shared, SharePointIdsFacet sharePointIds, Long size,
-					   String webDavUrl, String webUrl) {
-		this.client = client;
-		this.id = id;
-		this.createdBy = createdBy;
-		this.createdDateTime = createdDateTime;
-		this.cTag = cTag;
-		this.deleted = deleted;
-		this.description = description;
-		this.eTag = eTag;
-		this.fileSystemInfo = fileSystemInfo;
-		this.lastModifiedBy = lastModifiedBy;
-		this.lastModifiedDateTime = lastModifiedDateTime;
-		this.name = name;
+	@JsonCreator
+	public PackageItem(@JacksonInject("OneDriveClient") Client client,
+					   @JsonProperty("id") String id,
+					   @JsonProperty("createdBy") IdentitySet createdBy,
+					   @JsonProperty("createdDateTime") String createdDateTime,
+					   @JsonProperty("cTag") String cTag,
+					   @JsonProperty("deleted") ObjectNode deleted,
+					   @JsonProperty("description") String description,
+					   @JsonProperty("eTag") String eTag,
+					   @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
+					   @JsonProperty("lastModifiedBy") IdentitySet lastModifiedBy,
+					   @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime,
+					   @JsonProperty("name") @NotNull String name,
+					   @JsonProperty("parentReference") @NotNull ItemReference parentReference,
+					   @JsonProperty("searchResult") @Nullable SearchResultFacet searchResult,
+					   @JsonProperty("shared") @Nullable SharedFacet shared,
+					   @JsonProperty("sharePointIds") @Nullable SharePointIdsFacet sharePointIds,
+					   @JsonProperty("size") long size,
+					   @JsonProperty("webDavUrl") String webDavUrl,
+					   @JsonProperty("webUrl") String webUrl,
+					   @JsonProperty("package") @NotNull PackageFacet packages) {
+		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
+				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
+				size, webDavUrl, webUrl);
+
 		this.packages = packages;
-		this.parentReference = parentReference;
-		this.remoteItem = remoteItem;
-		this.searchResult = searchResult;
-		this.shared = shared;
-		this.sharePointIds = sharePointIds;
-		this.size = size;
-		this.webDavUrl = webDavUrl;
-		this.webUrl = webUrl;
+	}
+
+	@NotNull
+	@Override
+	public String getDriveId() {
+		assert parentReference != null;
+		return parentReference.driveId;
 	}
 
 	@Nullable
-	static PackageItem parsePackage(Client client, JSONObject json) {
-		if (json == null) return null;
-
-		return new PackageItem(
-				client,
-				json.getString("id"),
-				IdentitySet.parse(json.getObject("createdBy")),
-				BaseContainer.parseDateTime(json.getString("createdDateTime")),
-				json.getString("cTag"),
-				json.getObject("deleted") != null,
-				json.getString("description"),
-				json.getString("eTag"),
-				FileSystemInfoFacet.parse(json.getObject("fileSystemInfo")),
-				IdentitySet.parse(json.getObject("lastModifiedBy")),
-				BaseContainer.parseDateTime(json.getString("lastModifiedDateTime")),
-				json.getString("name"),
-				PackageFacet.parse(json.getObject("package")),
-				ItemReference.parse(json.getObject("parentReference")),
-				RemoteItemFacet.parse(json.getObject("remoteItem")),
-				SearchResultFacet.parse(json.getObject("searchResult")),
-				SharedFacet.parse(json.getObject("shared")),
-				SharePointIdsFacet.parse(json.getObject("sharepointIds")),
-				json.getLong("size"),
-				json.getString("webDavUrl"),
-				json.getString("webUrl")
-		);
+	@Override
+	public String getPath() {
+		assert parentReference != null;
+		if (parentReference.path == null) return null;
+		return parentReference.path + '/' + name;
 	}
 }

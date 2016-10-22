@@ -1,24 +1,36 @@
 package org.onedrive;
 
-import com.sun.istack.internal.NotNull;
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import lombok.Getter;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-import org.network.HttpsRequest;
-import org.network.HttpsResponse;
+import lombok.SneakyThrows;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.Drive;
+import org.onedrive.container.items.BaseItem;
 import org.onedrive.container.items.FileItem;
 import org.onedrive.container.items.FolderItem;
+import org.onedrive.network.legacy.HttpsRequest;
+import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.utils.AuthServer;
 import org.onedrive.utils.OneDriveRequest;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -27,19 +39,37 @@ import java.util.concurrent.Semaphore;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class Client {
-	private static final String UNREACHABLE_MSG = "Unreachable Area. Check stack stace above";
-	private final JSONParser parser = new JSONParser();
+	public static final ExecutorService threadPool =
+			Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+	/*
+	for resolve tricky issue of Jackson.
+	See:
+	https://github.com/FasterXML/jackson-databind/issues/1119
+	and
+	https://github.com/FasterXML/jackson-databind/issues/962
+	*/
+	private static final SimpleModule jacksonIsTricky =
+			new SimpleModule().setMixInAnnotation(ObjectMapper.class, Client.IgnoreMe.class);
+	/**
+	 * Only one {@code mapper} per a {@code Client} object.<br>
+	 * It makes possible to multi client usage
+	 */
+	@Getter private final ObjectMapper mapper;
+	@Getter @NotNull private final OneDriveRequest requestTool;
+
 	private long lastRefresh;
 	@Getter private long expirationTime;
-	@Getter private String tokenType;
-	@Getter private String accessToken;
-	@Getter private String userId;
-	@Getter private String refreshToken;
-	@Getter private String[] scopes;
-	@Getter private String clientId;
-	@Getter private String clientSecret;
-	@Getter private String redirectURL;
-	@Getter private String authCode;
+	@Nullable private String authCode;
+	@Nullable private String tokenType;
+	@Nullable private String accessToken;
+	@Nullable private String userId;
+	@Nullable private String refreshToken;
+	@Nullable private String fullToken;
+	@Getter @NotNull private String[] scopes;
+	@Getter @NotNull private String clientId;
+	@Getter @NotNull private String clientSecret;
+	@Getter @NotNull private String redirectURL;
 
 	/**
 	 * Construct with auto login.
@@ -50,7 +80,8 @@ public class Client {
 	 *                     one!
 	 * @param clientSecret Client secret key that MS gave to programmer.
 	 */
-	public Client(String clientId, String[] scope, String redirectURL, String clientSecret) {
+	public Client(@NotNull String clientId, @NotNull String[] scope,
+				  @NotNull String redirectURL, @NotNull String clientSecret) {
 		this(clientId, scope, redirectURL, clientSecret, true);
 	}
 
@@ -62,11 +93,36 @@ public class Client {
 	 * @param clientSecret Client secret key that MS gave to programmer.
 	 * @param autoLogin    if {@code true} construct with auto login.
 	 */
-	public Client(String clientId, String[] scope, String redirectURL, String clientSecret, boolean autoLogin) {
+	public Client(@NotNull String clientId, @NotNull String[] scope, @NotNull String redirectURL,
+				  @NotNull String clientSecret, boolean autoLogin) {
 		this.scopes = scope;
 		this.clientId = clientId;
 		this.clientSecret = clientSecret;
 		this.redirectURL = redirectURL;
+
+		mapper = new ObjectMapper();
+
+		InjectableValues.Std clientInjector = new InjectableValues.Std().addValue("OneDriveClient", this);
+		mapper.setInjectableValues(clientInjector);
+
+		/*
+		for resolve tricky issue of Jackson.
+		See:
+		https://github.com/FasterXML/jackson-databind/issues/1119
+		and
+		https://github.com/FasterXML/jackson-databind/issues/962
+		 */
+		mapper.registerModule(jacksonIsTricky);
+		mapper.registerModule(new AfterburnerModule());
+
+
+		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+		// in serialization, ignore null values.
+		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+		requestTool = new OneDriveRequest(this, mapper);
+
 		if (autoLogin) login();
 	}
 
@@ -90,7 +146,9 @@ public class Client {
 	 * @return <b>Access Code</b>({@code this.accessToken}) if successful. Otherwise throw {@link RuntimeException}.
 	 * @throws RuntimeException if getting <b>Access Code</b> is unsuccessful.
 	 */
+	@NotNull
 	private String getCode() {
+		// FIXME: string.join() is a Java 8 method.
 		String url = String.format("https://login.live.com/oauth20_authorize.srf" +
 						"?client_id=%s&scope=%s&response_type=code&redirect_uri=%s",
 				clientId,
@@ -109,25 +167,30 @@ public class Client {
 			String code = server.close();
 			answerLock.release();
 
+			if (code == null) {
+				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+			}
+
 			return code;
 		}
 		catch (IOException | URISyntaxException e) {
 			e.printStackTrace();
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 		}
 		catch (InterruptedException e) {
 			e.printStackTrace();
-			System.err.println("Lock Error In " + this.getClass().getName());
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Lock Error In " + this.getClass().getName());
 		}
-
-		throw new RuntimeException(UNREACHABLE_MSG);
 	}
 
+	@NotNull
 	private String redeemToken() {
 		return getToken(
 				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&code=%s&grant_type=authorization_code",
 						clientId, redirectURL, clientSecret, authCode));
 	}
 
+	@NotNull
 	public String refreshToken() {
 		if (!isLogin()) {
 			throw new RuntimeException("Do login first!!");
@@ -139,6 +202,7 @@ public class Client {
 						clientId, redirectURL, clientSecret, refreshToken));
 	}
 
+	@NotNull
 	private String getToken(String httpBody) {
 		try {
 			HttpsRequest request = new HttpsRequest("https://login.live.com/oauth20_token.srf");
@@ -146,30 +210,34 @@ public class Client {
 
 			HttpsResponse response = request.doPost(httpBody);
 
+			JsonNode json = mapper.readTree(response.getContent());
 
-			JSONObject jsonResponse = (JSONObject) parser.parse(response.getContentString());
+			JsonNode access = json.get("access_token");
+			JsonNode refresh = json.get("refresh_token");
+			JsonNode id = json.get("user_id");
+			JsonNode type = json.get("token_type");
+			JsonNode expires = json.get("expires_in");
+
+			if (access == null || refresh == null || id == null || type == null || expires == null) {
+				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+			}
 
 			saveToken(
-					jsonResponse.getString("access_token"),
-					jsonResponse.getString("refresh_token"),
-					jsonResponse.getString("user_id"),
-					jsonResponse.getString("token_type"),
-					jsonResponse.getLong("expires_in")
+					access.asText(),
+					refresh.asText(),
+					id.asText(),
+					type.asText(),
+					expires.asLong()
 			);
 
-			return jsonResponse.getString("access_token");
+			return access.asText();
 
 		}
 		catch (IOException e) {
 			e.printStackTrace();
-			System.err.println("Internet Connection Error While Refreshing Login Info");
+			throw new RuntimeException(
+					HttpsRequest.NETWORK_ERR_MSG + " Internet Connection Error While Refreshing Login Info");
 		}
-		catch (ParseException e) {
-			e.printStackTrace();
-			System.err.println("Response Json Error in " + this.getClass().getName());
-		}
-
-		throw new RuntimeException(UNREACHABLE_MSG);
 	}
 
 	private void saveToken(String accessToken, String refreshToken, String userId, String type, long expirationTime) {
@@ -179,9 +247,14 @@ public class Client {
 		this.refreshToken = refreshToken;
 		this.expirationTime = expirationTime * 1000;
 		this.lastRefresh = System.currentTimeMillis();
+		this.fullToken = type + ' ' + accessToken;
 	}
 
 	private void checkExpired() {
+		if (!isLogin()) {
+			throw new RuntimeException("Do login first!!");
+		}
+
 		if (isExpired()) {
 			refreshToken();
 		}
@@ -192,26 +265,25 @@ public class Client {
 	 *
 	 * @throws RuntimeException if it isn't login when called.
 	 */
+	@SneakyThrows(MalformedURLException.class)
 	public void logout() {
 		if (!isLogin()) throw new RuntimeException("Already Logout!!");
 
-		try {
-			String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
-					clientId, redirectURL);
+		String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
+				clientId, redirectURL);
 
-			HttpsRequest request = new HttpsRequest(url);
-			// TODO
-			HttpsResponse response = request.doGet();
+		HttpsResponse response = new HttpsRequest(url).doGet();
 
-			authCode = null;
-			accessToken = null;
-			userId = null;
-			refreshToken = null;
-			expirationTime = 0;
+		if (response.getCode() != HttpsURLConnection.HTTP_MOVED_TEMP) {
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Fail to logout.");
 		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
+
+		authCode = null;
+		accessToken = null;
+		userId = null;
+		refreshToken = null;
+		expirationTime = 0;
+		fullToken = null;
 	}
 
 	public boolean isExpired() {
@@ -226,67 +298,126 @@ public class Client {
 	public Drive getDefaultDrive() {
 		checkExpired();
 
-		try {
-			HttpsResponse response = OneDriveRequest.doGet("/drive", accessToken);
-			JSONObject json = (JSONObject) parser.parse(response.getContentString());
-
-			return Drive.parse(json);
-		}
-		catch (ParseException e) {
-			e.printStackTrace();
-			System.err.println("Wrong json response. It must be connection error");
-		}
-
-		throw new RuntimeException(UNREACHABLE_MSG);
+		return requestTool.doGetObject("/drive", Drive.class);
 	}
 
 	@NotNull
-	public List<Drive> getAllDrive() {
-		ArrayList<Drive> list = new ArrayList<>();
+	public Drive[] getAllDrive() {
+		checkExpired();
 
-		JSONObject json = OneDriveRequest.doGetJson("/drives", accessToken);
+		ObjectNode jsonResponse = requestTool.doGetJson("/drives");
 
-		for (Object drive : json.getArray("value")) {
-			list.add(Drive.parse((JSONObject) drive));
-		}
-
-		return list;
+		return mapper.convertValue(jsonResponse.get("value"), Drive[].class);
 	}
 
 	@NotNull
 	public FolderItem getRootDir() {
-		JSONObject json = OneDriveRequest.doGetJson("/drive/root:/?expand=children", accessToken);
+		checkExpired();
 
-		return (FolderItem) FolderItem.parse(this, json);
+		return requestTool.doGetObject("/drive/root:/?expand=children", FolderItem.class);
 	}
 
+	/**
+	 * {@// TODO: handling error if `id`'s item isn't folder item. }
+	 *
+	 * @param id folder id.
+	 * @return folder object
+	 */
 	@NotNull
 	public FolderItem getFolder(@NotNull String id) {
-		try {
-			JSONObject json = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
+		checkExpired();
 
-			return (FolderItem) FolderItem.parse(this, json);
-		}
-		catch (ClassCastException e) {
-			e.printStackTrace();
-			System.err.println(id + " is not folder ID.");
-		}
+		return requestTool.doGetObject("/drive/items/" + id + "?expand=children", FolderItem.class);
+	}
 
-		throw new RuntimeException(UNREACHABLE_MSG);
+	/**
+	 * {@// TODO: handling error if `id`'s item isn't folder item. }
+	 *
+	 * @param id file id.
+	 * @return file object
+	 */
+	@NotNull
+	public FileItem getFile(@NotNull String id) {
+		checkExpired();
+
+		return requestTool.doGetObject("/drive/items/" + id, FileItem.class);
 	}
 
 	@NotNull
-	public FileItem getFile(@NotNull String id) {
-		try {
-			JSONObject json = OneDriveRequest.doGetJson("/drive/items/" + id + "?expand=children", accessToken);
+	public BaseItem getItem(@NotNull String id) {
+		checkExpired();
 
-			return (FileItem) FileItem.parse(this, json);
-		}
-		catch (ClassCastException e) {
-			e.printStackTrace();
-			System.err.println(id + " is not file ID.");
+		return requestTool.doGetObject("/drive/items/" + id, BaseItem.class);
+	}
+
+	@NotNull
+	public BaseItem[] getShared() {
+		checkExpired();
+
+		ArrayNode values = (ArrayNode) requestTool.doGetJson("/drive/shared").get("value");
+
+		int size = values.size();
+		BaseItem[] items = new BaseItem[size];
+
+
+		ObjectNode jsonResponse;
+		for (int i = 0; i < size; i++) {
+			jsonResponse = requestTool.doGetJson(
+					"/drive/items/" + values.get(i).get("id").asText() + "?expand=children"
+			);
+
+			items[i] = mapper.convertValue(jsonResponse, BaseItem.class);
 		}
 
-		throw new RuntimeException(UNREACHABLE_MSG);
+		return items;
+	}
+
+
+	/*
+	=============================================================
+	Custom Getter
+	=============================================================
+	 */
+
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getTokenType() {
+		checkExpired();
+		return tokenType;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getAccessToken() {
+		checkExpired();
+		return accessToken;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getUserId() {
+		checkExpired();
+		return userId;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getRefreshToken() {
+		checkExpired();
+		return refreshToken;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getAuthCode() {
+		checkExpired();
+		return authCode;
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@NotNull public String getFullToken() {
+		checkExpired();
+		return fullToken;
+	}
+
+
+	@JsonIgnoreType
+	private static class IgnoreMe {
 	}
 }
