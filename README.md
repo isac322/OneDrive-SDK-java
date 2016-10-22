@@ -3,6 +3,39 @@
 
 # [OneDrive](https://onedrive.live.com/) API for Java
 
+purse fast, easy to use, intuitive API.
+
+
+### Supported Operation
+
+- auto login authorization check and refresh
+- fetching metadata of folder, file (by id)
+- folder or file's metadata (size, name, path, children list and etc.)
+- downloading file (sync)
+- folder or file's delete, copy, metadata change
+- creating folder (only by parent object)
+- [Facets](https://dev.onedrive.com/facets/facets.htm) that OneDrive support like image, video..
+- inquiring shared folder
+- basic [RemoteItem](https://dev.onedrive.com/misc/working-with-links.htm) handling
+- inquiring [Drives](https://dev.onedrive.com/resources/drive.htm)
+
+
+
+### TODO
+
+- downloading file (async: almost complete)
+- searching file or folder (by name or content)
+- fetching metadata of folder, file (by path)
+- moving file or folder
+- creating folder (solely by path or id, without parent object)
+- creating file and upload it (async)
+- sharing folder or file 
+- downloading whole folder
+- Maven
+- documentation
+- support custom redirect url when login
+- REST-api response error handling
+
 
 ### Environment
 

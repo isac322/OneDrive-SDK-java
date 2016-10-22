@@ -12,7 +12,7 @@
 - 폴더, 파일 정보 확인 (크기, 이름, 경로, 폴더 내부 목록 등등)
 - 파일 다운로드 (sync)
 - 폴더, 파일 정보 변경, 삭제, 복사
-- 폴더 생성 (브모 객체를 통해서만)
+- 폴더 생성 (부모 객체를 통해서만)
 - 이미지, 비디오, 등등 OneDrive에서 지원하는 [Facets](https://dev.onedrive.com/facets/facets.htm)
 - 공유 폴더 조회
 - 간단한 [RemoteItem](https://dev.onedrive.com/misc/working-with-links.htm) handling
