@@ -231,7 +231,7 @@ item.moveToId(destination.getId());
 
 ### 8. Update folder or file's metadata & Refresh
 
-- `setName` and `setDescription` of `BaseItem` are lazy-operation. Actual modification will be adjusted after call `update`.
+- `setName` and `setDescription` of `BaseItem` are lazy-operation. Actual modification will be adjusted after calling `update`.
 - `update` will upload local changes and update all variable with fetched latest metadata. 
 - That is, if `update` is invoked, all variable can be changed, even if the current program did not modify the variables.
 
