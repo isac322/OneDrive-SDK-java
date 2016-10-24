@@ -80,7 +80,7 @@ client.login();
 
 ### 2. Folder, file fetch
 
-- For now, it can conduct via only ID.
+- For now, it can conduct only via ID.
 - `FolderItem` and `FileItem` are represent folder and file respectively.
 - `FolderItem` and `FileItem` are child class of `BaseItem`.
 
@@ -124,7 +124,7 @@ List<FileItem> fileChildren = root.getFileChildren();
 
 ### 4. Create folder
 
-- For now, it can only create via parent's `FolderItem` object.
+- For now, it can create only via parent's `FolderItem` object.
 
 ```java
 import org.onedrive.container.items.FolderItem;
@@ -138,7 +138,7 @@ String newId = root.createFolder("test");
 
 ### 5. Copy folder or file
 
-- For now, it can only copy via source item's object.
+- For now, it can copy only via source item's object.
 
 ```java
 import org.onedrive.container.items.*;
@@ -175,8 +175,8 @@ item.copyToId(destination.getId(), "newName");
 
 ### 6. Download file
 
-- For now, it can only download via `FileItem`'s object.
-- For now, only supports synchronous way. (async way will support soon)
+- For now, it can download only via `FileItem`'s object.
+- For now, only supports synchronous way. (async way will be supported soon)
 
 ```java
 import java.nio.file.Paths;
@@ -203,7 +203,7 @@ file.download(Paths.get(path), "newName");
 
 ### 7. Move folder or file
 
-- For now, it can only move via source item's object.
+- For now, it can move only via source item's object.
 
 ```java
 import org.onedrive.container.items.BaseItem;
