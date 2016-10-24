@@ -11,7 +11,7 @@
 - 폴더, 파일 로드 (by id)
 - 폴더, 파일 정보 확인 (크기, 이름, 경로, 폴더 내부 목록 등등)
 - 파일 다운로드 (sync)
-- 폴더, 파일 정보 변경, 삭제, 복사
+- 폴더, 파일 정보(이름, 설명) 변경, 삭제, 복사, 이동
 - 폴더 생성 (부모 객체를 통해서만)
 - 이미지, 비디오, 등등 OneDrive에서 지원하는 [Facets](https://dev.onedrive.com/facets/facets.htm)
 - 공유 폴더 조회
@@ -27,7 +27,6 @@
 - 파일 다운로드 (async: almost complete)
 - 파일 or 폴더 검색 (by name or content)
 - 폴더, 파일 로드 (by path)
-- 폴더, 파일 이동
 - 폴더 생성 (부모 객체 없이 경로를 통해서만)
 - 파일 생성, 내용 업로드 (async)
 - 공유 기능
@@ -64,6 +63,8 @@
 - 생성에 사용되는 변수들은 [OneDrive app 인증 설명](https://dev.onedrive.com/app-registration.htm)을 따라하면 얻을 수 있다. 
 
 ```java
+import org.onedrive.Client;
+
 String clientId = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
 String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
 String redirectURL = "http://localhost:8080/";
@@ -84,6 +85,9 @@ client.login();
 - `FolderItem`과 `FileItem`은 모두 `BaseItem`의 자식 클래스임.
 
 ```java
+import org.onedrive.container.items.FolderItem;
+import org.onedrive.container.items.BaseItem;
+
 // Client는 생성 되어있다고 가정
 
 
@@ -110,6 +114,7 @@ BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 - 위의 메소드들은 호출시 자식정보를 load하고 caching한 후 반환하기 떄문에 **첫 호출은 오래걸릴 수도 있음.**
 
 ```java
+import org.onedrive.container.items.*;
 // Client는 생성 되어있다고 가정
 
 FolderItem root = client.getRootDir();
@@ -125,6 +130,8 @@ List<FileItem> fileChildren = root.getFileChildren();
 - 현재까지는 부모 `FolderItem`을 통해서만 생성 가능.
 
 ```java
+import org.onedrive.container.items.FolderItem;
+
 // Client는 생성 되어있다고 가정
 
 FolderItem root = client.getRootDir();
@@ -138,6 +145,8 @@ String newId = root.createFolder("test");
 - 현재까지는 복사하고싶은 아이템의 객체를 통해서만 가능.
 
 ```java
+import org.onedrive.container.items.*;
+
 // Client는 생성 되어있다고 가정
 
 BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
@@ -175,7 +184,9 @@ item.copyToId(destination.getId(), "newName");
 - 현재까지는 synchronous한 방식으로만 가능. (async도 조만간 완료)
 
 ```java
+import org.onedrive.container.items.FileItem;
 import java.nio.file.Paths;
+
 // Client는 생성 되어있다고 가정
 
 FileItem file = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
@@ -194,4 +205,59 @@ file.download(Paths.get(path));
 
 // download by path object with new name
 file.download(Paths.get(path), "newName");
+```
+
+### 7. 폴더, 파일 이동
+
+- 현재까지는 이동하고싶은 아이템의 객체를 통해서만 가능.
+
+```java
+import org.onedrive.container.items.BaseItem;
+
+// Client는 생성 되어있다고 가정
+
+BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
+
+FolderItem destination = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
+
+// direct move
+item.moveTo(destination);
+
+
+// move by reference object
+item.moveTo(destination.newRerence());
+
+
+// move by path string
+item.moveToPath(destination.getPath());
+
+
+// move by id string
+item.moveToId(destination.getId());
+```
+
+### 8. 폴더, 파일 정보 변경 or 업데이트
+
+- `BaseItem`의 `setName`과 `setDescription` 메소드는 `update`를 호출해야 변경사항이 적용된다.
+- `update`함수는 로컬에서 변경사항이 있다면 업로드하고, 서버에서 최신 정보를 받아와 해당 객체의 모든 변수를 업데이트한다. 
+- 즉 `update`함수가 호출될 경우, 현재 프로그램이 변경하지 않은 변수라도 업데이트 될 수 있음.
+
+```java
+import org.onedrive.container.items.BaseItem;
+
+// Client는 생성 되어있다고 가정
+BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
+
+// change item's name and flush to server.
+item.setName("new name");
+item.update();
+
+
+// change item's description and flush to server.
+item.setDescription("blah blah");
+item.update();
+
+
+// refresh item's all variable to latest value
+item.update();
 ```
