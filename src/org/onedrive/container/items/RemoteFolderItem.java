@@ -15,6 +15,7 @@ import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
 
 import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * {@// TODO: enhance javadoc}
@@ -63,24 +64,23 @@ public class RemoteFolderItem extends FolderItem {
 	}
 
 	@NotNull
-	public String getReadDriveID() {
+	public String getRealDriveID() {
 		return remoteItem.getParentReference().driveId;
 	}
 
 	@NotNull
-	public String getReadID() {
+	public String getRealID() {
 		return remoteItem.getId();
 	}
 
 	@Override
 	protected void fetchChildren() {
 		ObjectNode content = client.getRequestTool().doGetJson(
-				String.format("/drives/%s/items/%s/children", getReadDriveID(), getReadID())
-		);
+				String.format("/drives/%s/items/%s/children", getRealDriveID(), getRealID()));
 
-		allChildren = new ArrayList<>();
-		folderChildren = new ArrayList<>();
-		fileChildren = new ArrayList<>();
+		allChildren = new CopyOnWriteArrayList<>();
+		folderChildren = new CopyOnWriteArrayList<>();
+		fileChildren = new CopyOnWriteArrayList<>();
 
 		JsonNode value = content.get("value");
 		JsonNode nextLink = content.get("@odata.nextLink");

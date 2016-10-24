@@ -8,22 +8,27 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.network.legacy.BadRequestException;
-import org.onedrive.network.legacy.HttpsRequest;
-import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.FileSystemInfoFacet;
 import org.onedrive.container.facet.SearchResultFacet;
 import org.onedrive.container.facet.SharePointIdsFacet;
 import org.onedrive.container.facet.SharedFacet;
+import org.onedrive.network.ErrorResponse;
+import org.onedrive.network.HttpsClientHandler;
+import org.onedrive.network.legacy.BadRequestException;
+import org.onedrive.network.legacy.HttpsRequest;
+import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.utils.OneDriveRequest;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * https://dev.onedrive.com/resources/item.htm
@@ -33,7 +38,7 @@ import java.io.IOException;
  */
 @JsonDeserialize(using = BaseItem.ItemDeserializer.class)
 abstract public class BaseItem {
-	@JsonIgnore @NotNull protected Client client;
+	@JsonIgnore @NotNull protected final Client client;
 
 	@Getter @NotNull protected String id;
 	@Getter protected IdentitySet createdBy;
@@ -61,6 +66,8 @@ abstract public class BaseItem {
 	@Getter protected String webDavUrl;
 	@Getter protected String webUrl;
 
+	@JsonIgnore private boolean changedName;
+	@JsonIgnore private boolean changedDescription;
 
 	protected BaseItem(@NotNull Client client, @NotNull String id, IdentitySet createdBy, String createdDateTime,
 					   String cTag, ObjectNode deleted, String description, String eTag,
@@ -69,6 +76,7 @@ abstract public class BaseItem {
 					   @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
 					   @Nullable SharePointIdsFacet sharePointIds, long size, String webDavUrl, String webUrl) {
 		this.client = client;
+
 		this.id = id;
 		this.createdBy = createdBy;
 		this.createdDateTime = createdDateTime;
@@ -89,7 +97,8 @@ abstract public class BaseItem {
 		this.webUrl = webUrl;
 	}
 
-	public void delete() throws IOException {
+
+	public void delete() throws BadRequestException {
 		HttpsResponse response = OneDriveRequest.doDelete("/drive/items/" + id, client.getFullToken());
 
 		// 204 No Content
@@ -98,35 +107,9 @@ abstract public class BaseItem {
 		}
 	}
 
-	/**
-	 * Upload changes of metadata to server. And update this object with correspond response.
-	 */
-	public void update() {
-		try {
-			byte[] bytes = client.getMapper().writeValueAsBytes(this);
-
-			@NotNull
-			HttpsResponse response =
-					client.getRequestTool().patchMetadata("/drive/items/" + id, bytes);
-
-			BaseItem item = client.getMapper().readValue(response.getContent(), BaseItem.class);
-			System.out.println(response.getContentString());
-
-			// TODO: solve 'java.net.ProtocolException: Invalid HTTP method: PATCH' problem.
-		}
-		catch (JsonProcessingException e) {
-			e.printStackTrace();
-			throw new RuntimeException("DEV: Can't serialize object. Contact author.");
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException("DEV: Can't deserialize response. Contact author.");
-		}
-	}
-
 	@NotNull
 	public String copyTo(@NotNull FolderItem folder) {
-		return this.copyToId(folder.id, null);
+		return this.copyToId(folder.id);
 	}
 
 	@NotNull
@@ -140,9 +123,9 @@ abstract public class BaseItem {
 	@NotNull
 	public String copyTo(@NotNull ItemReference folder) {
 		if (folder.id != null)
-			return this.copyToId(folder.id, null);
+			return this.copyToId(folder.id);
 		else if (folder.path != null)
-			return this.copyToPath(folder.path, null);
+			return this.copyToPath(folder.path);
 		else
 			throw new RuntimeException(
 					"Because folder's id and path both are null, can not address destination folder.");
@@ -161,48 +144,29 @@ abstract public class BaseItem {
 
 	@NotNull
 	public String copyToPath(@NotNull String path) {
-		return this.copyToPath(path, null);
+		byte[] content = ("{\"parentReference\":{\"path\":\"" + path + "\"}}").getBytes();
+
+		return this.copyTo(content);
 	}
 
 	@NotNull
-	public String copyToPath(@NotNull String path, @Nullable String newName) {
-		byte[] prefix = "{\"parentReference\":{\"path\":\"".getBytes();
-		byte[] middle = path.getBytes();
-		byte[] suffix;
-		if (newName == null)
-			suffix = "\"}}".getBytes();
-		else
-			suffix = ("\"},\"name\":\"" + newName + "\"}").getBytes();
-
-		byte[] content = new byte[prefix.length + middle.length + suffix.length];
-
-		System.arraycopy(prefix, 0, content, 0, prefix.length);
-		System.arraycopy(middle, 0, content, prefix.length, middle.length);
-		System.arraycopy(suffix, 0, content, prefix.length + middle.length, suffix.length);
+	// TODO: decide `path`'s format. "/drive/root:/Documents" vs "/Documents"
+	public String copyToPath(@NotNull String path, @NotNull String newName) {
+		byte[] content = ("{\"parentReference\":{\"path\":\"" + path + "\"},\"name\":\"" + newName + "\"}").getBytes();
 
 		return this.copyTo(content);
 	}
 
 	@NotNull
 	public String copyToId(@NotNull String id) {
-		return this.copyToId(id, null);
+		byte[] content = ("{\"parentReference\":{\"id\":\"" + id + "\"}}").getBytes();
+
+		return this.copyTo(content);
 	}
 
 	@NotNull
-	public String copyToId(@NotNull String id, @Nullable String newName) {
-		byte[] prefix = "{\"parentReference\":{\"id\":\"".getBytes();
-		byte[] middle = id.getBytes();
-		byte[] suffix;
-		if (newName == null)
-			suffix = "\"}}".getBytes();
-		else
-			suffix = ("\"},\"name\":\"" + newName + "\"}").getBytes();
-
-		byte[] content = new byte[prefix.length + middle.length + suffix.length];
-
-		System.arraycopy(prefix, 0, content, 0, prefix.length);
-		System.arraycopy(middle, 0, content, prefix.length, middle.length);
-		System.arraycopy(suffix, 0, content, prefix.length + middle.length, suffix.length);
+	public String copyToId(@NotNull String id, @NotNull String newName) {
+		byte[] content = ("{\"parentReference\":{\"id\":\"" + id + "\"},\"name\":\"" + newName + "\"}").getBytes();
 
 		return this.copyTo(content);
 	}
@@ -245,6 +209,47 @@ abstract public class BaseItem {
 	}
 
 
+	public void moveTo(FolderItem folder) {
+		moveToId(folder.id);
+	}
+
+	public void moveTo(ItemReference reference) {
+		if (reference.id != null) moveToId(reference.id);
+		else if (reference.path != null) moveToPath(reference.path);
+		else throw new RuntimeException(
+					"Because folder's id and path both are null, can not address destination folder.");
+	}
+
+	public void moveToId(String id) {
+		byte[] content = ("{\"parentReference\":{\"id\":\"" + id + "\"}}").getBytes();
+		moveTo(content);
+	}
+
+	// TODO: decide `path`'s format. "/drive/root:/Documents" vs "/Documents"
+	public void moveToPath(String path) {
+		byte[] content = ("{\"parentReference\":{\"path\":\"" + path + "\"}}").getBytes();
+		moveTo(content);
+	}
+
+	protected void moveTo(byte[] content) {
+		HttpsClientHandler responseHandler = client.getRequestTool().patchMetadata("/drive/items/" + id, content);
+		HttpResponse response = responseHandler.getBlockingResponse();
+		InputStream result = responseHandler.getResultStream();
+
+		try {
+			if (!response.status().equals(HttpResponseStatus.OK)) {
+				ErrorResponse error = client.getMapper().readValue(result, ErrorResponse.class);
+				throw new RuntimeException("DEV: Update response is not 200 OK. Error code : " + error.getCode() +
+						", message : " + error.getMessage());
+			}
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException("DEV: Can't serialize object. Contact author.");
+		}
+	}
+
+
 	@NotNull
 	public final ItemReference newReference() {
 		return new ItemReference(getDriveId(), id, getPath());
@@ -257,11 +262,120 @@ abstract public class BaseItem {
 	=============================================================
 	 */
 
+
 	@NotNull
-	abstract public String getDriveId();
+	@JsonIgnore
+	public String getDriveId() {
+		assert parentReference != null;
+		return parentReference.driveId;
+	}
+
 
 	@Nullable
-	abstract public String getPath();
+	@JsonIgnore
+	public String getPath() {
+		assert parentReference != null;
+		if (parentReference.path == null) return null;
+		return parentReference.path + '/' + name;
+	}
+
+
+	/*
+	=============================================================
+	Custom Setter
+	=============================================================
+	 */
+
+
+	@JsonIgnore
+	public void setDescription(String description) {
+		this.description = description;
+		changedDescription = true;
+	}
+
+	@JsonIgnore
+	public void setName(@NotNull String name) {
+		this.name = name;
+		changedName = true;
+	}
+
+	protected void refreshBy(@NotNull BaseItem newItem) {
+		this.id = newItem.id;
+		this.createdBy = newItem.createdBy;
+		this.createdDateTime = newItem.createdDateTime;
+		this.cTag = newItem.cTag;
+		this.deleted = newItem.deleted;
+		this.description = newItem.description;
+		this.eTag = newItem.eTag;
+		this.fileSystemInfo = newItem.fileSystemInfo;
+		this.lastModifiedBy = newItem.lastModifiedBy;
+		this.lastModifiedDateTime = newItem.lastModifiedDateTime;
+		this.name = newItem.name;
+		this.parentReference = newItem.parentReference;
+		this.searchResult = newItem.searchResult;
+		this.shared = newItem.shared;
+		this.sharePointIds = newItem.sharePointIds;
+		this.size = newItem.size;
+		this.webDavUrl = newItem.webDavUrl;
+		this.webUrl = newItem.webUrl;
+	}
+
+	/**
+	 * Upload changes of metadata to server. And update this object with correspond response.<br>
+	 * This method refresh content even if you doesn't have changes.<br>
+	 * <br>
+	 * Note that when refresh content, <b>it can contains difference that you didn't modify</b>. because other side
+	 * (it could be other App, other process, etc.) modifies content after you fetched.
+	 */
+	public void update() {
+		try {
+			// make request body
+			StringBuilder builder = new StringBuilder("{");
+			if (changedDescription) {
+				builder.append("\"description\":\"").append(description).append('\"');
+			}
+			if (changedName) {
+				if (changedDescription) builder.append(',');
+				builder.append("\"name\":\"").append(name).append('\"');
+			}
+			builder.append('}');
+
+			byte[] diffJson = builder.toString().getBytes();
+			HttpsClientHandler responseHandler = client.getRequestTool().patchMetadata("/drive/items/" + id, diffJson);
+
+			HttpResponse response = responseHandler.getBlockingResponse();
+			InputStream result = responseHandler.getResultStream();
+
+			// if http response code is 200 OK
+			if (response.status().equals(HttpResponseStatus.OK)) {
+
+				BaseItem newItem = client.getMapper().readValue(result, BaseItem.class);
+				this.refreshBy(newItem);
+
+				changedDescription = changedName = false;
+			}
+			// or something else
+			else {
+				ErrorResponse error = client.getMapper().readValue(result, ErrorResponse.class);
+				throw new RuntimeException("DEV: Update response is not 200 OK. Error code : " + error.getCode() +
+						", message : " + error.getMessage());
+			}
+		}
+		catch (JsonProcessingException e) {
+			e.printStackTrace();
+			throw new RuntimeException("DEV: Can't serialize object. Contact author.");
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	/*
+	=============================================================
+	Custom Jackson Deserializer
+	=============================================================
+	 */
 
 
 	public static class ItemDeserializer extends JsonDeserializer<BaseItem> {

@@ -5,7 +5,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.LastHttpContent;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
@@ -105,13 +108,13 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 	}
 
 
-	public void addCloseListener(@NotNull final AsyncHttpsResponseHandler closeHandler) {
+	public void addCloseListener(@NotNull final AsyncHttpsResponseHandler beforeCloseHandler) {
 		getBlockingCloseFuture().addListener(
 				new ChannelFutureListener() {
 					@Override
 					public void operationComplete(ChannelFuture future) throws Exception {
 						assert response != null;
-						closeHandler.handle(resultStream, response);
+						beforeCloseHandler.handle(resultStream, response);
 					}
 				});
 	}
@@ -132,9 +135,5 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 	public ChannelFuture getBlockingCloseFuture() {
 		ChannelHandlerContext channelContext = getBlockingChannelContext();
 		return channelContext.channel().closeFuture();
-	}
-
-	public InputStream getInputStream() {
-		return resultStream;
 	}
 }

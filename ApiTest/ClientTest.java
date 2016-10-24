@@ -315,7 +315,7 @@ public class ClientTest extends TestCase {
 		FileItem file = client.getFile("D4FD82CA6DF96A47%2124988");
 		FolderItem folder = client.getFolder("D4FD82CA6DF96A47!110");
 
-		file.copyToPath("/drive/root:/test folder");
+		System.out.println(file.copyToPath("/drive/root:/test folder"));
 	}
 
 	public void testCopy2() throws MalformedURLException, JsonProcessingException {
@@ -344,7 +344,7 @@ public class ClientTest extends TestCase {
 		}
 	}
 
-	public void testFolder() {
+	public void testCreateFolder() {
 		getClient();
 
 		FolderItem rootDir = client.getRootDir();
@@ -353,12 +353,63 @@ public class ClientTest extends TestCase {
 		System.out.println(test);
 	}
 
-	public void testFields() throws JsonProcessingException {
+	public void testUpdate() throws JsonProcessingException {
+		getClient();
+
+		FileItem file = client.getFile("D4FD82CA6DF96A47!25996");
+
+		file.setDescription("testtestsetsetsetsetsetsetsetsetset");
+
+		file.update();
+	}
+
+	public void testUpdateRoot() throws JsonProcessingException {
 		getClient();
 
 		FolderItem root = client.getRootDir();
 
 		root.update();
+	}
+
+	public void testUpdateAudioFacet() throws JsonProcessingException {
+		getClient();
+
+		FileItem file = client.getFile("D4FD82CA6DF96A47!25997");
+
+		file.setName("Roy Kim 로이킴 - 봄봄봄. -[ mymusicroad.net ].mp3");
+		file.setDescription("fasdffadfasdgqwe");
+
+		System.out.println();
+		System.out.println(client.getMapper().writeValueAsString(file));
+
+		file.update();
+
+		System.out.println();
+		System.out.println(client.getMapper().writeValueAsString(file));
+	}
+
+	public void testMove() {
+		getClient();
+
+		FileItem mp3 = client.getFile("D4FD82CA6DF96A47!25997");
+
+		FolderItem doc = client.getFolder("D4FD82CA6DF96A47!110");
+		FolderItem root = client.getRootDir();
+
+		mp3.moveToId(doc.getId());
+		mp3.moveTo(root);
+		mp3.moveToPath(doc.getPath());
+		mp3.moveTo(root.newReference());
+	}
+
+	public void testRootChildren() {
+		getClient();
+
+		FolderItem root = client.getRootDir();
+
+		for (BaseItem item : root) {
+			System.out.println(item.getName() + "\t" + item.getId());
+		}
 	}
 
 	public void testNetty() throws URISyntaxException, InterruptedException {

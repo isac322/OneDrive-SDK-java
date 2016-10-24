@@ -2,7 +2,6 @@ package org.onedrive.container.items;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonFilter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -22,10 +21,9 @@ import org.onedrive.container.facet.*;
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
-@JsonFilter("PackageItem")
 @JsonDeserialize(as = PackageItem.class)
 public class PackageItem extends BaseItem {
-	@Getter @NotNull protected PackageFacet packages;
+	@Getter(onMethod = @__(@JsonProperty("package"))) @NotNull protected PackageFacet packages;
 
 	@JsonCreator
 	public PackageItem(@JacksonInject("OneDriveClient") Client client,
@@ -53,20 +51,5 @@ public class PackageItem extends BaseItem {
 				size, webDavUrl, webUrl);
 
 		this.packages = packages;
-	}
-
-	@NotNull
-	@Override
-	public String getDriveId() {
-		assert parentReference != null;
-		return parentReference.driveId;
-	}
-
-	@Nullable
-	@Override
-	public String getPath() {
-		assert parentReference != null;
-		if (parentReference.path == null) return null;
-		return parentReference.path + '/' + name;
 	}
 }

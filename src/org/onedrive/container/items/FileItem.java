@@ -2,6 +2,7 @@ package org.onedrive.container.items;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -32,7 +33,7 @@ import java.nio.file.StandardOpenOption;
 @JsonDeserialize(as = FileItem.class)
 public class FileItem extends BaseItem {
 	@Getter @Nullable protected AudioFacet audio;
-	@NotNull protected FileFacet file;
+	@NotNull @JsonProperty protected FileFacet file;
 	@Getter @Nullable protected ImageFacet image;
 	@Getter @Nullable protected LocationFacet location;
 	@Getter @Nullable protected PhotoFacet photo;
@@ -74,36 +75,6 @@ public class FileItem extends BaseItem {
 		this.location = location;
 		this.photo = photo;
 		this.video = video;
-	}
-
-	@NotNull
-	@Override
-	public String getDriveId() {
-		assert parentReference != null;
-		return parentReference.driveId;
-	}
-
-	@Nullable
-	@Override
-	public String getPath() {
-		assert parentReference != null;
-		if (parentReference.path == null) return null;
-		return parentReference.path + '/' + name;
-	}
-
-	@Nullable
-	public String getCRC32() {
-		return this.file.getCrc32Hash();
-	}
-
-	@Nullable
-	public String getSHA1() {
-		return this.file.getSha1Hash();
-	}
-
-	@Nullable
-	public String getQuickXorHash() {
-		return this.file.getQuickXorHash();
 	}
 
 	/**
@@ -173,5 +144,53 @@ public class FileItem extends BaseItem {
 		ByteBuffer contentBuf = ByteBuffer.wrap(response.getContent());
 
 		fileChannel.write(contentBuf, 0);
+	}
+
+
+	@Override
+	protected void refreshBy(@NotNull BaseItem newItem) {
+		super.refreshBy(newItem);
+
+		FileItem item = (FileItem) newItem;
+
+		this.audio = item.audio;
+		this.file = item.file;
+		this.image = item.image;
+		this.location = item.location;
+		this.photo = item.photo;
+		this.video = item.video;
+	}
+
+
+
+	/*
+	=============================================================
+	Custom Getter
+	=============================================================
+	 */
+
+
+	@Nullable
+	@JsonIgnore
+	public String getMimeType() {
+		return this.file.getMimeType();
+	}
+
+	@Nullable
+	@JsonIgnore
+	public String getCRC32() {
+		return this.file.getCrc32Hash();
+	}
+
+	@Nullable
+	@JsonIgnore
+	public String getSHA1() {
+		return this.file.getSha1Hash();
+	}
+
+	@Nullable
+	@JsonIgnore
+	public String getQuickXorHash() {
+		return this.file.getQuickXorHash();
 	}
 }

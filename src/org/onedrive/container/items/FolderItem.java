@@ -128,20 +128,22 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		while (nextLink != null) {
 			@NotNull
 			HttpsClientHandler httpsHandler =
-					client.getRequestTool().doAsync(new URI(nextLink), HttpMethod.GET, new AsyncHttpsResponseHandler
-							() {
-						@Override
-						public void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response) {
-							try {
-								jsonObject[0] = (ObjectNode) client.getMapper().readTree(resultStream);
-							}
-							catch (IOException e) {
-								e.printStackTrace();
-								throw new RuntimeException(
-										HttpsRequest.NETWORK_ERR_MSG + " Can not convert response to JSON");
-							}
-						}
-					});
+					client.getRequestTool().doAsync(
+							new URI(nextLink),
+							HttpMethod.GET,
+							new AsyncHttpsResponseHandler() {
+								@Override
+								public void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response) {
+									try {
+										jsonObject[0] = (ObjectNode) client.getMapper().readTree(resultStream);
+									}
+									catch (IOException e) {
+										e.printStackTrace();
+										throw new RuntimeException(
+												HttpsRequest.NETWORK_ERR_MSG + " Can not convert response to JSON");
+									}
+								}
+							});
 
 			addChildren(client, array, all, folder, file);
 			try {
@@ -230,6 +232,29 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	}
 
 
+	/**
+	 * Update data itself with {@code newItem}.<br>
+	 * This will <b>set all children {@code List} null</b>. so very next call that related with children may take a
+	 * while to
+	 * fetch children data.
+	 *
+	 * @param newItem New object that contains new data to update.
+	 */
+	@Override
+	protected void refreshBy(@NotNull BaseItem newItem) {
+		super.refreshBy(newItem);
+
+		FolderItem item = (FolderItem) newItem;
+
+		this.folder = item.folder;
+		this.specialFolder = item.specialFolder;
+
+		folderChildren = null;
+		fileChildren = null;
+		allChildren = null;
+	}
+
+
 	/*
 	=============================================================
 	Custom Getter
@@ -255,7 +280,6 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	public long childrenCount() {
 		return folder.getChildCount();
 	}
-
 
 	@NotNull
 	@Override

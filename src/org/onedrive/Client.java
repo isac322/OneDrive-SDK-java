@@ -148,12 +148,11 @@ public class Client {
 	 */
 	@NotNull
 	private String getCode() {
-		// FIXME: string.join() is a Java 8 method.
+		String scope = "";
+		for (String s : scopes) scope += "%20" + s;
+
 		String url = String.format("https://login.live.com/oauth20_authorize.srf" +
-						"?client_id=%s&scope=%s&response_type=code&redirect_uri=%s",
-				clientId,
-				String.join(" ", (CharSequence[]) scopes),
-				redirectURL)
+				"?client_id=%s&scope=%s&response_type=code&redirect_uri=%s", clientId, scope, redirectURL)
 				.replace(" ", "%20");
 
 		try {
@@ -286,14 +285,6 @@ public class Client {
 		fullToken = null;
 	}
 
-	public boolean isExpired() {
-		return System.currentTimeMillis() - lastRefresh >= expirationTime;
-	}
-
-	public boolean isLogin() {
-		return authCode != null && accessToken != null && userId != null && refreshToken != null;
-	}
-
 	@NotNull
 	public Drive getDefaultDrive() {
 		checkExpired();
@@ -379,6 +370,14 @@ public class Client {
 	=============================================================
 	 */
 
+
+	public boolean isExpired() {
+		return System.currentTimeMillis() - lastRefresh >= expirationTime;
+	}
+
+	public boolean isLogin() {
+		return authCode != null && accessToken != null && userId != null && refreshToken != null;
+	}
 
 	@SuppressWarnings("ConstantConditions")
 	@NotNull public String getTokenType() {

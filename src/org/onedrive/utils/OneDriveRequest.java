@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.onedrive.Client;
 import org.onedrive.network.AsyncHttpsResponseHandler;
@@ -463,10 +465,36 @@ public class OneDriveRequest {
 		return request.doPost(content);
 	}
 
-	public HttpsResponse patchMetadata(@NotNull String api, byte[] content) {
-		HttpsRequest request = newOneDriveRequest(api, client.getFullToken());
-		request.setHeader("Content-Type", "application/json");
-		request.setHeader("Prefer", "respond-async");
-		return request.doPatch(content);
+	@NotNull
+	public HttpsClientHandler patchMetadata(@NotNull String api, byte[] content) {
+		HttpsClientHandler clientHandler = patchMetadataAsync(api, content, null);
+
+		try {
+			clientHandler.getBlockingCloseFuture().sync();
+		}
+		catch (InterruptedException e) {
+			e.printStackTrace();
+			throw new RuntimeException("DEV: Error while waiting patch done.");
+		}
+
+		return clientHandler;
+	}
+
+	@NotNull
+	public HttpsClientHandler patchMetadataAsync(@NotNull String api, byte[] content) {
+		return patchMetadataAsync(api, content, null);
+	}
+
+	@NotNull
+	@SneakyThrows(URISyntaxException.class)
+	public HttpsClientHandler patchMetadataAsync(@NotNull String api, byte[] content,
+												 AsyncHttpsResponseHandler handler) {
+		HttpsClient httpsClient = new HttpsClient(group, new URI(BASE_URL + api), HttpMethod.PATCH, handler);
+
+		httpsClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
+		httpsClient.setHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+		httpsClient.setHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(content.length));
+
+		return httpsClient.send(content);
 	}
 }
