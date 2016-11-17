@@ -21,7 +21,7 @@ import java.util.Map;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 @JsonDeserialize(using = Drive.DriveDeserializer.class)
-public class Drive extends BaseContainer {
+public class Drive {
 	protected static Map<String, Drive> containerSet = new LinkedHashMap<>();
 
 	@Getter @NotNull protected final String id;

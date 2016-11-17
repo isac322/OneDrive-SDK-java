@@ -72,7 +72,7 @@ public class OneDriveRequest {
 	 * }
 	 *
 	 * @param api             API to get. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
-	 *                        <tt>/drive/root:/{path}</tt>)
+	 *                        <tt>/drive/root:/{item-path}</tt>)
 	 * @param fullAccessToken OneDrive access token.
 	 * @return HTTP GET's response object.
 	 * @throws RuntimeException If {@code api} form is incorrect or connection fails.
@@ -178,7 +178,7 @@ public class OneDriveRequest {
 	 *
 	 * @param api             API to delete. It must starts with <tt>/</tt>, kind of API form. (like
 	 *                        <tt>/drives</tt> or
-	 *                        <tt>/drive/root:/{path}</tt>)
+	 *                        <tt>/drive/root:/{item-path}</tt>)
 	 * @param fullAccessToken OneDrive access token.
 	 * @return HTTP DELETE's response object.
 	 * @throws RuntimeException If {@code api} form is incorrect or connection fails.
@@ -233,7 +233,7 @@ public class OneDriveRequest {
 	 *
 	 * @param api             API to request. It must starts with <tt>/</tt>, kind of API form. (like
 	 *                        <tt>/drives</tt> or
-	 *                        <tt>/drive/root:/{path}</tt>)
+	 *                        <tt>/drive/root:/{item-path}</tt>)
 	 * @param fullAccessToken OneDrive access token.
 	 * @return {@link HttpsRequest} object that contains {@code api} and {@code fullAccessToken}.
 	 * @throws RuntimeException If api form is invalid. It is mainly because of {@code api} that starting with
@@ -360,7 +360,7 @@ public class OneDriveRequest {
 	 * }
 	 *
 	 * @param api API to get. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
-	 *            <tt>/drive/root:/{path}</tt>)
+	 *            <tt>/drive/root:/{item-path}</tt>)
 	 * @return that parsed from HTTP GET's json response.
 	 * @throws RuntimeException If {@code api} form is incorrect or connection fails.
 	 * @see ObjectNode

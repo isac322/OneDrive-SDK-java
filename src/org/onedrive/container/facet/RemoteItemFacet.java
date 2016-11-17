@@ -31,7 +31,7 @@ public class RemoteItemFacet {
 							  @JsonProperty("size") Long size,
 							  @Nullable @JsonProperty("name") String name) {
 		if (size == null) {
-			throw new RuntimeException("\"size\" filed can not be null");
+			throw new IllegalArgumentException("\"size\" field can not be null");
 		}
 		this.id = id;
 		this.parentReference = parentReference;

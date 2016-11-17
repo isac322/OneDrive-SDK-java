@@ -16,12 +16,11 @@ import org.jetbrains.annotations.Nullable;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
+import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.network.AsyncHttpsResponseHandler;
 import org.onedrive.network.HttpsClientHandler;
 import org.onedrive.network.legacy.HttpsRequest;
-import org.onedrive.network.legacy.HttpsResponse;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -91,7 +90,13 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			allChildren = null;
 		}
 
-		if (!isRoot() && parentReference == null) {
+		if (isRoot()) {
+			assert pathPointer == null;
+			assert parentReference == null;
+			pathPointer = new PathPointer("/", getDriveId());
+		}
+		else if (parentReference == null) {
+			// TODO: custom exception
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " parentReference is missing!");
 		}
 	}
@@ -189,6 +194,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 				allChildren, folderChildren, fileChildren);
 	}
 
+
 	/**
 	 * Implementation of <a href='https://dev.onedrive.com/items/create.htm'>detail</a>.
 	 * <p>
@@ -196,39 +202,12 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	 * {@// TODO: Implement '@name.conflictBehavior' }
 	 *
 	 * @param name New folder name.
-	 * @return New folder's ID.
+	 * @return New folder's object.
 	 * @throws RuntimeException If creating folder or converting response is fails.
 	 */
 	@NotNull
-	public String createFolder(@NotNull String name) {
-		byte[] prefix = "{\"name\":\"".getBytes();
-		byte[] middle = name.getBytes();
-		byte[] suffix = "\",\"folder\":{}}".getBytes();
-
-		byte[] content = new byte[prefix.length + middle.length + suffix.length];
-
-		System.arraycopy(prefix, 0, content, 0, prefix.length);
-		System.arraycopy(middle, 0, content, prefix.length, middle.length);
-		System.arraycopy(suffix, 0, content, prefix.length + middle.length, suffix.length);
-
-		HttpsResponse response =
-				client.getRequestTool().postMetadata(
-						String.format("/drives/%s/items/%s/children", getDriveId(), this.id),
-						content);
-
-		// 201 Created
-		if (response.getCode() != HttpsURLConnection.HTTP_CREATED) {
-			throw new RuntimeException("Create folder " + name + " fails.");
-		}
-
-
-		try {
-			return client.getMapper().readTree(response.getContent()).get("id").asText();
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Converting response to json is fail.");
-		}
+	public FolderItem createFolder(@NotNull String name) {
+		return client.createFolder(this.id, name);
 	}
 
 
@@ -252,13 +231,25 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		folderChildren = null;
 		fileChildren = null;
 		allChildren = null;
+
+		if (isRoot()) {
+			assert pathPointer == null;
+			assert parentReference == null;
+			pathPointer = new PathPointer("/", getDriveId());
+		}
+		else if (parentReference == null) {
+			// TODO: custom exception
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " parentReference is missing!");
+		}
 	}
 
 
 	/*
-	=============================================================
-	Custom Getter
-	=============================================================
+	*************************************************************
+	*
+	* Custom Getter
+	*
+	*************************************************************
 	 */
 
 
@@ -289,15 +280,6 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		return parentReference.driveId;
 	}
 
-	@Nullable
-	@Override
-	public String getPath() {
-		if (isRoot()) return "/drive/root:";
-		assert parentReference != null;
-		if (parentReference.path == null) return null;
-		return parentReference.path + '/' + name;
-	}
-
 	@SuppressWarnings("ConstantConditions")
 	@NotNull
 	public List<BaseItem> getAllChildren() {
@@ -321,9 +303,11 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 
 
 	/*
-	=============================================================
-	Custom Iterator
-	=============================================================
+	*************************************************************
+	*
+	* Custom Iterator
+	*
+	*************************************************************
 	 */
 
 

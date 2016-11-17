@@ -8,11 +8,11 @@
 
 ### 간략한 지원기능
 
-- 폴더, 파일 로드 (by id)
+- 폴더, 파일 로드 (by id and path)
 - 폴더, 파일 정보 확인 (크기, 이름, 경로, 폴더 내부 목록 등등)
 - 파일 다운로드 (sync)
-- 폴더, 파일 정보(이름, 설명) 변경, 삭제, 복사, 이동
-- 폴더 생성 (부모 객체를 통해서만)
+- 폴더, 파일의 정보(이름, 설명) 변경, 삭제, 복사, 이동
+- 폴더 생성
 - 이미지, 비디오, 등등 OneDrive에서 지원하는 [Facets](https://dev.onedrive.com/facets/facets.htm)
 - 공유 폴더 조회
 - 간단한 [RemoteItem](https://dev.onedrive.com/misc/working-with-links.htm) handling
@@ -26,8 +26,6 @@
 
 - 파일 다운로드 (async: almost complete)
 - 파일 or 폴더 검색 (by name or content)
-- 폴더, 파일 로드 (by path)
-- 폴더 생성 (부모 객체 없이 경로를 통해서만)
 - 파일 생성, 내용 업로드 (async)
 - 공유 기능
 - 폴더채로 다운
@@ -80,13 +78,14 @@ client.login();
 
 ### 2. 파일, 폴더 로드
 
-- 현재까지는 ID를 통해서만 가능함.
+- ID와 경로를 통해서 가능.
 - 폴더는 `FolderItem`, 파일은 `FileItem`객체로 나눔.
 - `FolderItem`과 `FileItem`은 모두 `BaseItem`의 자식 클래스임.
 
 ```java
 import org.onedrive.container.items.FolderItem;
 import org.onedrive.container.items.BaseItem;
+import org.onedrive.container.items.pointer.PathPointer;
 
 // Client는 생성 되어있다고 가정
 
@@ -98,11 +97,20 @@ FolderItem root = client.getRootDir();
 // get folder by ID
 FolderItem folder = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
 
+// get folder by path
+FolderItem folder1 = client.getFolder(new PathPointer("/{item-path}"));
+
 // get file by ID
 FileItem file = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
 
+// get file by path
+FileItem file1 = client.getFile(new PathPointer("/{item-path}/{file-name}"));
+
 // or if you don't know whether ID is file or folder
 BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
+
+// or if you don't know whether path is file or folder
+BaseItem item1 = client.getItem(new PathPointer("/{item-path}"));
 ```
 
 
@@ -127,30 +135,40 @@ List<FileItem> fileChildren = root.getFileChildren();
 
 ### 4. 폴더 생성
 
-- 현재까지는 부모 `FolderItem`을 통해서만 생성 가능.
+- 부모 `FolderItem`객체 혹은 `Client`객체를 통해 생성 가능.
+- 생성된 폴더의 객체를 반환한다.
 
 ```java
 import org.onedrive.container.items.FolderItem;
+import org.onedrive.container.items.pointer.PathPointer;
 
 // Client는 생성 되어있다고 가정
 
 FolderItem root = client.getRootDir();
 
-String newId = root.createFolder("test");
+// create folder by parent folder object
+FolderItem newFolder = root.createFolder("test");
+
+
+// create folder by client with parent folder id
+FolderItem newFolder1 = client.createFolder("XXXXXXXXXXXXXXXX!XXXX", "test1");
+
+// create folder by client with parent folder path
+FolderItem newFolder2 = client.createFolder(new PathPointer("/"), "test2");
 ```
 
 
 ### 5. 폴더, 파일 복사
 
-- 현재까지는 복사하고싶은 아이템의 객체를 통해서만 가능.
+- 복사하고싶은 아이템의 객체, 혹은 `Client` 객체를 통해서 가능.
 
 ```java
 import org.onedrive.container.items.*;
+import org.onedrive.container.items.pointer.*;
 
 // Client는 생성 되어있다고 가정
 
 BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
-
 FolderItem destination = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
 
 // direct copy
@@ -158,23 +176,24 @@ item.copyTo(destination);
 // direct copy with new name
 item.copyTo(destination, "newName");
 
-
 // copy by reference object
-item.copyTo(destination.newRerence());
+item.copyTo(destination.newReference());
 // copy by reference object with new name
-item.copyTo(destination.newRerence(), "newName");
-
+item.copyTo(destination.newReference(), "newName");
 
 // copy by path string
-item.copyToPath(destination.getPath());
+item.copyTo(destination.getPathPointer());
 // copy by path string with new name
-item.copyToPath(destination.getPath(), "newName");
-
+item.copyTo(destination.getPathPointer(), "newName");
 
 // copy by id string
-item.copyToId(destination.getId());
+item.copyTo(destination.getId());
 // copy by id string with new name
-item.copyToId(destination.getId(), "newName");
+item.copyTo(destination.getId(), "newName");
+
+
+// using `Client`, copy by path
+client.copyItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX!XXXX"));
 ```
 
 
@@ -209,38 +228,38 @@ file.download(Paths.get(path), "newName");
 
 ### 7. 폴더, 파일 이동
 
-- 현재까지는 이동하고싶은 아이템의 객체를 통해서만 가능.
+- 이동하고싶은 아이템의 객체, 혹은 `Client` 객체를 통해서 가능.
 
 ```java
 import org.onedrive.container.items.BaseItem;
+import org.onedrive.container.items.pointer.*;
 
 // Client는 생성 되어있다고 가정
 
 BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
-
 FolderItem destination = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
 
 // direct move
 item.moveTo(destination);
 
-
 // move by reference object
-item.moveTo(destination.newRerence());
-
+item.moveTo(destination.newReference());
 
 // move by path string
-item.moveToPath(destination.getPath());
-
+item.moveTo(destination.getPathPointer());
 
 // move by id string
-item.moveToId(destination.getId());
+item.moveTo(destination.getId());
+
+
+// using `Client` object, move by folder path
+client.moveItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX!XXXX"));
 ```
 
 ### 8. 폴더, 파일 정보 변경 or 업데이트
 
-- `BaseItem`의 `setName`과 `setDescription` 메소드는 `update`를 호출해야 변경사항이 적용된다.
-- `update`함수는 로컬에서 변경사항이 있다면 업로드하고, 서버에서 최신 정보를 받아와 해당 객체의 모든 변수를 업데이트한다. 
-- 즉 `update`함수가 호출될 경우, 현재 프로그램이 변경하지 않은 변수라도 업데이트 될 수 있음.
+- `refresh`함수는 서버에서 최신 정보를 받아와 해당 객체의 모든 변수를 업데이트한다. 
+- 즉 `refresh`함수가 호출될 경우, 현재 프로그램이 변경하지 않은 변수라도 업데이트 될 수 있음.
 
 ```java
 import org.onedrive.container.items.BaseItem;
@@ -250,14 +269,12 @@ BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 
 // change item's name and flush to server.
 item.setName("new name");
-item.update();
 
 
 // change item's description and flush to server.
 item.setDescription("blah blah");
-item.update();
 
 
 // refresh item's all variable to latest value
-item.update();
+item.refresh();
 ```

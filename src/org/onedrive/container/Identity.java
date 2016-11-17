@@ -22,7 +22,7 @@ import java.util.Map;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 @JsonDeserialize(using = Identity.IdentityDeserializer.class)
-public class Identity extends BaseContainer {
+public class Identity {
 	protected static Map<String, Identity> identitySet = new HashMap<>();
 	@Getter @NotNull protected final String id;
 	@Getter @Nullable protected final String displayName;

@@ -9,11 +9,11 @@ purse fast, easy to use, intuitive API.
 ### Supported Operation
 
 - auto login authorization check and refresh
-- fetching metadata of folder, file (by id)
+- fetching metadata of folder, file (by id and path)
 - folder or file's metadata (size, name, path, children list and etc.)
 - downloading file (sync)
 - delete, copy, move, change metadata(name, description) of folder or file
-- creating folder (only by parent object)
+- creating folder
 - [Facets](https://dev.onedrive.com/facets/facets.htm) that OneDrive support like image, video..
 - inquiring shared folder
 - basic [RemoteItem](https://dev.onedrive.com/misc/working-with-links.htm) handling
@@ -25,8 +25,6 @@ purse fast, easy to use, intuitive API.
 
 - downloading file (async: almost complete)
 - searching file or folder (by name or content)
-- fetching metadata of folder, file (by path)
-- creating folder (solely by path or id, without parent object)
 - creating file and upload it (async)
 - sharing folder or file 
 - downloading whole folder
@@ -80,15 +78,18 @@ client.login();
 
 ### 2. Folder, file fetch
 
-- For now, it can conduct only via ID.
+- It can conduct via either ID or path.
 - `FolderItem` and `FileItem` are represent folder and file respectively.
 - `FolderItem` and `FileItem` are child class of `BaseItem`.
 
 ```java
 import org.onedrive.container.items.FolderItem;
 import org.onedrive.container.items.BaseItem;
+import org.onedrive.container.items.pointer.PathPointer;
 
 // assume that Client object is already constructed
+
+
 // get root directory
 FolderItem root = client.getRootDir();
 
@@ -96,11 +97,20 @@ FolderItem root = client.getRootDir();
 // get folder by ID
 FolderItem folder = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
 
+// get folder by path
+FolderItem folder1 = client.getFolder(new PathPointer("/{item-path}"));
+
 // get file by ID
 FileItem file = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
 
+// get file by path
+FileItem file1 = client.getFile(new PathPointer("/{item-path}/{file-name}"));
+
 // or if you don't know whether ID is file or folder
 BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
+
+// or if you don't know whether path is file or folder
+BaseItem item1 = client.getItem(new PathPointer("/{item-path}"));
 ```
 
 
@@ -113,6 +123,7 @@ BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 
 ```java
 import org.onedrive.container.items.*;
+
 // assume that Client object is already constructed
 FolderItem root = client.getRootDir();
 
@@ -124,28 +135,40 @@ List<FileItem> fileChildren = root.getFileChildren();
 
 ### 4. Create folder
 
-- For now, it can create only via parent's `FolderItem` object.
+- It can create via either parent's `FolderItem` object or `Client` object.
+- It will return created folder's `FolderItem` object.
 
 ```java
 import org.onedrive.container.items.FolderItem;
+import org.onedrive.container.items.pointer.PathPointer;
 
 // assume that Client object is already constructed
+
 FolderItem root = client.getRootDir();
 
-String newId = root.createFolder("test");
+// create folder by parent folder object
+FolderItem newFolder = root.createFolder("test");
+
+
+// create folder by client with parent folder id
+FolderItem newFolder1 = client.createFolder("XXXXXXXXXXXXXXXX!XXXX", "test1");
+
+// create folder by client with parent folder path
+FolderItem newFolder2 = client.createFolder(new PathPointer("/"), "test2");
 ```
 
 
 ### 5. Copy folder or file
 
-- For now, it can copy only via source item's object.
+- It can copy via either source item's object or `Client` object.
 
 ```java
 import org.onedrive.container.items.*;
+import org.onedrive.container.items.pointer.*;
 
 // assume that Client object is already constructed
-BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 
+BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 FolderItem destination = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
 
 // direct copy
@@ -153,23 +176,24 @@ item.copyTo(destination);
 // direct copy with new name
 item.copyTo(destination, "newName");
 
-
 // copy by reference object
-item.copyTo(destination.newRerence());
+item.copyTo(destination.newReference());
 // copy by reference object with new name
-item.copyTo(destination.newRerence(), "newName");
-
+item.copyTo(destination.newReference(), "newName");
 
 // copy by path string
-item.copyToPath(destination.getPath());
+item.copyTo(destination.getPathPointer());
 // copy by path string with new name
-item.copyToPath(destination.getPath(), "newName");
-
+item.copyTo(destination.getPathPointer(), "newName");
 
 // copy by id string
-item.copyToId(destination.getId());
+item.copyTo(destination.getId());
 // copy by id string with new name
-item.copyToId(destination.getId(), "newName");
+item.copyTo(destination.getId(), "newName");
+
+
+// using `Client`, copy by path
+client.copyItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX!XXXX"));
 ```
 
 
@@ -203,37 +227,38 @@ file.download(Paths.get(path), "newName");
 
 ### 7. Move folder or file
 
-- For now, it can move only via source item's object.
+- It can move via either source item's object or `Client` object.
 
 ```java
 import org.onedrive.container.items.BaseItem;
+import org.onedrive.container.items.pointer.*;
 
 // assume that Client object is already constructed
-BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 
+BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 FolderItem destination = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
 
 // direct move
 item.moveTo(destination);
 
-
 // move by reference object
-item.moveTo(destination.newRerence());
-
+item.moveTo(destination.newReference());
 
 // move by path string
-item.moveToPath(destination.getPath());
-
+item.moveTo(destination.getPathPointer());
 
 // move by id string
-item.moveToId(destination.getId());
+item.moveTo(destination.getId());
+
+
+// using `Client` object, move by folder path
+client.moveItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX!XXXX"));
 ```
 
 ### 8. Update folder or file's metadata & Refresh
 
-- `setName` and `setDescription` of `BaseItem` are lazy-operation. Actual modification will be adjusted after calling `update`.
-- `update` will upload local changes and update all variable with fetched latest metadata. 
-- That is, if `update` is invoked, all variable can be changed, even if the current program did not modify the variables.
+- `refresh` will update all variable with fetched latest metadata. 
+- That is, if `refresh` is invoked, all variable can be changed, even if the current program did not modify the variables.
 
 ```java
 import org.onedrive.container.items.BaseItem;
@@ -243,14 +268,12 @@ BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 
 // change item's name and flush to server.
 item.setName("new name");
-item.update();
 
 
 // change item's description and flush to server.
 item.setDescription("blah blah");
-item.update();
 
 
 // refresh item's all variable to latest value
-item.update();
+item.refresh();
 ```

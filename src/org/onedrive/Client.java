@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
@@ -18,6 +20,10 @@ import org.onedrive.container.Drive;
 import org.onedrive.container.items.BaseItem;
 import org.onedrive.container.items.FileItem;
 import org.onedrive.container.items.FolderItem;
+import org.onedrive.container.items.pointer.BasePointer;
+import org.onedrive.container.items.pointer.PathPointer;
+import org.onedrive.network.ErrorResponse;
+import org.onedrive.network.HttpsClientHandler;
 import org.onedrive.network.legacy.HttpsRequest;
 import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.utils.AuthServer;
@@ -26,6 +32,7 @@ import org.onedrive.utils.OneDriveRequest;
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,11 +41,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
 /**
- * {@// TODO: add javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class Client {
+	public static final String ITEM_ID_PREFIX = "/drive/items/";
+
 	public static final ExecutorService threadPool =
 			Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
@@ -138,6 +147,18 @@ public class Client {
 			redeemToken();
 		}
 	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Regarding authorization
+	*
+	*************************************************************
+	 */
+
 
 	/**
 	 * Implementation of
@@ -259,14 +280,16 @@ public class Client {
 		}
 	}
 
+
 	/**
+	 * {@// TODO: Enhance javadoc }
 	 * {@// TODO: check logout HTTP response about error.}
 	 *
 	 * @throws RuntimeException if it isn't login when called.
 	 */
 	@SneakyThrows(MalformedURLException.class)
-	public void logout() {
-		if (!isLogin()) throw new RuntimeException("Already Logout!!");
+	public void logout() throws IllegalStateException {
+		if (!isLogin()) throw new IllegalStateException("Already Logout!!");
 
 		String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
 				clientId, redirectURL);
@@ -274,6 +297,7 @@ public class Client {
 		HttpsResponse response = new HttpsRequest(url).doGet();
 
 		if (response.getCode() != HttpsURLConnection.HTTP_MOVED_TEMP) {
+			// TODO: custom exception
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Fail to logout.");
 		}
 
@@ -284,6 +308,18 @@ public class Client {
 		expirationTime = 0;
 		fullToken = null;
 	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Regarding drive
+	*
+	*************************************************************
+	 */
+
 
 	@NotNull
 	public Drive getDefaultDrive() {
@@ -301,6 +337,18 @@ public class Client {
 		return mapper.convertValue(jsonResponse.get("value"), Drive[].class);
 	}
 
+
+
+
+	/*
+	*************************************************************
+	*
+	* Fetching folder
+	*
+	*************************************************************
+	 */
+
+
 	@NotNull
 	public FolderItem getRootDir() {
 		checkExpired();
@@ -308,7 +356,9 @@ public class Client {
 		return requestTool.doGetObject("/drive/root:/?expand=children", FolderItem.class);
 	}
 
+
 	/**
+	 * {@// TODO: Enhance javadoc }
 	 * {@// TODO: handling error if `id`'s item isn't folder item. }
 	 *
 	 * @param id folder id.
@@ -316,30 +366,105 @@ public class Client {
 	 */
 	@NotNull
 	public FolderItem getFolder(@NotNull String id) {
-		checkExpired();
-
-		return requestTool.doGetObject("/drive/items/" + id + "?expand=children", FolderItem.class);
+		return getFolder(id, true);
 	}
 
+	// TODO: handling error if `id`'s item isn't folder item.
+	@NotNull
+	public FolderItem getFolder(@NotNull String id, boolean childrenFetching) {
+		checkExpired();
+
+		if (childrenFetching)
+			return requestTool.doGetObject(ITEM_ID_PREFIX + id + "?expand=children", FolderItem.class);
+		else
+			return requestTool.doGetObject(ITEM_ID_PREFIX + id, FolderItem.class);
+	}
+
+	// TODO: handling error if `pointer`'s item isn't folder item.
+	@NotNull
+	public FolderItem getFolder(@NotNull BasePointer pointer) {
+		return getFolder(pointer, true);
+	}
+
+	// TODO: handling error if `pointer`'s item isn't folder item.
+	@NotNull
+	public FolderItem getFolder(@NotNull BasePointer pointer, boolean childrenFetching) {
+		checkExpired();
+
+		if (childrenFetching)
+			return requestTool.doGetObject(pointer.toASCIIApi() + "?expand=children", FolderItem.class);
+		else
+			return requestTool.doGetObject(pointer.toASCIIApi(), FolderItem.class);
+	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Fetching file
+	*
+	*************************************************************
+	 */
+
+
 	/**
-	 * {@// TODO: handling error if `id`'s item isn't folder item. }
+	 * {@// TODO: Enhance javadoc }
 	 *
 	 * @param id file id.
 	 * @return file object
 	 */
 	@NotNull
 	public FileItem getFile(@NotNull String id) {
-		checkExpired();
-
-		return requestTool.doGetObject("/drive/items/" + id, FileItem.class);
+		try {
+			return (FileItem) getItem(id);
+		}
+		catch (ClassCastException e) {
+			e.printStackTrace();
+			// TODO: custom exception
+			throw new RuntimeException("Given `id` isn't file type id!. id : " + id);
+		}
 	}
+
+	@NotNull
+	public FileItem getFile(@NotNull BasePointer pointer) {
+		try {
+			return (FileItem) getItem(pointer);
+		}
+		catch (ClassCastException e) {
+			e.printStackTrace();
+			// TODO: custom exception
+			throw new RuntimeException("Given `pointer` isn't file type pointer!. pointer : " + pointer);
+		}
+	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Fetching item
+	*
+	* *************************************************************
+	 */
+
 
 	@NotNull
 	public BaseItem getItem(@NotNull String id) {
 		checkExpired();
 
-		return requestTool.doGetObject("/drive/items/" + id, BaseItem.class);
+		return requestTool.doGetObject(ITEM_ID_PREFIX + id, BaseItem.class);
 	}
+
+	@NotNull
+	public BaseItem getItem(@NotNull BasePointer pointer) {
+		checkExpired();
+
+		return requestTool.doGetObject(pointer.toASCIIApi(), BaseItem.class);
+	}
+
 
 	@NotNull
 	public BaseItem[] getShared() {
@@ -351,10 +476,9 @@ public class Client {
 		BaseItem[] items = new BaseItem[size];
 
 
-		ObjectNode jsonResponse;
 		for (int i = 0; i < size; i++) {
-			jsonResponse = requestTool.doGetJson(
-					"/drive/items/" + values.get(i).get("id").asText() + "?expand=children"
+			ObjectNode jsonResponse = requestTool.doGetJson(
+					ITEM_ID_PREFIX + values.get(i).get("id").asText() + "?expand=children"
 			);
 
 			items[i] = mapper.convertValue(jsonResponse, BaseItem.class);
@@ -364,10 +488,230 @@ public class Client {
 	}
 
 
+
+
 	/*
-	=============================================================
-	Custom Getter
-	=============================================================
+	*************************************************************
+	*
+	* Coping OneDrive Item
+	*
+	*************************************************************
+	 */
+
+
+	@NotNull
+	public String copyItem(@NotNull String srcId, @NotNull String destId) {
+		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
+		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
+	}
+
+	@NotNull
+	public String copyItem(@NotNull String srcId, @NotNull String destId, @NotNull String newName) {
+		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"},\"name\":\"" + newName + "\"}").getBytes();
+		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
+	}
+
+	@NotNull
+	public String copyItem(@NotNull String srcId, @NotNull PathPointer destPath) {
+		byte[] content = ("{\"parentReference\":" + destPath.toJson() + "}").getBytes();
+		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
+	}
+
+	@NotNull
+	public String copyItem(@NotNull String srcId, @NotNull PathPointer dest, @NotNull String newName) {
+		byte[] content = ("{\"parentReference\":" + dest.toJson() + ",\"name\":\"" + newName + "\"}").getBytes();
+		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
+	}
+
+
+	@NotNull
+	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId) {
+		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
+		return copyItem(srcPath.resolveOperator(BasePointer.ACTION_COPY), content);
+	}
+
+	@NotNull
+	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId, @NotNull String newName) {
+		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"},\"name\":\"" + newName + "\"}").getBytes();
+		return copyItem(srcPath.resolveOperator(BasePointer.ACTION_COPY), content);
+	}
+
+	@NotNull
+	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest) {
+		byte[] content = ("{\"parentReference\":" + dest.toJson() + "}").getBytes();
+		return copyItem(src.resolveOperator(BasePointer.ACTION_COPY), content);
+	}
+
+	@NotNull
+	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest, @NotNull String newName) {
+		byte[] content = ("{\"parentReference\":" + dest.toJson() + ",\"name\":\"" + newName + "\"}").getBytes();
+		return copyItem(src.resolveOperator(BasePointer.ACTION_COPY), content);
+	}
+
+
+	@NotNull
+	private String copyItem(@NotNull String api, @NotNull byte[] content) {
+		checkExpired();
+
+		HttpsResponse response = requestTool.postMetadata(api, content);
+
+		// if not 202 Accepted
+		if (response.getCode() != HttpsURLConnection.HTTP_ACCEPTED) {
+			try {
+				ErrorResponse error = mapper.readValue(response.getContent(), ErrorResponse.class);
+				// TODO: custom exception
+				throw new RuntimeException("DEV: Copy failed with : " + error.getCode() +
+						", message : " + error.getMessage());
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+				// TODO: custom exception
+				throw new RuntimeException("DEV: Unrecognizable error response.");
+			}
+		}
+
+		return response.getHeader().get("Location").get(0);
+	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Moving OneDrive Item
+	*
+	*************************************************************
+	 */
+
+
+	@NotNull
+	public BaseItem moveItem(@NotNull String srcId, @NotNull String destId) {
+		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
+		return moveItem(ITEM_ID_PREFIX + srcId, content);
+	}
+
+	@NotNull
+	public BaseItem moveItem(@NotNull String srcId, @NotNull PathPointer destPath) {
+		byte[] content = ("{\"parentReference\":" + destPath.toJson() + "}").getBytes();
+		return moveItem(ITEM_ID_PREFIX + srcId, content);
+	}
+
+	@NotNull
+	public BaseItem moveItem(@NotNull PathPointer srcPath, @NotNull String destId) {
+		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
+		return moveItem(srcPath.toASCIIApi(), content);
+	}
+
+	@NotNull
+	public BaseItem moveItem(@NotNull BasePointer src, @NotNull BasePointer dest) {
+		byte[] content = ("{\"parentReference\":" + dest.toJson() + "}").getBytes();
+		return moveItem(src.toASCIIApi(), content);
+	}
+
+	@NotNull
+	private BaseItem moveItem(@NotNull String api, @NotNull byte[] content) {
+		checkExpired();
+
+		HttpsClientHandler responseHandler = requestTool.patchMetadata(api, content);
+
+		HttpResponse response = responseHandler.getBlockingResponse();
+		InputStream result = responseHandler.getResultStream();
+
+
+		try {
+			// if http response code is 200 OK
+			if (response.status().equals(HttpResponseStatus.OK)) {
+				return mapper.readValue(result, BaseItem.class);
+			}
+			// or something else
+			else {
+				ErrorResponse error = mapper.readValue(result, ErrorResponse.class);
+				// TODO: custom exception
+				throw new RuntimeException("DEV: Update response is not 200 OK. Error code : " + error.getCode() +
+						", message : " + error.getMessage());
+			}
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException("DEV: Can't serialize object. Contact author.");
+		}
+	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Creating folder
+	*
+	*************************************************************
+	 */
+
+
+	/**
+	 * Implementation of <a href='https://dev.onedrive.com/items/create.htm'>detail</a>.
+	 * <p>
+	 * {@// TODO: Enhance javadoc }
+	 * {@// TODO: Implement '@name.conflictBehavior' }
+	 *
+	 * @param parentId Parent ID that creating folder inside.
+	 * @param name     New folder name.
+	 * @return New folder's object.
+	 * @throws RuntimeException If creating folder or converting response is fails.
+	 */
+	@NotNull
+	public FolderItem createFolder(@NotNull String parentId, @NotNull String name) {
+		byte[] content = ("{\"name\":\"" + name + "\",\"folder\":{}}").getBytes();
+		return createFolder("/drive/items/" + parentId + "/children", content);
+	}
+
+	/**
+	 * Implementation of <a href='https://dev.onedrive.com/items/create.htm'>detail</a>.
+	 * <p>
+	 * {@// TODO: Enhance javadoc }
+	 * {@// TODO: Implement '@name.conflictBehavior' }
+	 *
+	 * @param parent Parent pointer that creating folder inside. (either ID or path)
+	 * @param name     New folder name.
+	 * @return New folder's object.
+	 * @throws RuntimeException If creating folder or converting response is fails.
+	 */
+	@NotNull
+	public FolderItem createFolder(@NotNull BasePointer parent, @NotNull String name) {
+		byte[] content = ("{\"name\":\"" + name + "\",\"folder\":{}}").getBytes();
+		return createFolder(parent.resolveOperator(BasePointer.CHILDREN), content);
+	}
+
+	@NotNull
+	private FolderItem createFolder(@NotNull String api, @NotNull byte[] content) {
+		HttpsResponse response = requestTool.postMetadata(api, content);
+
+		// if response code isn't 201 Created
+		if (response.getCode() != HttpsURLConnection.HTTP_CREATED) {
+			// TODO: custom exception
+			throw new RuntimeException("Create folder fails.");
+		}
+
+
+		try {
+			return mapper.readValue(response.getContent(), FolderItem.class);
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			// TODO: custom exception
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Converting response to json is fail.");
+		}
+	}
+
+
+	/*
+	*************************************************************
+	*
+	* Custom Getter
+	*
+	*************************************************************
 	 */
 
 

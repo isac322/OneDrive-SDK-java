@@ -13,6 +13,8 @@ import org.onedrive.Client;
 import org.onedrive.container.Drive;
 import org.onedrive.container.facet.AudioFacet;
 import org.onedrive.container.items.*;
+import org.onedrive.container.items.pointer.PathPointer;
+import org.onedrive.exceptions.BadRequestException;
 import org.onedrive.exceptions.FileDownFailException;
 import org.onedrive.network.AsyncHttpsResponseHandler;
 import org.onedrive.network.HttpsClientHandler;
@@ -169,7 +171,7 @@ public class ClientTest extends TestCase {
 		System.out.println(rootDir.getSize());
 		System.out.println(rootDir.getFolderChildren().get(1).getAllChildren().get(0)
 				.getParentReference()
-				.getPath());
+				.getPathPointer());
 		System.out.println(rootDir.getFolderChildren().get(1));
 	}
 
@@ -206,8 +208,7 @@ public class ClientTest extends TestCase {
 
 				System.out.println(builder.toString());
 
-				int idx = file.getParentReference().getPath().indexOf(':') + 2;
-				String path = file.getParentReference().getPath().substring(idx);
+				String path = file.getParentReference().getPathPointer().toString().substring(1);
 				file.download(Paths.get(path));
 			}
 			else if (item instanceof PackageItem) {
@@ -315,7 +316,7 @@ public class ClientTest extends TestCase {
 		FileItem file = client.getFile("D4FD82CA6DF96A47%2124988");
 		FolderItem folder = client.getFolder("D4FD82CA6DF96A47!110");
 
-		System.out.println(file.copyToPath("/drive/root:/test folder"));
+		System.out.println(file.copyTo("/drive/root:/test folder"));
 	}
 
 	public void testCopy2() throws MalformedURLException, JsonProcessingException {
@@ -344,23 +345,29 @@ public class ClientTest extends TestCase {
 		}
 	}
 
-	public void testCreateFolder() {
+	public void testCreateFolder() throws BadRequestException {
 		getClient();
 
 		FolderItem rootDir = client.getRootDir();
 
-		@NotNull String test = rootDir.createFolder("test");
-		System.out.println(test);
+		@NotNull FolderItem testFolder = client.createFolder(new PathPointer("/"), "test");
+
+		System.out.println(testFolder.getId() + '\t' + testFolder.getName() + '\t' + testFolder.childrenCount());
+		testFolder.delete();
+
+		@NotNull FolderItem test = rootDir.createFolder("test");
+		System.out.println(test.getId() + '\t' + test.getName() + '\t' + test.childrenCount());
+		test.delete();
 	}
 
 	public void testUpdate() throws JsonProcessingException {
 		getClient();
 
-		FileItem file = client.getFile("D4FD82CA6DF96A47!25996");
+		FileItem file = client.getFile("D4FD82CA6DF96A47!26026");
 
 		file.setDescription("testtestsetsetsetsetsetsetsetsetset");
 
-		file.update();
+		file.refresh();
 	}
 
 	public void testUpdateRoot() throws JsonProcessingException {
@@ -368,7 +375,7 @@ public class ClientTest extends TestCase {
 
 		FolderItem root = client.getRootDir();
 
-		root.update();
+		root.refresh();
 	}
 
 	public void testUpdateAudioFacet() throws JsonProcessingException {
@@ -382,7 +389,7 @@ public class ClientTest extends TestCase {
 		System.out.println();
 		System.out.println(client.getMapper().writeValueAsString(file));
 
-		file.update();
+		file.refresh();
 
 		System.out.println();
 		System.out.println(client.getMapper().writeValueAsString(file));
@@ -396,9 +403,9 @@ public class ClientTest extends TestCase {
 		FolderItem doc = client.getFolder("D4FD82CA6DF96A47!110");
 		FolderItem root = client.getRootDir();
 
-		mp3.moveToId(doc.getId());
+		mp3.moveTo(doc.getId());
 		mp3.moveTo(root);
-		mp3.moveToPath(doc.getPath());
+		mp3.moveTo(doc.getPathPointer());
 		mp3.moveTo(root.newReference());
 	}
 
@@ -515,5 +522,41 @@ public class ClientTest extends TestCase {
 		System.out.println(items[0].getName());
 		System.out.println(items[0].childrenCount());
 		System.out.println(items[0].getAllChildren().size());
+	}
+
+	public void testOneDrivePath() {
+		getClient();
+
+		FolderItem rootDir = client.getRootDir();
+
+		System.out.println(rootDir.getPathPointer());
+
+		for (val object : rootDir) {
+			System.out.println(object.getName() + '\t' + object.getId() + '\t' + object.getDriveId());
+		}
+
+		FileItem mp3 = rootDir.getFileChildren().get(2);
+		client.copyItem(mp3.getPathPointer(), rootDir.getFolderChildren().get(2).getId());
+	}
+
+	public void testOneDriveCopy() {
+		getClient();
+
+		FolderItem rootDir = client.getRootDir();
+
+		RemoteFolderItem testFiles = (RemoteFolderItem) rootDir.getFolderChildren().get(0);
+
+		System.out.println(testFiles.getName() + '\t' + testFiles.getId() + '\t' + testFiles.getDriveId() + '\t' +
+				testFiles.getRealDriveID());
+
+		FileItem testTxt = rootDir.getFileChildren().get(1);
+		System.out.println(testTxt.getName());
+		client.copyItem(testTxt.getPathPointer(), testFiles.getPathPointer());
+/*
+		testTxt.setName("newName");
+		testTxt.refresh();
+
+		System.out.println(testTxt.getName());
+		System.out.println(testTxt.getPathPointer());*/
 	}
 }

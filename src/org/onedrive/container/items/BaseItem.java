@@ -2,7 +2,6 @@ package org.onedrive.container.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,9 +18,12 @@ import org.onedrive.container.facet.FileSystemInfoFacet;
 import org.onedrive.container.facet.SearchResultFacet;
 import org.onedrive.container.facet.SharePointIdsFacet;
 import org.onedrive.container.facet.SharedFacet;
+import org.onedrive.container.items.pointer.BasePointer;
+import org.onedrive.container.items.pointer.IdPointer;
+import org.onedrive.container.items.pointer.PathPointer;
+import org.onedrive.exceptions.BadRequestException;
 import org.onedrive.network.ErrorResponse;
 import org.onedrive.network.HttpsClientHandler;
-import org.onedrive.network.legacy.BadRequestException;
 import org.onedrive.network.legacy.HttpsRequest;
 import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.utils.OneDriveRequest;
@@ -66,8 +68,8 @@ abstract public class BaseItem {
 	@Getter protected String webDavUrl;
 	@Getter protected String webUrl;
 
-	@JsonIgnore private boolean changedName;
-	@JsonIgnore private boolean changedDescription;
+	@Getter(onMethod = @__(@JsonIgnore)) @NotNull protected PathPointer pathPointer;
+	@Getter(onMethod = @__(@JsonIgnore)) @NotNull protected IdPointer idPointer;
 
 	protected BaseItem(@NotNull Client client, @NotNull String id, IdentitySet createdBy, String createdDateTime,
 					   String cTag, ObjectNode deleted, String description, String eTag,
@@ -95,210 +97,31 @@ abstract public class BaseItem {
 		this.size = size;
 		this.webDavUrl = webDavUrl;
 		this.webUrl = webUrl;
+
+		// are they always have `parentReference` except root directory?
+		if (parentReference != null) {
+			if (parentReference.pathPointer != null && parentReference.rawPath != null) {
+				this.pathPointer = parentReference.pathPointer.resolve(name);
+			}
+			this.idPointer = new IdPointer(id, parentReference.driveId);
+		}
+		else {
+			this.idPointer = new IdPointer(id);
+		}
 	}
 
 
 	public void delete() throws BadRequestException {
-		HttpsResponse response = OneDriveRequest.doDelete("/drive/items/" + id, client.getFullToken());
+		HttpsResponse response = OneDriveRequest.doDelete(Client.ITEM_ID_PREFIX + id, client.getFullToken());
 
-		// 204 No Content
+		// if response isn't 204 No Content
 		if (response.getCode() != HttpsURLConnection.HTTP_NO_CONTENT) {
 			throw new BadRequestException("Bad request. It must be already deleted item or wrong ID.");
 		}
 	}
 
-	@NotNull
-	public String copyTo(@NotNull FolderItem folder) {
-		return this.copyToId(folder.id);
-	}
 
-	@NotNull
-	public String copyTo(@NotNull FolderItem folder, @NotNull String newName) {
-		if (folder instanceof RemoteFolderItem) {
-			throw new RuntimeException("Any file or folder can not copy to Remote Folder.");
-		}
-		return this.copyToId(folder.id, newName);
-	}
-
-	@NotNull
-	public String copyTo(@NotNull ItemReference folder) {
-		if (folder.id != null)
-			return this.copyToId(folder.id);
-		else if (folder.path != null)
-			return this.copyToPath(folder.path);
-		else
-			throw new RuntimeException(
-					"Because folder's id and path both are null, can not address destination folder.");
-	}
-
-	@NotNull
-	public String copyTo(@NotNull ItemReference folder, @NotNull String newName) {
-		if (folder.id != null)
-			return this.copyToId(folder.id, newName);
-		else if (folder.path != null)
-			return this.copyToPath(folder.path, newName);
-		else
-			throw new RuntimeException(
-					"Because folder's id and path both are null, can not address destination folder.");
-	}
-
-	@NotNull
-	public String copyToPath(@NotNull String path) {
-		byte[] content = ("{\"parentReference\":{\"path\":\"" + path + "\"}}").getBytes();
-
-		return this.copyTo(content);
-	}
-
-	@NotNull
-	// TODO: decide `path`'s format. "/drive/root:/Documents" vs "/Documents"
-	public String copyToPath(@NotNull String path, @NotNull String newName) {
-		byte[] content = ("{\"parentReference\":{\"path\":\"" + path + "\"},\"name\":\"" + newName + "\"}").getBytes();
-
-		return this.copyTo(content);
-	}
-
-	@NotNull
-	public String copyToId(@NotNull String id) {
-		byte[] content = ("{\"parentReference\":{\"id\":\"" + id + "\"}}").getBytes();
-
-		return this.copyTo(content);
-	}
-
-	@NotNull
-	public String copyToId(@NotNull String id, @NotNull String newName) {
-		byte[] content = ("{\"parentReference\":{\"id\":\"" + id + "\"},\"name\":\"" + newName + "\"}").getBytes();
-
-		return this.copyTo(content);
-	}
-
-	/**
-	 * {@// TODO: Enhance javadoc }
-	 * <p>
-	 * Implementation of <a href'https://dev.onedrive.com/items/copy.htm'>detail</a>
-	 *
-	 * @param content Http body content.
-	 * @return URL that can monitor status of coping process.
-	 * @throws RuntimeException If you trying to copy root itself or fail to copy.
-	 */
-	@NotNull
-	protected String copyTo(byte[] content) {
-		// ensure that only root item can have null parentReference.
-		if (parentReference == null) {
-			if (this instanceof FolderItem) {
-				FolderItem item = (FolderItem) this;
-				if (item.isRoot()) {
-					throw new RuntimeException("Root folder can not be moved");
-				}
-			}
-
-			throw new RuntimeException("ParentReference field is missing.");
-		}
-
-		HttpsResponse response = client.getRequestTool().postMetadata(
-				String.format("/drives/%s/items/%s/action.copy", parentReference.driveId, this.id),
-				content);
-
-		// if not 202 Accepted
-		if (response.getCode() != HttpsURLConnection.HTTP_ACCEPTED) {
-			throw new RuntimeException(
-					"Copy failed with : " + response.getCode() + " " + response.getMessage() +
-							" " + response.getContentString());
-		}
-
-		return response.getHeader().get("Location").get(0);
-	}
-
-
-	public void moveTo(FolderItem folder) {
-		moveToId(folder.id);
-	}
-
-	public void moveTo(ItemReference reference) {
-		if (reference.id != null) moveToId(reference.id);
-		else if (reference.path != null) moveToPath(reference.path);
-		else throw new RuntimeException(
-					"Because folder's id and path both are null, can not address destination folder.");
-	}
-
-	public void moveToId(String id) {
-		byte[] content = ("{\"parentReference\":{\"id\":\"" + id + "\"}}").getBytes();
-		moveTo(content);
-	}
-
-	// TODO: decide `path`'s format. "/drive/root:/Documents" vs "/Documents"
-	public void moveToPath(String path) {
-		byte[] content = ("{\"parentReference\":{\"path\":\"" + path + "\"}}").getBytes();
-		moveTo(content);
-	}
-
-	protected void moveTo(byte[] content) {
-		HttpsClientHandler responseHandler = client.getRequestTool().patchMetadata("/drive/items/" + id, content);
-		HttpResponse response = responseHandler.getBlockingResponse();
-		InputStream result = responseHandler.getResultStream();
-
-		try {
-			if (!response.status().equals(HttpResponseStatus.OK)) {
-				ErrorResponse error = client.getMapper().readValue(result, ErrorResponse.class);
-				throw new RuntimeException("DEV: Update response is not 200 OK. Error code : " + error.getCode() +
-						", message : " + error.getMessage());
-			}
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException("DEV: Can't serialize object. Contact author.");
-		}
-	}
-
-
-	@NotNull
-	public final ItemReference newReference() {
-		return new ItemReference(getDriveId(), id, getPath());
-	}
-
-
-	/*
-	=============================================================
-	Custom Getter
-	=============================================================
-	 */
-
-
-	@NotNull
-	@JsonIgnore
-	public String getDriveId() {
-		assert parentReference != null;
-		return parentReference.driveId;
-	}
-
-
-	@Nullable
-	@JsonIgnore
-	public String getPath() {
-		assert parentReference != null;
-		if (parentReference.path == null) return null;
-		return parentReference.path + '/' + name;
-	}
-
-
-	/*
-	=============================================================
-	Custom Setter
-	=============================================================
-	 */
-
-
-	@JsonIgnore
-	public void setDescription(String description) {
-		this.description = description;
-		changedDescription = true;
-	}
-
-	@JsonIgnore
-	public void setName(@NotNull String name) {
-		this.name = name;
-		changedName = true;
-	}
-
+	// TODO: is there any way to merge with constructor? cause both are almost same
 	protected void refreshBy(@NotNull BaseItem newItem) {
 		this.id = newItem.id;
 		this.createdBy = newItem.createdBy;
@@ -318,52 +141,49 @@ abstract public class BaseItem {
 		this.size = newItem.size;
 		this.webDavUrl = newItem.webDavUrl;
 		this.webUrl = newItem.webUrl;
+
+		if (parentReference != null) {
+			if (parentReference.pathPointer != null && parentReference.rawPath != null) {
+				this.pathPointer = parentReference.pathPointer.resolve(name);
+			}
+			this.idPointer = new IdPointer(id, parentReference.driveId);
+		}
+		else {
+			this.idPointer = new IdPointer(id);
+		}
 	}
 
 	/**
-	 * Upload changes of metadata to server. And update this object with correspond response.<br>
 	 * This method refresh content even if you doesn't have changes.<br>
 	 * <br>
 	 * Note that when refresh content, <b>it can contains difference that you didn't modify</b>. because other side
-	 * (it could be other App, other process, etc.) modifies content after you fetched.
+	 * (it could be other App, other process, etc.) can modify content after you fetched.
 	 */
-	public void update() {
-		try {
-			// make request body
-			StringBuilder builder = new StringBuilder("{");
-			if (changedDescription) {
-				builder.append("\"description\":\"").append(description).append('\"');
-			}
-			if (changedName) {
-				if (changedDescription) builder.append(',');
-				builder.append("\"name\":\"").append(name).append('\"');
-			}
-			builder.append('}');
+	public void refresh() {
+		this.update("{}".getBytes());
+	}
 
-			byte[] diffJson = builder.toString().getBytes();
-			HttpsClientHandler responseHandler = client.getRequestTool().patchMetadata("/drive/items/" + id, diffJson);
+	private void update(byte[] content) {
+		try {
+			HttpsClientHandler responseHandler =
+					client.getRequestTool().patchMetadata(Client.ITEM_ID_PREFIX + id, content);
 
 			HttpResponse response = responseHandler.getBlockingResponse();
 			InputStream result = responseHandler.getResultStream();
 
+
 			// if http response code is 200 OK
 			if (response.status().equals(HttpResponseStatus.OK)) {
-
 				BaseItem newItem = client.getMapper().readValue(result, BaseItem.class);
 				this.refreshBy(newItem);
-
-				changedDescription = changedName = false;
 			}
 			// or something else
 			else {
 				ErrorResponse error = client.getMapper().readValue(result, ErrorResponse.class);
+				// TODO: custom exception
 				throw new RuntimeException("DEV: Update response is not 200 OK. Error code : " + error.getCode() +
 						", message : " + error.getMessage());
 			}
-		}
-		catch (JsonProcessingException e) {
-			e.printStackTrace();
-			throw new RuntimeException("DEV: Can't serialize object. Contact author.");
 		}
 		catch (IOException e) {
 			e.printStackTrace();
@@ -371,10 +191,153 @@ abstract public class BaseItem {
 	}
 
 
+
 	/*
-	=============================================================
-	Custom Jackson Deserializer
-	=============================================================
+	*************************************************************
+	*
+	* Coping
+	*
+	* *************************************************************
+	 */
+
+
+	@NotNull
+	public String copyTo(@NotNull FolderItem folder) {
+		return this.copyTo(folder.id);
+	}
+
+	@NotNull
+	public String copyTo(@NotNull FolderItem folder, @NotNull String newName) {
+		if (folder instanceof RemoteFolderItem) {
+			throw new RuntimeException("Any file or folder can not copy to Remote Folder.");
+		}
+		return this.copyTo(folder.id, newName);
+	}
+
+	@NotNull
+	public String copyTo(@NotNull ItemReference folder) {
+		if (folder.id != null)
+			return this.copyTo(folder.id);
+		else if (folder.pathPointer != null)
+			return this.copyTo(folder.pathPointer);
+		else
+			throw new RuntimeException(
+					"Because folder's id and path both are null, can not address destination folder.");
+	}
+
+	@NotNull
+	public String copyTo(@NotNull ItemReference folder, @NotNull String newName) {
+		if (folder.id != null)
+			return this.copyTo(folder.id, newName);
+		else if (folder.pathPointer != null)
+			return this.copyTo(folder.pathPointer, newName);
+		else
+			throw new RuntimeException(
+					"Because folder's id and path both are null, can not address destination folder.");
+	}
+
+	@NotNull
+	public String copyTo(@NotNull BasePointer dest) {
+		return client.copyItem(idPointer, dest);
+	}
+
+	@NotNull
+	public String copyTo(@NotNull BasePointer dest, @NotNull String newName) {
+		return client.copyItem(idPointer, dest, newName);
+	}
+
+	@NotNull
+	public String copyTo(@NotNull String destId) {
+		return client.copyItem(this.id, destId);
+	}
+
+	@NotNull
+	public String copyTo(@NotNull String destId, @NotNull String newName) {
+		return client.copyItem(this.id, destId, newName);
+	}
+
+
+
+	/*
+	*************************************************************
+	*
+	* Moving
+	*
+	*************************************************************
+	 */
+
+
+	public void moveTo(@NotNull FolderItem folder) {
+		moveTo(folder.id);
+	}
+
+	public void moveTo(@NotNull ItemReference reference) {
+		if (reference.id != null) moveTo(reference.id);
+		else if (reference.pathPointer != null) moveTo(reference.pathPointer);
+		else throw new RuntimeException(
+					"Because folder's id and path both are null, can not address destination folder.");
+	}
+
+	public void moveTo(@NotNull String id) {
+		BaseItem item = client.moveItem(this.id, id);
+		this.refreshBy(item);
+	}
+
+	public void moveTo(@NotNull BasePointer pointer) {
+		BaseItem item = client.moveItem(this.idPointer, pointer);
+		this.refreshBy(item);
+	}
+
+
+	@NotNull
+	public final ItemReference newReference() {
+		return new ItemReference(getDriveId(), id, pathPointer);
+	}
+
+
+	/*
+	*************************************************************
+	*
+	* Custom Getter
+	*
+	*************************************************************
+	 */
+
+
+	@NotNull
+	@JsonIgnore
+	public String getDriveId() {
+		assert parentReference != null;
+		return parentReference.driveId;
+	}
+
+
+	/*
+	*************************************************************
+	*
+	* Custom Setter
+	*
+	*************************************************************
+	 */
+
+
+	@JsonIgnore
+	public void setDescription(String description) {
+		update(("{\"description\":\"" + description + "\"}").getBytes());
+	}
+
+	@JsonIgnore
+	public void setName(@NotNull String name) {
+		update(("{\"name\":\"" + name + "\"}").getBytes());
+	}
+
+
+	/*
+	*************************************************************
+	*
+	* Custom Jackson Deserializer
+	*
+	*************************************************************
 	 */
 
 

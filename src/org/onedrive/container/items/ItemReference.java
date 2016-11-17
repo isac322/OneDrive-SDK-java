@@ -4,37 +4,44 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
+import org.onedrive.container.items.pointer.PathPointer;
 
 /**
  * https://dev.onedrive.com/resources/itemReference.htm
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class ItemReference {
 	@Getter @NotNull protected final String driveId;
 	@Getter @Nullable protected final String id;
-	@Getter(onMethod = @__(@JsonIgnore)) @Nullable protected final String path;
+	@Getter(onMethod = @__(@JsonIgnore)) @Nullable protected final PathPointer pathPointer;
 	@Getter @Nullable @JsonProperty("path") protected final String rawPath;
 
 	@JsonCreator
-	@SneakyThrows(UnsupportedEncodingException.class)
 	protected ItemReference(@JsonProperty("driveId") @NotNull String driveId,
 							@JsonProperty("id") @Nullable String id,
-							@JsonProperty("path") @Nullable String rawPath) {
+							@JsonProperty("path") @Nullable String asciiPath) {
 		this.driveId = driveId;
 		this.id = id;
-		this.rawPath = rawPath;
+		this.rawPath = asciiPath;
 
-		if (rawPath != null) {
-			this.path = URLDecoder.decode(rawPath, "UTF-8");
-		}
-		else this.path = null;
+		if (asciiPath != null)
+			this.pathPointer = new PathPointer(asciiPath, driveId);
+		else
+			this.pathPointer = null;
+	}
+
+	protected ItemReference(@NotNull String driveId, @Nullable String id, @Nullable PathPointer pathPointer) {
+		this.driveId = driveId;
+		this.id = id;
+		this.pathPointer = pathPointer;
+
+		if (pathPointer != null)
+			this.rawPath = pathPointer.toASCIIApi();
+		else
+			this.rawPath = null;
 	}
 }

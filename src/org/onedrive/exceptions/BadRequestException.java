@@ -1,4 +1,4 @@
-package org.onedrive.network.legacy;
+package org.onedrive.exceptions;
 
 import java.io.IOException;
 
