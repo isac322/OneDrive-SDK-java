@@ -8,7 +8,8 @@ import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.items.ItemReference;
 
 /**
- * https://dev.onedrive.com/facets/remoteitem_facet.htm
+ * <a href="https://dev.onedrive.com/facets/remoteitem_facet.htm">https://dev.onedrive.com/facets/remoteitem_facet
+ * .htm</a>
  * {@// TODO: Enhance javadoc}
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
@@ -29,7 +30,7 @@ public class RemoteItemFacet {
 							  @Nullable @JsonProperty("file") FileFacet file,
 							  @Nullable @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
 							  @JsonProperty("size") Long size,
-							  @Nullable @JsonProperty("name") String name) {
+							  @Nullable @JsonProperty("name") String name) throws IllegalArgumentException {
 		if (size == null) {
 			throw new IllegalArgumentException("\"size\" field can not be null");
 		}

@@ -2,6 +2,7 @@ package org.onedrive.container.items;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -9,12 +10,11 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
-import org.onedrive.network.legacy.HttpsRequest;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
+import org.onedrive.network.legacy.HttpsRequest;
 
-import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -64,11 +64,13 @@ public class RemoteFolderItem extends FolderItem {
 	}
 
 	@NotNull
+	@JsonIgnore
 	public String getRealDriveID() {
 		return remoteItem.getParentReference().driveId;
 	}
 
 	@NotNull
+	@JsonIgnore
 	public String getRealID() {
 		return remoteItem.getId();
 	}
@@ -86,6 +88,7 @@ public class RemoteFolderItem extends FolderItem {
 		JsonNode nextLink = content.get("@odata.nextLink");
 
 		if (!value.isArray() || (nextLink != null && !nextLink.isTextual())) {
+			// TODO: custom exception
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 		}
 

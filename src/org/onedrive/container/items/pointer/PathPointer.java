@@ -35,15 +35,22 @@ public class PathPointer extends BasePointer {
 	@NotNull private final String rawPath;
 
 
-	@SneakyThrows({UnsupportedEncodingException.class, URISyntaxException.class})
-	public PathPointer(@NotNull String anyPath) {
+	@SneakyThrows(UnsupportedEncodingException.class)
+	public PathPointer(@NotNull String anyPath) throws IllegalArgumentException {
 		String rawPath = anyPath;
 
 		// ensure that `anyPath` is always decoded path
 		anyPath = URLDecoder.decode(rawPath, "UTF-8");
 
 		// if `anyPath` is already escaped string, make encoded path
-		if (anyPath.equalsIgnoreCase(rawPath)) rawPath = new URI(null, null, rawPath, null).toASCIIString();
+		if (anyPath.equalsIgnoreCase(rawPath)) {
+			try {
+				rawPath = new URI(null, null, anyPath, null).toASCIIString();
+			}
+			catch (URISyntaxException e) {
+				throw new IllegalArgumentException("Illegal character in `anyPath` at index " + e.getIndex(), e);
+			}
+		}
 
 
 		Matcher matcher;
@@ -61,7 +68,7 @@ public class PathPointer extends BasePointer {
 			this.rawPath = rawPath;
 		}
 		else if (anyPath.charAt(0) != '/') {
-			throw new IllegalArgumentException("path argument must starts with '/'. current path string : " + anyPath);
+			throw new IllegalArgumentException("`path` doesn't start with '/'. given : " + anyPath);
 		}
 		else {
 			this.readablePath = anyPath;
@@ -72,15 +79,22 @@ public class PathPointer extends BasePointer {
 	}
 
 
-	@SneakyThrows({UnsupportedEncodingException.class, URISyntaxException.class})
-	public PathPointer(@NotNull String anyPath, @Nullable String driveId) {
+	@SneakyThrows(UnsupportedEncodingException.class)
+	public PathPointer(@NotNull String anyPath, @Nullable String driveId) throws IllegalArgumentException {
 		String rawPath = anyPath;
 
 		// ensure that `anyPath` is always decoded path
 		anyPath = URLDecoder.decode(rawPath, "UTF-8");
 
 		// if `anyPath` is already escaped string, make encoded path
-		if (anyPath.equalsIgnoreCase(rawPath)) rawPath = new URI(null, null, rawPath, null).toASCIIString();
+		if (anyPath.equalsIgnoreCase(rawPath)) {
+			try {
+				rawPath = new URI(null, null, anyPath, null).toASCIIString();
+			}
+			catch (URISyntaxException e) {
+				throw new IllegalArgumentException("Illegal character in `anyPath` at index " + e.getIndex(), e);
+			}
+		}
 
 
 		Matcher matcher;
@@ -121,7 +135,7 @@ public class PathPointer extends BasePointer {
 		}
 		// if anyPath is neither OneDrive-path nor pure absolute path
 		else if (anyPath.charAt(0) != '/') {
-			throw new IllegalArgumentException("path argument must starts with '/'. current path is : " + anyPath);
+			throw new IllegalArgumentException("`path` doesn't start with '/'. given : " + anyPath);
 		}
 		// if anyPath is pure absolute path
 		else {
@@ -150,7 +164,7 @@ public class PathPointer extends BasePointer {
 	@NotNull
 	@Override
 	public URI toURI() throws URISyntaxException {
-		return new URI("https", null, path, null);
+		return new URI("https", "api.onedrive.com/v1.0", path, null);
 	}
 
 	@NotNull
@@ -179,11 +193,11 @@ public class PathPointer extends BasePointer {
 
 
 	@NotNull
-	@SneakyThrows({UnsupportedEncodingException.class, URISyntaxException.class})
-	public PathPointer resolve(@NotNull String name) {
+	@SneakyThrows(UnsupportedEncodingException.class)
+	public PathPointer resolve(@NotNull String name) throws IllegalArgumentException {
 		// raise exception if `name` is absolute path
 		if (name.charAt(0) == '/') {
-			throw new IllegalArgumentException("name argument must not starts with '/'. current name is : " + name);
+			throw new IllegalArgumentException("`name` doesn't starts with '/'. given : " + name);
 		}
 
 		String rawName = name;
@@ -191,9 +205,17 @@ public class PathPointer extends BasePointer {
 		// ensure that `name` is always decoded string
 		name = URLDecoder.decode(name, "UTF-8");
 
-		// if `anyPath` is already escaped string, make encoded path
-		if (name.equalsIgnoreCase(rawName)) rawName = new URI(null, null, name, null).toASCIIString();
+		// if `name` is already escaped string, make encoded path
+		if (name.equalsIgnoreCase(rawName)) {
+			try {
+				rawName = new URI(null, null, name, null).toASCIIString();
+			}
+			catch (URISyntaxException e) {
+				throw new IllegalArgumentException("Illegal character in `name` at index " + e.getIndex(), e);
+			}
+		}
 
+		// if `path` end with '/'
 		if (path.charAt(path.length() - 1) == '/')
 			return new PathPointer(driveId, readablePath + name, path + name, rawPath + rawName);
 		else

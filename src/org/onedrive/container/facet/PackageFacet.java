@@ -6,7 +6,7 @@ import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * https://dev.onedrive.com/facets/package_facet.htm
+ * <a href="https://dev.onedrive.com/facets/package_facet.htm">https://dev.onedrive.com/facets/package_facet.htm</a>
  * {@// TODO: Enhance javadoc }
  * {@// TODO: merge with BaseItem if possible }
  *

@@ -41,6 +41,12 @@ public class ClientTest extends TestCase {
 	ObjectMapper mapper = new ObjectMapper();
 
 	private static Client getClient() {
+		if (client == null) {
+			final String clientId = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
+			final String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
+			final String redirectURL = "http://localhost:8080/";
+			final String clientSecret = "XXXXXXXXXXXXXXXXXXXXXXX";
+
 			client = new Client(clientId, scope, redirectURL, clientSecret);
 		}
 
@@ -122,7 +128,7 @@ public class ClientTest extends TestCase {
 	public void testPackage() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/items/485BEF1A80539148!115?expand=children", client
+		HttpsResponse response = OneDriveRequest.doGet("/drive/items/D4FD82CA6DF96A47!2104", client
 				.getFullToken());
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
@@ -552,11 +558,13 @@ public class ClientTest extends TestCase {
 		FileItem testTxt = rootDir.getFileChildren().get(1);
 		System.out.println(testTxt.getName());
 		client.copyItem(testTxt.getPathPointer(), testFiles.getPathPointer());
-/*
+
+		/*
 		testTxt.setName("newName");
 		testTxt.refresh();
 
 		System.out.println(testTxt.getName());
-		System.out.println(testTxt.getPathPointer());*/
+		System.out.println(testTxt.getPathPointer());
+		*/
 	}
 }

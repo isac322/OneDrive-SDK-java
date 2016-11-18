@@ -46,7 +46,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 
 	@JsonCreator
 	protected FolderItem(@JacksonInject("OneDriveClient") Client client,
-						 @JsonProperty("id") String id,
+						 @JsonProperty("id") @NotNull String id,
 						 @JsonProperty("createdBy") IdentitySet createdBy,
 						 @JsonProperty("createdDateTime") String createdDateTime,
 						 @JsonProperty("cTag") String cTag,
@@ -68,7 +68,8 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 						 @JsonProperty("webDavUrl") String webDavUrl,
 						 @JsonProperty("webUrl") String webUrl,
 						 @JsonProperty("children@odata.nextLink") @Nullable String nextLink,
-						 @JsonProperty("children") @Nullable ArrayNode children) {
+						 @JsonProperty("children") @Nullable ArrayNode children)
+			throws IllegalArgumentException {
 		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
 				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
 				size, webDavUrl, webUrl);
@@ -115,12 +116,14 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 				}
 				else if (!(item instanceof PackageItem)) {
 					// if child is neither FolderItem nor FileItem nor PackageItem.
+					// TODO: custom exception
 					throw new UnsupportedOperationException("Children object must file or folder of package");
 				}
 				all.add(item);
 			}
 			// if child is neither FolderItem nor FileItem nor PackageItem.
 			else
+				// TODO: custom exception
 				throw new UnsupportedOperationException("Children object must file or folder of package");
 		}
 	}
@@ -144,6 +147,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 									}
 									catch (IOException e) {
 										e.printStackTrace();
+										// TODO: custom exception
 										throw new RuntimeException(
 												HttpsRequest.NETWORK_ERR_MSG + " Can not convert response to JSON");
 									}
@@ -167,6 +171,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 				array = jsonObject[0].get("value");
 			}
 			else {
+				// TODO: custom exception
 				throw new UnsupportedOperationException("Children object must file or folder of package");
 			}
 		}
@@ -185,6 +190,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		JsonNode nextLink = content.get("@odata.nextLink");
 
 		if (!value.isArray() || (nextLink != null && !nextLink.isTextual())) {
+			// TODO: custom exception
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 		}
 

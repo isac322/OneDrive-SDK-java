@@ -76,7 +76,8 @@ abstract public class BaseItem {
 					   FileSystemInfoFacet fileSystemInfo, IdentitySet lastModifiedBy, String lastModifiedDateTime,
 					   @NotNull String name, @Nullable ItemReference parentReference,
 					   @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
-					   @Nullable SharePointIdsFacet sharePointIds, long size, String webDavUrl, String webUrl) {
+					   @Nullable SharePointIdsFacet sharePointIds, long size, String webDavUrl, String webUrl)
+			throws IllegalArgumentException {
 		this.client = client;
 
 		this.id = id;
@@ -116,6 +117,7 @@ abstract public class BaseItem {
 
 		// if response isn't 204 No Content
 		if (response.getCode() != HttpsURLConnection.HTTP_NO_CONTENT) {
+			// TODO: custom exception
 			throw new BadRequestException("Bad request. It must be already deleted item or wrong ID.");
 		}
 	}
@@ -208,32 +210,29 @@ abstract public class BaseItem {
 
 	@NotNull
 	public String copyTo(@NotNull FolderItem folder, @NotNull String newName) {
-		if (folder instanceof RemoteFolderItem) {
-			throw new RuntimeException("Any file or folder can not copy to Remote Folder.");
-		}
 		return this.copyTo(folder.id, newName);
 	}
 
 	@NotNull
-	public String copyTo(@NotNull ItemReference folder) {
+	public String copyTo(@NotNull ItemReference folder) throws IllegalArgumentException {
 		if (folder.id != null)
 			return this.copyTo(folder.id);
 		else if (folder.pathPointer != null)
 			return this.copyTo(folder.pathPointer);
 		else
-			throw new RuntimeException(
-					"Because folder's id and path both are null, can not address destination folder.");
+			throw new IllegalArgumentException(
+					"Can not address destination folder. `folder`'s id and path are both null");
 	}
 
 	@NotNull
-	public String copyTo(@NotNull ItemReference folder, @NotNull String newName) {
+	public String copyTo(@NotNull ItemReference folder, @NotNull String newName) throws IllegalArgumentException {
 		if (folder.id != null)
 			return this.copyTo(folder.id, newName);
 		else if (folder.pathPointer != null)
 			return this.copyTo(folder.pathPointer, newName);
 		else
-			throw new RuntimeException(
-					"Because folder's id and path both are null, can not address destination folder.");
+			throw new IllegalArgumentException(
+					"Can not address destination folder. `folder`'s id and path are both null");
 	}
 
 	@NotNull
@@ -271,11 +270,11 @@ abstract public class BaseItem {
 		moveTo(folder.id);
 	}
 
-	public void moveTo(@NotNull ItemReference reference) {
+	public void moveTo(@NotNull ItemReference reference) throws IllegalArgumentException {
 		if (reference.id != null) moveTo(reference.id);
 		else if (reference.pathPointer != null) moveTo(reference.pathPointer);
-		else throw new RuntimeException(
-					"Because folder's id and path both are null, can not address destination folder.");
+		else throw new IllegalArgumentException(
+					"Can not address destination folder. `folder`'s id and path are both null");
 	}
 
 	public void moveTo(@NotNull String id) {
@@ -349,29 +348,34 @@ abstract public class BaseItem {
 
 			if (node.has("file")) {
 				if (node.has("folder") || node.has("package") || node.has("remoteItem")) {
+					// TODO: custom exception
 					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
 				return codec.convertValue(node, FileItem.class);
 			}
 			else if (node.has("folder")) {
 				if (node.has("file") || node.has("package") || node.has("remoteItem")) {
+					// TODO: custom exception
 					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
 				return codec.convertValue(node, FolderItem.class);
 			}
 			else if (node.has("package")) {
 				if (node.has("folder") || node.has("file") || node.has("remoteItem")) {
+					// TODO: custom exception
 					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
 				return codec.convertValue(node, PackageItem.class);
 			}
 			else if (node.has("remoteItem")) {
 				if (node.has("folder") || node.has("file") || node.has("file")) {
+					// TODO: custom exception
 					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
 				return codec.convertValue(node, RemoteFolderItem.class);
 			}
 			else {
+				// TODO: custom exception
 				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 			}
 		}

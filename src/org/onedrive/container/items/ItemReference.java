@@ -9,8 +9,11 @@ import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.items.pointer.PathPointer;
 
 /**
- * https://dev.onedrive.com/resources/itemReference.htm
+ * <a href="https://dev.onedrive.com/resources/itemReference.htm">https://dev.onedrive.com/resources/itemReference
+ * .htm</a>
  * {@// TODO: Enhance javadoc }
+ * {@// TODO: is there any way to merge with {@link org.onedrive.container.items.pointer.BasePointer}? cause it's
+ * conflict in behavior }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
@@ -23,7 +26,7 @@ public class ItemReference {
 	@JsonCreator
 	protected ItemReference(@JsonProperty("driveId") @NotNull String driveId,
 							@JsonProperty("id") @Nullable String id,
-							@JsonProperty("path") @Nullable String asciiPath) {
+							@JsonProperty("path") @Nullable String asciiPath) throws IllegalArgumentException {
 		this.driveId = driveId;
 		this.id = id;
 		this.rawPath = asciiPath;

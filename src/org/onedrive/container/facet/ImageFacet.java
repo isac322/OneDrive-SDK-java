@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 /**
- * https://dev.onedrive.com/facets/image_facet.htm
+ * <a href="https://dev.onedrive.com/facets/image_facet.htm">https://dev.onedrive.com/facets/image_facet.htm</a>
  * {@// TODO: Enhance javadoc}
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
@@ -16,12 +16,12 @@ public class ImageFacet {
 
 	@JsonCreator
 	protected ImageFacet(@JsonProperty("width") Long width,
-						 @JsonProperty("height") Long height) {
+						 @JsonProperty("height") Long height) throws IllegalArgumentException {
 		if (width == null) {
-			throw new RuntimeException("\"width\" filed can not be null");
+			throw new IllegalArgumentException("\"width\" field can not be null");
 		}
 		if (height == null) {
-			throw new RuntimeException("\"height\" filed can not be null");
+			throw new IllegalArgumentException("\"height\" field can not be null");
 		}
 		this.width = width;
 		this.height = height;

@@ -7,7 +7,7 @@ import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * https://dev.onedrive.com/facets/file_facet.htm
+ * <a href="https://dev.onedrive.com/facets/file_facet.htm">https://dev.onedrive.com/facets/file_facet.htm</a>
  * {@// TODO: Enhance javadoc}
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>

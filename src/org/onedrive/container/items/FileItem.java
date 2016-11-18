@@ -64,7 +64,7 @@ public class FileItem extends BaseItem {
 					   @JsonProperty("size") long size,
 					   @JsonProperty("video") @Nullable VideoFacet video,
 					   @JsonProperty("webDavUrl") String webDavUrl,
-					   @JsonProperty("webUrl") String webUrl) {
+					   @JsonProperty("webUrl") String webUrl) throws IllegalArgumentException {
 		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
 				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
 				size, webDavUrl, webUrl);
@@ -80,64 +80,68 @@ public class FileItem extends BaseItem {
 	/**
 	 * @see FileItem#download(Path)
 	 */
-	public void download(@NotNull String path) throws IOException, FileDownFailException {
+	public void download(@NotNull String path) throws IOException, FileDownFailException, IllegalArgumentException {
 		this.download(Paths.get(path));
 	}
 
 	/**
 	 * @see FileItem#download(Path, String)
 	 */
-	public void download(@NotNull String path, @NotNull String newName) throws IOException, FileDownFailException {
+	public void download(@NotNull String path, @NotNull String newName)
+			throws IOException, FileDownFailException, IllegalArgumentException {
 		this.download(Paths.get(path), newName);
 	}
 
 	/**
-	 * Download file from OneDrive to {@code path}.<br>
+	 * Download file from OneDrive to {@code folderPath}.<br>
 	 * It could be relative path (like . or ..).<br>
 	 * Downloaded file will automatically name as {@code getName()}.<br>
 	 *
-	 * @param path Folder path. It always treated as folder even if it contains extension.
+	 * @param folderPath Folder path. It always treated as folder even if it contains extension.
 	 * @throws SecurityException        If a required system property value cannot be accessed, or if a security
 	 *                                  manager exists and its SecurityManager.checkRead method denies read access to
 	 *                                  the file
 	 * @throws FileDownFailException    If fail to download with not 200 OK response.
-	 * @throws IllegalArgumentException If {@code path} is exists and is not directory.
+	 * @throws IllegalArgumentException If {@code folderPath} is exists and is not directory.
 	 */
-	public void download(@NotNull Path path) throws IOException, FileDownFailException {
-		download(path, this.getName());
+	public void download(@NotNull Path folderPath)
+			throws IOException, FileDownFailException, IllegalArgumentException {
+		download(folderPath, this.getName());
 	}
 
 	/**
-	 * Download file from OneDrive to {@code path} with {@code newName}.<br>
+	 * Download file from OneDrive to {@code folderPath} with {@code newName}.<br>
 	 * It could be relative path (like . or ..).<br>
-	 * If {@code newName} is already exists in {@code path} or {@code path} is not folder,
+	 * If {@code newName} is already exists in {@code folderPath} or {@code folderPath} is not folder,
 	 * it will throw {@link IllegalArgumentException}.
 	 *
-	 * @param path    Folder path. It always treated as folder even if it contains extension.
-	 * @param newName new file name.
+	 * @param folderPath Folder path. It always treated as folder even if it contains extension.
+	 * @param newName    new file name.
 	 * @throws SecurityException        If a required system property value cannot be accessed, or if a security
 	 *                                  manager exists and its SecurityManager.checkRead method denies read access to
 	 *                                  the file
 	 * @throws FileDownFailException    If fail to download with not 200 OK response.
-	 * @throws IllegalArgumentException If {@code path} is exists and is not directory.
+	 * @throws IllegalArgumentException If {@code folderPath} is exists and is not directory.
 	 */
-	public void download(@NotNull Path path, String newName) throws IOException, FileDownFailException {
-		Path parent = path.toAbsolutePath();
-		path = parent.resolve(newName);
+	public void download(@NotNull Path folderPath, String newName)
+			throws IOException, FileDownFailException, IllegalArgumentException {
+		Path parent = folderPath.toAbsolutePath();
+		folderPath = parent.resolve(newName);
 		if (Files.exists(parent) && !Files.isDirectory(parent))
-			throw new IllegalArgumentException("path argument must pointing directory.");
+			throw new IllegalArgumentException("`folderPath` argument must pointing directory.");
 
 		Files.createDirectories(parent);
 
 		HttpsResponse response = OneDriveRequest.doGet("/drive/items/" + id + "/content", client.getFullToken());
 
 		if (response.getCode() != 200) {
+			// TODO: custom exception
 			throw new FileDownFailException(
 					String.format("File download fails with %d %s", response.getCode(), response.getMessage()));
 		}
 
 		val fileChannel = AsynchronousFileChannel.open(
-				path,
+				folderPath,
 				StandardOpenOption.CREATE,
 				StandardOpenOption.WRITE);
 

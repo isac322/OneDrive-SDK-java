@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.regex.Pattern;
 
 /**
  * {@// TODO: Enhance javadoc}
@@ -13,18 +14,25 @@ import java.net.URISyntaxException;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class IdPointer extends BasePointer {
+	private final static Pattern idPattern = Pattern.compile("[a-fA-F0-9!]+");
 	@Getter @Nullable private final String driveId;
 	@Getter @NotNull private final String id;
 	@NotNull private final String path;
 
 
-	public IdPointer(@NotNull String id) {
+	public IdPointer(@NotNull String id) throws IllegalArgumentException {
+		if (!idPattern.matcher(id).matches())
+			throw new IllegalArgumentException("`id` isn't match with regex \"[a-fA-F0-9!]+\"");
+
 		this.id = id;
 		this.driveId = null;
 		this.path = "/drive/items/" + id;
 	}
 
-	public IdPointer(@NotNull String id, @Nullable String driveId) {
+	public IdPointer(@NotNull String id, @Nullable String driveId) throws IllegalArgumentException {
+		if (!idPattern.matcher(id).matches())
+			throw new IllegalArgumentException("`id` isn't match with regex \"[a-fA-F0-9!]+\"");
+
 		this.id = id;
 		this.driveId = driveId;
 		this.path = "/drives/" + driveId + "/items/" + id;
@@ -45,7 +53,7 @@ public class IdPointer extends BasePointer {
 	@NotNull
 	@Override
 	public URI toURI() throws URISyntaxException {
-		return new URI("https", null, path, null);
+		return new URI("https", "api.onedrive.com/v1.0", path, null);
 	}
 
 	@NotNull

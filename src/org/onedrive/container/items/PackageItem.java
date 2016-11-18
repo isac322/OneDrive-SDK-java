@@ -2,10 +2,10 @@ package org.onedrive.container.items;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.Client;
@@ -23,7 +23,7 @@ import org.onedrive.container.facet.*;
  */
 @JsonDeserialize(as = PackageItem.class)
 public class PackageItem extends BaseItem {
-	@Getter(onMethod = @__(@JsonProperty("package"))) @NotNull protected PackageFacet packages;
+	@JsonProperty("package") @NotNull private PackageFacet packages;
 
 	@JsonCreator
 	public PackageItem(@JacksonInject("OneDriveClient") Client client,
@@ -45,11 +45,16 @@ public class PackageItem extends BaseItem {
 					   @JsonProperty("size") long size,
 					   @JsonProperty("webDavUrl") String webDavUrl,
 					   @JsonProperty("webUrl") String webUrl,
-					   @JsonProperty("package") @NotNull PackageFacet packages) {
+					   @JsonProperty("package") @NotNull PackageFacet packages) throws IllegalArgumentException {
 		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
 				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
 				size, webDavUrl, webUrl);
 
 		this.packages = packages;
+	}
+
+	@JsonIgnore
+	public String getType() {
+		return packages.getType();
 	}
 }

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 /**
- * https://dev.onedrive.com/facets/jumpinfo_facet.htm
+ * <a href="https://dev.onedrive.com/facets/jumpinfo_facet.htm">https://dev.onedrive.com/facets/jumpinfo_facet.htm</a>
  * {@// TODO: Enhance javadoc}
  * {@// TODO: merge with BaseItem if possible }
  *

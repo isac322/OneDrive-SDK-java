@@ -122,6 +122,7 @@ public class Client {
 		https://github.com/FasterXML/jackson-databind/issues/962
 		 */
 		mapper.registerModule(jacksonIsTricky);
+
 		mapper.registerModule(new AfterburnerModule());
 
 
@@ -188,6 +189,7 @@ public class Client {
 			answerLock.release();
 
 			if (code == null) {
+				// TODO: custom exception
 				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 			}
 
@@ -195,10 +197,12 @@ public class Client {
 		}
 		catch (IOException | URISyntaxException e) {
 			e.printStackTrace();
+			// TODO: custom exception
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
 		}
 		catch (InterruptedException e) {
 			e.printStackTrace();
+			// TODO: custom exception
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Lock Error In " + this.getClass().getName());
 		}
 	}
@@ -211,10 +215,8 @@ public class Client {
 	}
 
 	@NotNull
-	public String refreshToken() {
-		if (!isLogin()) {
-			throw new RuntimeException("Do login first!!");
-		}
+	public String refreshToken() throws IllegalStateException {
+		if (!isLogin()) throw new IllegalStateException("Do login first!!");
 
 		return getToken(
 				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&refresh_token=%s&grant_type" +
@@ -224,40 +226,50 @@ public class Client {
 
 	@NotNull
 	private String getToken(String httpBody) {
+		HttpsRequest request;
 		try {
-			HttpsRequest request = new HttpsRequest("https://login.live.com/oauth20_token.srf");
-			request.setHeader("Content-Type", "application/x-www-form-urlencoded");
+			request = new HttpsRequest("https://login.live.com/oauth20_token.srf");
+		}
+		catch (MalformedURLException e) {
+			e.printStackTrace();
+			// TODO: custom exception
+			throw new RuntimeException("Internal error. contact author");
+		}
+		request.setHeader("Content-Type", "application/x-www-form-urlencoded");
 
-			HttpsResponse response = request.doPost(httpBody);
+		HttpsResponse response = request.doPost(httpBody);
 
-			JsonNode json = mapper.readTree(response.getContent());
-
-			JsonNode access = json.get("access_token");
-			JsonNode refresh = json.get("refresh_token");
-			JsonNode id = json.get("user_id");
-			JsonNode type = json.get("token_type");
-			JsonNode expires = json.get("expires_in");
-
-			if (access == null || refresh == null || id == null || type == null || expires == null) {
-				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
-			}
-
-			saveToken(
-					access.asText(),
-					refresh.asText(),
-					id.asText(),
-					type.asText(),
-					expires.asLong()
-			);
-
-			return access.asText();
-
+		JsonNode json;
+		try {
+			json = mapper.readTree(response.getContent());
 		}
 		catch (IOException e) {
 			e.printStackTrace();
+			// TODO: custom exception
 			throw new RuntimeException(
 					HttpsRequest.NETWORK_ERR_MSG + " Internet Connection Error While Refreshing Login Info");
 		}
+
+		JsonNode access = json.get("access_token");
+		JsonNode refresh = json.get("refresh_token");
+		JsonNode id = json.get("user_id");
+		JsonNode type = json.get("token_type");
+		JsonNode expires = json.get("expires_in");
+
+		if (access == null || refresh == null || id == null || type == null || expires == null) {
+			// TODO: custom exception
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+		}
+
+		saveToken(
+				access.asText(),
+				refresh.asText(),
+				id.asText(),
+				type.asText(),
+				expires.asLong()
+		);
+
+		return access.asText();
 	}
 
 	private void saveToken(String accessToken, String refreshToken, String userId, String type, long expirationTime) {
@@ -270,20 +282,16 @@ public class Client {
 		this.fullToken = type + ' ' + accessToken;
 	}
 
-	private void checkExpired() {
-		if (!isLogin()) {
-			throw new RuntimeException("Do login first!!");
-		}
+	private void checkExpired() throws IllegalStateException {
+		if (!isLogin()) throw new IllegalStateException("Do login first!!");
 
-		if (isExpired()) {
-			refreshToken();
-		}
+		if (isExpired()) refreshToken();
 	}
 
 
 	/**
-	 * {@// TODO: Enhance javadoc }
-	 * {@// TODO: check logout HTTP response about error.}
+	 * {@// TODO: enhance javadoc }
+	 * {@// TODO: check logout HTTP response about error. (https://dev.onedrive.com/auth/msa_oauth.htm#errors) }
 	 *
 	 * @throws RuntimeException if it isn't login when called.
 	 */
@@ -634,6 +642,7 @@ public class Client {
 		}
 		catch (IOException e) {
 			e.printStackTrace();
+			// TODO: custom exception
 			throw new RuntimeException("DEV: Can't serialize object. Contact author.");
 		}
 	}
@@ -674,7 +683,7 @@ public class Client {
 	 * {@// TODO: Implement '@name.conflictBehavior' }
 	 *
 	 * @param parent Parent pointer that creating folder inside. (either ID or path)
-	 * @param name     New folder name.
+	 * @param name   New folder name.
 	 * @return New folder's object.
 	 * @throws RuntimeException If creating folder or converting response is fails.
 	 */
@@ -686,6 +695,8 @@ public class Client {
 
 	@NotNull
 	private FolderItem createFolder(@NotNull String api, @NotNull byte[] content) {
+		checkExpired();
+
 		HttpsResponse response = requestTool.postMetadata(api, content);
 
 		// if response code isn't 201 Created

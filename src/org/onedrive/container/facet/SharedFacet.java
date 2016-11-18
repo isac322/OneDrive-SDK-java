@@ -6,7 +6,7 @@ import lombok.Getter;
 import org.onedrive.container.IdentitySet;
 
 /**
- * https://dev.onedrive.com/facets/shared_facet.htm
+ * <a href="https://dev.onedrive.com/facets/shared_facet.htm">https://dev.onedrive.com/facets/shared_facet.htm</a>
  * {@// TODO: Enhance javadoc}
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
