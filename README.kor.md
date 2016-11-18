@@ -1,4 +1,4 @@
-**한국어** | [English](https://github.com/isac322/OneDrive-API-java/blob/jackson-test/README.md)
+**한국어** | [English](https://github.com/isac322/OneDrive-API-java/blob/master/README.md)
 
 
 # [OneDrive](https://onedrive.live.com/) API for Java
