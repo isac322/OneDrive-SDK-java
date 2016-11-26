@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
+import org.onedrive.container.items.pointer.IdPointer;
 
 /**
  * <a href='https://dev.onedrive.com/facets/package_facet.htm'>https://dev.onedrive.com/facets/package_facet.htm</a>
@@ -25,6 +26,11 @@ import org.onedrive.container.facet.*;
 public class PackageItem extends BaseItem {
 	@JsonProperty("package") @NotNull private PackageFacet packages;
 
+	/**
+	 * @throws IllegalArgumentException It's solely because of construction of {@link IdPointer}.
+	 * @see IdPointer#IdPointer(String, String)
+	 * @see IdPointer#IdPointer(String)
+	 */
 	@JsonCreator
 	public PackageItem(@JacksonInject("OneDriveClient") Client client,
 					   @JsonProperty("id") String id,
@@ -45,7 +51,7 @@ public class PackageItem extends BaseItem {
 					   @JsonProperty("size") long size,
 					   @JsonProperty("webDavUrl") String webDavUrl,
 					   @JsonProperty("webUrl") String webUrl,
-					   @JsonProperty("package") @NotNull PackageFacet packages) throws IllegalArgumentException {
+					   @JsonProperty("package") @NotNull PackageFacet packages) {
 		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
 				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
 				size, webDavUrl, webUrl);

@@ -2,6 +2,7 @@ package org.onedrive.container.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,7 +22,8 @@ import org.onedrive.container.facet.SharedFacet;
 import org.onedrive.container.items.pointer.BasePointer;
 import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.PathPointer;
-import org.onedrive.exceptions.BadRequestException;
+import org.onedrive.exceptions.ErrorResponseException;
+import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.ErrorResponse;
 import org.onedrive.network.HttpsClientHandler;
 import org.onedrive.network.legacy.HttpsRequest;
@@ -71,13 +73,17 @@ abstract public class BaseItem {
 	@Getter(onMethod = @__(@JsonIgnore)) @NotNull protected PathPointer pathPointer;
 	@Getter(onMethod = @__(@JsonIgnore)) @NotNull protected IdPointer idPointer;
 
+	/**
+	 * @throws IllegalArgumentException It's solely because of construction of {@link IdPointer}.
+	 * @see IdPointer#IdPointer(String, String)
+	 * @see IdPointer#IdPointer(String)
+	 */
 	protected BaseItem(@NotNull Client client, @NotNull String id, IdentitySet createdBy, String createdDateTime,
 					   String cTag, ObjectNode deleted, String description, String eTag,
 					   FileSystemInfoFacet fileSystemInfo, IdentitySet lastModifiedBy, String lastModifiedDateTime,
 					   @NotNull String name, @Nullable ItemReference parentReference,
 					   @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
-					   @Nullable SharePointIdsFacet sharePointIds, long size, String webDavUrl, String webUrl)
-			throws IllegalArgumentException {
+					   @Nullable SharePointIdsFacet sharePointIds, long size, String webDavUrl, String webUrl) {
 		this.client = client;
 
 		this.id = id;
@@ -112,13 +118,28 @@ abstract public class BaseItem {
 	}
 
 
-	public void delete() throws BadRequestException {
+	public void delete() throws ErrorResponseException {
 		HttpsResponse response = OneDriveRequest.doDelete(Client.ITEM_ID_PREFIX + id, client.getFullToken());
 
 		// if response isn't 204 No Content
 		if (response.getCode() != HttpsURLConnection.HTTP_NO_CONTENT) {
-			// TODO: custom exception
-			throw new BadRequestException("Bad request. It must be already deleted item or wrong ID.");
+			try {
+				ErrorResponse error = client.getMapper().readValue(response.getContent(), ErrorResponse.class);
+				throw new ErrorResponseException(
+						HttpsURLConnection.HTTP_NO_CONTENT,
+						response.getCode(),
+						error.getCode(),
+						error.getMessage()
+				);
+			}
+			catch (JsonProcessingException e) {
+				throw new InvalidJsonException(e, response.getCode(), response.getContent());
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+				// TODO: custom exception
+				throw new RuntimeException("DEV: Unrecognizable error response. contact author");
+			}
 		}
 	}
 
@@ -160,12 +181,14 @@ abstract public class BaseItem {
 	 * <br>
 	 * Note that when refresh content, <b>it can contains difference that you didn't modify</b>. because other side
 	 * (it could be other App, other process, etc.) can modify content after you fetched.
+	 *
+	 * @throws ErrorResponseException if error happens while requesting copying operation. such as invalid login info
 	 */
-	public void refresh() {
+	public void refresh() throws ErrorResponseException {
 		this.update("{}".getBytes());
 	}
 
-	private void update(byte[] content) {
+	private void update(byte[] content) throws ErrorResponseException {
 		try {
 			HttpsClientHandler responseHandler =
 					client.getRequestTool().patchMetadata(Client.ITEM_ID_PREFIX + id, content);
@@ -175,16 +198,19 @@ abstract public class BaseItem {
 
 
 			// if http response code is 200 OK
-			if (response.status().equals(HttpResponseStatus.OK)) {
+			if (response.status().code() == HttpResponseStatus.OK.code()) {
 				BaseItem newItem = client.getMapper().readValue(result, BaseItem.class);
 				this.refreshBy(newItem);
 			}
 			// or something else
 			else {
 				ErrorResponse error = client.getMapper().readValue(result, ErrorResponse.class);
-				// TODO: custom exception
-				throw new RuntimeException("DEV: Update response is not 200 OK. Error code : " + error.getCode() +
-						", message : " + error.getMessage());
+				throw new ErrorResponseException(
+						HttpsURLConnection.HTTP_ACCEPTED,
+						response.status().code(),
+						error.getCode(),
+						error.getMessage()
+				);
 			}
 		}
 		catch (IOException e) {
@@ -204,17 +230,17 @@ abstract public class BaseItem {
 
 
 	@NotNull
-	public String copyTo(@NotNull FolderItem folder) {
+	public String copyTo(@NotNull FolderItem folder) throws ErrorResponseException {
 		return this.copyTo(folder.id);
 	}
 
 	@NotNull
-	public String copyTo(@NotNull FolderItem folder, @NotNull String newName) {
+	public String copyTo(@NotNull FolderItem folder, @NotNull String newName) throws ErrorResponseException {
 		return this.copyTo(folder.id, newName);
 	}
 
 	@NotNull
-	public String copyTo(@NotNull ItemReference folder) throws IllegalArgumentException {
+	public String copyTo(@NotNull ItemReference folder) throws ErrorResponseException {
 		if (folder.id != null)
 			return this.copyTo(folder.id);
 		else if (folder.pathPointer != null)
@@ -225,7 +251,7 @@ abstract public class BaseItem {
 	}
 
 	@NotNull
-	public String copyTo(@NotNull ItemReference folder, @NotNull String newName) throws IllegalArgumentException {
+	public String copyTo(@NotNull ItemReference folder, @NotNull String newName) throws ErrorResponseException {
 		if (folder.id != null)
 			return this.copyTo(folder.id, newName);
 		else if (folder.pathPointer != null)
@@ -236,22 +262,22 @@ abstract public class BaseItem {
 	}
 
 	@NotNull
-	public String copyTo(@NotNull BasePointer dest) {
+	public String copyTo(@NotNull BasePointer dest) throws ErrorResponseException {
 		return client.copyItem(idPointer, dest);
 	}
 
 	@NotNull
-	public String copyTo(@NotNull BasePointer dest, @NotNull String newName) {
+	public String copyTo(@NotNull BasePointer dest, @NotNull String newName) throws ErrorResponseException {
 		return client.copyItem(idPointer, dest, newName);
 	}
 
 	@NotNull
-	public String copyTo(@NotNull String destId) {
+	public String copyTo(@NotNull String destId) throws ErrorResponseException {
 		return client.copyItem(this.id, destId);
 	}
 
 	@NotNull
-	public String copyTo(@NotNull String destId, @NotNull String newName) {
+	public String copyTo(@NotNull String destId, @NotNull String newName) throws ErrorResponseException {
 		return client.copyItem(this.id, destId, newName);
 	}
 
@@ -266,23 +292,23 @@ abstract public class BaseItem {
 	 */
 
 
-	public void moveTo(@NotNull FolderItem folder) {
+	public void moveTo(@NotNull FolderItem folder) throws ErrorResponseException {
 		moveTo(folder.id);
 	}
 
-	public void moveTo(@NotNull ItemReference reference) throws IllegalArgumentException {
+	public void moveTo(@NotNull ItemReference reference) throws ErrorResponseException {
 		if (reference.id != null) moveTo(reference.id);
 		else if (reference.pathPointer != null) moveTo(reference.pathPointer);
 		else throw new IllegalArgumentException(
 					"Can not address destination folder. `folder`'s id and path are both null");
 	}
 
-	public void moveTo(@NotNull String id) {
+	public void moveTo(@NotNull String id) throws ErrorResponseException {
 		BaseItem item = client.moveItem(this.id, id);
 		this.refreshBy(item);
 	}
 
-	public void moveTo(@NotNull BasePointer pointer) {
+	public void moveTo(@NotNull BasePointer pointer) throws ErrorResponseException {
 		BaseItem item = client.moveItem(this.idPointer, pointer);
 		this.refreshBy(item);
 	}
@@ -321,12 +347,12 @@ abstract public class BaseItem {
 
 
 	@JsonIgnore
-	public void setDescription(String description) {
+	public void setDescription(String description) throws ErrorResponseException {
 		update(("{\"description\":\"" + description + "\"}").getBytes());
 	}
 
 	@JsonIgnore
-	public void setName(@NotNull String name) {
+	public void setName(@NotNull String name) throws ErrorResponseException {
 		update(("{\"name\":\"" + name + "\"}").getBytes());
 	}
 

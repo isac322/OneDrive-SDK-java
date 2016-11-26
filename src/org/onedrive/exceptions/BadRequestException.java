@@ -1,13 +1,11 @@
 package org.onedrive.exceptions;
 
-import java.io.IOException;
-
 /**
  * {@// TODO: Enhance javadoc}
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
-public class BadRequestException extends IOException {
+public class BadRequestException extends Exception implements OneDriveSDKException {
 	public BadRequestException(String message) {
 		super(message);
 	}

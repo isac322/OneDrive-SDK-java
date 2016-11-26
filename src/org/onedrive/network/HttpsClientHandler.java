@@ -85,12 +85,7 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 			if (content instanceof LastHttpContent) {
 //				System.err.println("} END OF CONTENT");
 
-				try {
-					resultStream.close();
-				}
-				catch (IOException e) {
-					e.printStackTrace();
-				}
+				resultStream.close();
 
 				if (onComplete != null) {
 					onComplete.handle(resultStream, response);

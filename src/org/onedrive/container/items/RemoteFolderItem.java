@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
-import org.onedrive.network.legacy.HttpsRequest;
+import org.onedrive.exceptions.InvalidJsonException;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -58,9 +58,8 @@ public class RemoteFolderItem extends FolderItem {
 
 		this.remoteItem = remoteItem;
 
-		if (size != null) {
-			throw new RuntimeException("DEV: Size facet is exist in RemoteItem!!!!");
-		}
+		if (size != null)
+			throw new IllegalArgumentException("RemoteFolderItem can't have non-null `size` argument");
 	}
 
 	@NotNull
@@ -77,6 +76,7 @@ public class RemoteFolderItem extends FolderItem {
 
 	@Override
 	protected void fetchChildren() {
+		// children of remote folder can be obtained only by real drive's id and real id.
 		ObjectNode content = client.getRequestTool().doGetJson(
 				String.format("/drives/%s/items/%s/children", getRealDriveID(), getRealID()));
 
@@ -87,10 +87,8 @@ public class RemoteFolderItem extends FolderItem {
 		JsonNode value = content.get("value");
 		JsonNode nextLink = content.get("@odata.nextLink");
 
-		if (!value.isArray() || (nextLink != null && !nextLink.isTextual())) {
-			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
-		}
+		if (!value.isArray() || (nextLink != null && !nextLink.isTextual()))
+			throw new InvalidJsonException("`value` isn't array or `nextLink` isn't text");
 
 		// TODO: if-none-match request header handling.
 		// TODO: not 200 OK response handling.

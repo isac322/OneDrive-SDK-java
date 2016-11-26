@@ -36,7 +36,7 @@ public class PathPointer extends BasePointer {
 
 
 	@SneakyThrows(UnsupportedEncodingException.class)
-	public PathPointer(@NotNull String anyPath) throws IllegalArgumentException {
+	public PathPointer(@NotNull String anyPath) {
 		String rawPath = anyPath;
 
 		// ensure that `anyPath` is always decoded path
@@ -80,7 +80,7 @@ public class PathPointer extends BasePointer {
 
 
 	@SneakyThrows(UnsupportedEncodingException.class)
-	public PathPointer(@NotNull String anyPath, @Nullable String driveId) throws IllegalArgumentException {
+	public PathPointer(@NotNull String anyPath, @Nullable String driveId) {
 		String rawPath = anyPath;
 
 		// ensure that `anyPath` is always decoded path
@@ -175,12 +175,6 @@ public class PathPointer extends BasePointer {
 
 	@NotNull
 	@Override
-	public String resolveOperator(@NotNull String operator) {
-		return rawPath + ":/" + operator;
-	}
-
-	@NotNull
-	@Override
 	public String toASCIIApi() {
 		return rawPath;
 	}
@@ -191,10 +185,16 @@ public class PathPointer extends BasePointer {
 		return "{\"path\":\"" + path + "\"}";
 	}
 
+	@NotNull
+	@Override
+	public String resolveOperator(@NotNull Operator op) {
+		return rawPath + ":/" + op.getString();
+	}
+
 
 	@NotNull
 	@SneakyThrows(UnsupportedEncodingException.class)
-	public PathPointer resolve(@NotNull String name) throws IllegalArgumentException {
+	public PathPointer resolve(@NotNull String name) {
 		// raise exception if `name` is absolute path
 		if (name.charAt(0) == '/') {
 			throw new IllegalArgumentException("`name` doesn't starts with '/'. given : " + name);

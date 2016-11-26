@@ -18,10 +18,10 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.onedrive.exceptions.InternalException;
 
 import javax.net.ssl.SSLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 public final class HttpsClient {
 	@NotNull protected final EventLoopGroup group;
@@ -39,6 +39,9 @@ public final class HttpsClient {
 					   @NotNull HttpMethod method, @Nullable AsyncHttpsResponseHandler onComplete) {
 		this.group = group;
 		this.uri = uri;
+		if (!"https".equalsIgnoreCase(uri.getScheme())) {
+			throw new IllegalArgumentException("Wrong network scheme : \"" + uri.getScheme() + "\".");
+		}
 		this.method = method;
 		this.request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, uri.getRawPath());
 		this.request.headers().set(HttpHeaderNames.HOST, uri.getHost());
@@ -63,13 +66,8 @@ public final class HttpsClient {
 
 	@NotNull
 	public HttpsClientHandler send() {
-		String scheme = uri.getScheme();
 		String host = uri.getHost();
 		int port = 443;
-
-		if (!"https".equalsIgnoreCase(scheme)) {
-			throw new IllegalArgumentException("Wrong network scheme : \"" + scheme + "\".");
-		}
 
 		// Configure SSL context.
 		final SslContext sslCtx;
@@ -78,7 +76,7 @@ public final class HttpsClient {
 		}
 		catch (SSLException e) {
 			e.printStackTrace();
-			throw new RuntimeException("Internal SSL error while constructing.");
+			throw new InternalException("Internal SSL error while constructing. contact author.", e);
 		}
 
 		final HttpsClientHandler httpsHandler = new HttpsClientHandler(onComplete);
@@ -110,13 +108,8 @@ public final class HttpsClient {
 
 	@NotNull
 	public HttpsClientHandler send(final byte[] content) {
-		String scheme = uri.getScheme();
 		String host = uri.getHost();
 		int port = 443;
-
-		if (!"https".equalsIgnoreCase(scheme)) {
-			throw new IllegalArgumentException("Wrong network scheme : \"" + scheme + "\".");
-		}
 
 		// Configure SSL context.
 		final SslContext sslCtx;
@@ -125,7 +118,7 @@ public final class HttpsClient {
 		}
 		catch (SSLException e) {
 			e.printStackTrace();
-			throw new RuntimeException("Internal SSL error while constructing.");
+			throw new InternalException("Internal SSL error while constructing. contact author.", e);
 		}
 
 		final HttpsClientHandler httpsHandler = new HttpsClientHandler(onComplete);

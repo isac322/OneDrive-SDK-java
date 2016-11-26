@@ -2,8 +2,8 @@ package org.onedrive.network;
 
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
+import org.onedrive.exceptions.InternalException;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -32,7 +32,7 @@ public class GrowDirectByteInputStream extends InputStream {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public int read(@NotNull byte[] b, int off, int len) throws IOException {
+	public int read(@NotNull byte[] b, int off, int len) {
 		if (off < 0 || len < 0 || len > b.length - off) {
 			throw new IndexOutOfBoundsException();
 		}
@@ -64,7 +64,7 @@ public class GrowDirectByteInputStream extends InputStream {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public long skip(long n) throws IOException {
+	public long skip(long n) {
 		if (n < 0) return 0;
 
 		long dif = n;
@@ -81,7 +81,7 @@ public class GrowDirectByteInputStream extends InputStream {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public int available() throws IOException {
+	public int available() {
 		if (in < out) return 0;
 		else return in - out + 1;
 	}
@@ -90,7 +90,7 @@ public class GrowDirectByteInputStream extends InputStream {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public int read() throws IOException {
+	public int read() {
 		while (in < out) {
 			if (closed) return -1;
 			try {
@@ -98,17 +98,18 @@ public class GrowDirectByteInputStream extends InputStream {
 			}
 			catch (InterruptedException e) {
 				e.printStackTrace();
+				throw new InternalException("wait() is wrong.", e);
 			}
 		}
 		return buffer[out++];
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		closed = true;
 	}
 
-	public void ensureCap(int newCapacity) {
+	public void ensureCapacity(int newCapacity) {
 		if (newCapacity <= capacity) return;
 
 		int tmp = capacity;
@@ -121,7 +122,7 @@ public class GrowDirectByteInputStream extends InputStream {
 	}
 
 	public void ensureRemain(int additional) {
-		ensureCap(in + additional + 1);
+		ensureCapacity(in + additional + 1);
 	}
 
 	public byte[] getRawBuffer() {

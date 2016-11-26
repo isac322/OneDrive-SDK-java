@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -16,10 +17,14 @@ import org.jetbrains.annotations.Nullable;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
+import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.PathPointer;
+import org.onedrive.exceptions.ErrorResponseException;
+import org.onedrive.exceptions.InternalException;
+import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.AsyncHttpsResponseHandler;
+import org.onedrive.network.GrowDirectByteInputStream;
 import org.onedrive.network.HttpsClientHandler;
-import org.onedrive.network.legacy.HttpsRequest;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,7 +48,13 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	@Nullable @JsonIgnore protected List<BaseItem> allChildren;
 	@Nullable @JsonProperty protected ObjectNode root;
 
-
+	/**
+	 * @throws IllegalArgumentException It's because of construction of {@link IdPointer} or {@link PathPointer}. or
+	 *                                  if parameter {@code parentReference} is null even if this isn't root directory.
+	 * @see IdPointer#IdPointer(String, String)
+	 * @see IdPointer#IdPointer(String)
+	 * @see PathPointer#PathPointer(String, String)
+	 */
 	@JsonCreator
 	protected FolderItem(@JacksonInject("OneDriveClient") Client client,
 						 @JsonProperty("id") @NotNull String id,
@@ -68,8 +79,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 						 @JsonProperty("webDavUrl") String webDavUrl,
 						 @JsonProperty("webUrl") String webUrl,
 						 @JsonProperty("children@odata.nextLink") @Nullable String nextLink,
-						 @JsonProperty("children") @Nullable ArrayNode children)
-			throws IllegalArgumentException {
+						 @JsonProperty("children") @Nullable ArrayNode children) {
 		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
 				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
 				size, webDavUrl, webUrl);
@@ -96,10 +106,9 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			assert parentReference == null;
 			pathPointer = new PathPointer("/", getDriveId());
 		}
-		else if (parentReference == null) {
-			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " parentReference is missing!");
-		}
+		else if (parentReference == null)
+			throw new IllegalArgumentException(
+					"FolderItem that not root dir can't have null `parentReference` argument");
 	}
 
 	protected static void addChildren(@NotNull Client client, @NotNull JsonNode array, @NotNull List<BaseItem> all,
@@ -142,14 +151,19 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 							new AsyncHttpsResponseHandler() {
 								@Override
 								public void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response) {
+									GrowDirectByteInputStream result = (GrowDirectByteInputStream) resultStream;
 									try {
 										jsonObject[0] = (ObjectNode) client.getMapper().readTree(resultStream);
+									}
+									catch (JsonProcessingException e) {
+										throw new InvalidJsonException(
+												e, response.status().code(), result.getRawBuffer()
+										);
 									}
 									catch (IOException e) {
 										e.printStackTrace();
 										// TODO: custom exception
-										throw new RuntimeException(
-												HttpsRequest.NETWORK_ERR_MSG + " Can not convert response to JSON");
+										throw new RuntimeException("DEV: Unrecognizable error response.");
 									}
 								}
 							});
@@ -160,27 +174,25 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			}
 			catch (InterruptedException e) {
 				e.printStackTrace();
-			}
-
-			if (jsonObject[0].has("@odata.nextLink")) {
-				nextLink = jsonObject[0].get("@odata.nextLink").asText();
-			}
-			else nextLink = null;
-
-			if (jsonObject[0].has("value")) {
-				array = jsonObject[0].get("value");
-			}
-			else {
 				// TODO: custom exception
-				throw new UnsupportedOperationException("Children object must file or folder of package");
 			}
+
+			if (jsonObject[0].has("@odata.nextLink"))
+				nextLink = jsonObject[0].get("@odata.nextLink").asText();
+			else
+				nextLink = null;
+
+			if (jsonObject[0].has("value"))
+				array = jsonObject[0].get("value");
+			else
+				throw new InvalidJsonException("Empty response while expanding children list.");
 		}
 
 		addChildren(client, array, all, folder, file);
 	}
 
 	protected void fetchChildren() {
-		ObjectNode content = client.getRequestTool().doGetJson("/drive/items/" + id + "/children");
+		ObjectNode content = client.getRequestTool().doGetJson(Client.ITEM_ID_PREFIX + id + "/children");
 
 		allChildren = new CopyOnWriteArrayList<>();
 		folderChildren = new CopyOnWriteArrayList<>();
@@ -189,10 +201,8 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		JsonNode value = content.get("value");
 		JsonNode nextLink = content.get("@odata.nextLink");
 
-		if (!value.isArray() || (nextLink != null && !nextLink.isTextual())) {
-			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
-		}
+		if (!value.isArray() || (nextLink != null && !nextLink.isTextual()))
+			throw new InvalidJsonException("`value` isn't array or `nextLink` isn't text");
 
 		// TODO: if-none-match request header handling.
 		// TODO: not 200 OK response handling.
@@ -210,9 +220,10 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	 * @param name New folder name.
 	 * @return New folder's object.
 	 * @throws RuntimeException If creating folder or converting response is fails.
+	 *                          {@// TODO: add more @throws }
 	 */
 	@NotNull
-	public FolderItem createFolder(@NotNull String name) {
+	public FolderItem createFolder(@NotNull String name) throws ErrorResponseException {
 		return client.createFolder(this.id, name);
 	}
 
@@ -224,6 +235,8 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	 * fetch children data.
 	 *
 	 * @param newItem New object that contains new data to update.
+	 * @throws IllegalArgumentException It's because of construction of {@link IdPointer} or {@link PathPointer}.
+	 * @throws InternalException        if parameter {@code parentReference} is null even if this isn't root directory.
 	 */
 	@Override
 	protected void refreshBy(@NotNull BaseItem newItem) {
@@ -243,10 +256,9 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			assert parentReference == null;
 			pathPointer = new PathPointer("/", getDriveId());
 		}
-		else if (parentReference == null) {
-			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " parentReference is missing!");
-		}
+		else if (parentReference == null)
+			throw new IllegalArgumentException(
+					"FolderItem that not root dir can't have null `parentReference` argument");
 	}
 
 
@@ -282,7 +294,6 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	@Override
 	public String getDriveId() {
 		if (isRoot()) return id.split("!")[0];
-		assert parentReference != null;
 		return parentReference.driveId;
 	}
 

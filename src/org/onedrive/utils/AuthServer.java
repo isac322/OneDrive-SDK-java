@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import org.jetbrains.annotations.Nullable;
+import org.onedrive.exceptions.InternalException;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,7 +32,7 @@ public final class AuthServer {
 			authLock.acquire();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-			System.err.println("Lock Error In " + this.getClass().getName());
+			throw new InternalException("Lock error in AuthServer constructor.", e);
 		}
 
 		try {
@@ -40,6 +41,7 @@ public final class AuthServer {
 			server.setExecutor(null);
 		} catch (IOException e) {
 			e.printStackTrace();
+			// TODO: custom exception
 		}
 	}
 
@@ -72,8 +74,10 @@ public final class AuthServer {
 					authCode = query[1];
 					break;
 				case "error":
+					// TODO: custom exception
 					throw new IOException("Wrong Login Info");
 				default:
+					// TODO: custom exception
 					throw new IOException("Unrecognized OneDrive Server Error");
 			}
 

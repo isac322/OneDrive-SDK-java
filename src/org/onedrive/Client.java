@@ -2,6 +2,7 @@ package org.onedrive;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -21,8 +22,13 @@ import org.onedrive.container.items.BaseItem;
 import org.onedrive.container.items.FileItem;
 import org.onedrive.container.items.FolderItem;
 import org.onedrive.container.items.pointer.BasePointer;
+import org.onedrive.container.items.pointer.Operator;
 import org.onedrive.container.items.pointer.PathPointer;
+import org.onedrive.exceptions.ErrorResponseException;
+import org.onedrive.exceptions.InternalException;
+import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.ErrorResponse;
+import org.onedrive.network.GrowDirectByteInputStream;
 import org.onedrive.network.HttpsClientHandler;
 import org.onedrive.network.legacy.HttpsRequest;
 import org.onedrive.network.legacy.HttpsResponse;
@@ -32,10 +38,10 @@ import org.onedrive.utils.OneDriveRequest;
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -88,6 +94,14 @@ public class Client {
 	 * @param redirectURL  Redirect URL that programmer already set in Application setting. It must matches with set
 	 *                     one!
 	 * @param clientSecret Client secret key that MS gave to programmer.
+	 * @throws InternalException             If fail to create {@link URI} object in auth process.
+	 *                                       if it happens it's probably bug, so please report to
+	 *                                       <a href="mailto:yoobyeonghun@gmail.com" target="_top">author</a>.
+	 * @throws UnsupportedOperationException If the user default browser is not found, or it fails to be launched, or
+	 *                                       the default handler application failed to be launched, or the current
+	 *                                       platform does not support the {@link java.awt.Desktop.Action#BROWSE}
+	 *                                       action.
+	 * @throws RuntimeException              if login is unsuccessful.
 	 */
 	public Client(@NotNull String clientId, @NotNull String[] scope,
 				  @NotNull String redirectURL, @NotNull String clientSecret) {
@@ -101,6 +115,14 @@ public class Client {
 	 *                     one!
 	 * @param clientSecret Client secret key that MS gave to programmer.
 	 * @param autoLogin    if {@code true} construct with auto login.
+	 * @throws InternalException             If fail to create {@link URI} object in auth process.
+	 *                                       if it happens it's probably bug, so please report to
+	 *                                       <a href="mailto:yoobyeonghun@gmail.com" target="_top">author</a>.
+	 * @throws UnsupportedOperationException If the user default browser is not found, or it fails to be launched, or
+	 *                                       the default handler application failed to be launched, or the current
+	 *                                       platform does not support the {@link java.awt.Desktop.Action#BROWSE}
+	 *                                       action.
+	 * @throws RuntimeException              if login is unsuccessful.
 	 */
 	public Client(@NotNull String clientId, @NotNull String[] scope, @NotNull String redirectURL,
 				  @NotNull String clientSecret, boolean autoLogin) {
@@ -140,9 +162,20 @@ public class Client {
 	 * Implementation of
 	 * <a href=https://dev.onedrive.com/auth/msa_oauth.htm>detail</a>
 	 *
-	 * @throws RuntimeException if login is unsuccessful.
+	 * @throws InternalException             If fail to create {@link URI} object in auth process. or the underlying
+	 *                                       input source has problems during parsing response body.
+	 *                                       if it happens it's probably bug, so please report to
+	 *                                       <a href="mailto:yoobyeonghun@gmail.com" target="_top">author</a>.
+	 * @throws UnsupportedOperationException If the user default browser is not found, or it fails to be launched, or
+	 *                                       the default handler application failed to be launched, or the current
+	 *                                       platform does not support the {@link java.awt.Desktop.Action#BROWSE}
+	 *                                       action.
+	 * @throws InvalidJsonException          If fail to parse response of login request into json, or even if success
+	 *                                       to parse, if there're unexpected value. both caused by server side not by
+	 *                                       SDK.
+	 * @throws RuntimeException              if login is unsuccessful.
 	 */
-	private void login() throws RuntimeException {
+	private void login() {
 		if (!isLogin()) {
 			authCode = getCode();
 			redeemToken();
@@ -163,10 +196,20 @@ public class Client {
 
 	/**
 	 * Implementation of
-	 * <a href=https://dev.onedrive.com/auth/msa_oauth.htm#step-1-get-an-authorization-code>detail</a>
+	 * <a href=https://dev.onedrive.com/auth/msa_oauth.htm#step-1-get-an-authorization-code>detail</a>.<br>
+	 * Trying to login and get <a href="https://dev.onedrive.com/auth/msa_oauth.htm#code-flow">accessCode</a> from
+	 * server with login information that given when constructing (see
+	 * {@link Client#Client(String, String[], String, String)}.)
 	 *
 	 * @return <b>Access Code</b>({@code this.accessToken}) if successful. Otherwise throw {@link RuntimeException}.
-	 * @throws RuntimeException if getting <b>Access Code</b> is unsuccessful.
+	 * @throws InternalException             If fail to create {@link URI} object in auth process.
+	 *                                       if it happens it's probably bug, so please report to
+	 *                                       <a href="mailto:yoobyeonghun@gmail.com" target="_top">author</a>.
+	 * @throws UnsupportedOperationException If the user default browser is not found, or it fails to be launched, or
+	 *                                       the default handler application failed to be launched, or the current
+	 *                                       platform does not support the {@link java.awt.Desktop.Action#BROWSE}
+	 *                                       action.
+	 * @throws RuntimeException              if getting <b>Access Code</b> is unsuccessful.
 	 */
 	@NotNull
 	private String getCode() {
@@ -177,36 +220,55 @@ public class Client {
 				"?client_id=%s&scope=%s&response_type=code&redirect_uri=%s", clientId, scope, redirectURL)
 				.replace(" ", "%20");
 
+		Semaphore answerLock = new Semaphore(1);
+
+		AuthServer server = new AuthServer(answerLock);
+		server.start();
+
 		try {
-			Semaphore answerLock = new Semaphore(1);
-
-			AuthServer server = new AuthServer(answerLock);
-			server.start();
 			Desktop.getDesktop().browse(new URI(url));
-
-			answerLock.acquire();
-			String code = server.close();
-			answerLock.release();
-
-			if (code == null) {
-				// TODO: custom exception
-				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
-			}
-
-			return code;
 		}
-		catch (IOException | URISyntaxException e) {
+		catch (URISyntaxException e) {
 			e.printStackTrace();
-			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+			throw new InternalException(
+					"Fail to create URI object. probably wrong url on SDK code, contact the author", e);
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			throw new UnsupportedOperationException("Can not find default browser for authentication.", e);
+		}
+
+		try {
+			answerLock.acquire();
 		}
 		catch (InterruptedException e) {
 			e.printStackTrace();
 			// TODO: custom exception
 			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Lock Error In " + this.getClass().getName());
 		}
+
+		String code = server.close();
+		answerLock.release();
+
+		if (code == null) {
+			// TODO: custom exception
+			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+		}
+
+		return code;
 	}
 
+
+	/**
+	 * Get token from server with login information that given when {@code Client} object was constructed.<br>
+	 * And save to their own {@code Client} object.
+	 * <a href="https://dev.onedrive.com/auth/msa_oauth.htm#step-3-get-a-new-access-token-or-refresh-token">detail</a>
+	 *
+	 * @return access token {@code String} that given from server.
+	 * @throws InvalidJsonException If fail to parse response of login request into json, or even if success to parse,
+	 *                              if there're unexpected value. both caused by server side not by SDK.
+	 * @throws InternalException    if the underlying input source has problems during parsing response body.
+	 */
 	@NotNull
 	private String redeemToken() {
 		return getToken(
@@ -214,8 +276,18 @@ public class Client {
 						clientId, redirectURL, clientSecret, authCode));
 	}
 
+	/**
+	 * Refresh login info (same as access token).<br>
+	 * <a href="https://dev.onedrive.com/auth/msa_oauth.htm#step-3-get-a-new-access-token-or-refresh-token">detail</a>
+	 *
+	 * @return refreshed access token {@code String}.
+	 * @throws IllegalStateException If caller {@code Client} object isn't login yet.
+	 * @throws InvalidJsonException  If fail to parse response of login request into json, or even if success to parse,
+	 *                               if there're unexpected value. both caused by server side not by SDK.
+	 * @throws InternalException     if the underlying input source has problems during parsing response body.
+	 */
 	@NotNull
-	public String refreshToken() throws IllegalStateException {
+	public String refreshToken() {
 		if (!isLogin()) throw new IllegalStateException("Do login first!!");
 
 		return getToken(
@@ -224,17 +296,19 @@ public class Client {
 						clientId, redirectURL, clientSecret, refreshToken));
 	}
 
+	/**
+	 * Posting login information to server, be granted and get access token from server. and save them to this
+	 * {@code Client} object.
+	 *
+	 * @param httpBody HTTP POST's body that will be sent to server for being granted.
+	 * @return access token {@code String} that given from server.
+	 * @throws InvalidJsonException If fail to parse response of login request into json, or even if success to parse,
+	 *                              if there're unexpected value. both caused by server side not by SDK.
+	 * @throws InternalException    if the underlying input source has problems during parsing response body.
+	 */
 	@NotNull
 	private String getToken(String httpBody) {
-		HttpsRequest request;
-		try {
-			request = new HttpsRequest("https://login.live.com/oauth20_token.srf");
-		}
-		catch (MalformedURLException e) {
-			e.printStackTrace();
-			// TODO: custom exception
-			throw new RuntimeException("Internal error. contact author");
-		}
+		HttpsRequest request = new HttpsRequest("https://login.live.com/oauth20_token.srf");
 		request.setHeader("Content-Type", "application/x-www-form-urlencoded");
 
 		HttpsResponse response = request.doPost(httpBody);
@@ -243,11 +317,13 @@ public class Client {
 		try {
 			json = mapper.readTree(response.getContent());
 		}
+		catch (JsonProcessingException e) {
+			e.printStackTrace();
+			throw new InvalidJsonException(e, response.getCode(), response.getContent());
+		}
 		catch (IOException e) {
 			e.printStackTrace();
-			// TODO: custom exception
-			throw new RuntimeException(
-					HttpsRequest.NETWORK_ERR_MSG + " Internet Connection Error While Refreshing Login Info");
+			throw new InternalException("Probably error while read from source in json parsing", e);
 		}
 
 		JsonNode access = json.get("access_token");
@@ -256,9 +332,19 @@ public class Client {
 		JsonNode type = json.get("token_type");
 		JsonNode expires = json.get("expires_in");
 
-		if (access == null || refresh == null || id == null || type == null || expires == null) {
-			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+		if (access == null || !access.isTextual() || refresh == null || !refresh.isTextual() || id == null
+				|| !id.isTextual() || type == null || !type.isTextual() || expires == null
+				|| !expires.isIntegralNumber()) {
+			throw new InvalidJsonException(
+					String.format("Null value detected: %s %s %s %s %s",
+							access == null ? "access_token" : "",
+							refresh == null ? "refresh_token" : "",
+							id == null ? "user_id" : "",
+							type == null ? "token_type" : "",
+							expires == null ? "expires_in" : ""),
+					response.getCode(),
+					response.getContent()
+			);
 		}
 
 		saveToken(
@@ -282,7 +368,15 @@ public class Client {
 		this.fullToken = type + ' ' + accessToken;
 	}
 
-	private void checkExpired() throws IllegalStateException {
+	/**
+	 * Check expiration of authentication. if expired, refresh it with {@link Client#refreshToken()}.
+	 *
+	 * @throws IllegalStateException If caller {@code Client} object isn't login yet.
+	 * @throws InvalidJsonException  If fail to parse response of login request into json, or even if success to parse,
+	 *                               if there're unexpected value. both caused by server side not by SDK.
+	 * @throws InternalException     if the underlying input source has problems during parsing response body.
+	 */
+	private void checkExpired() {
 		if (!isLogin()) throw new IllegalStateException("Do login first!!");
 
 		if (isExpired()) refreshToken();
@@ -291,22 +385,23 @@ public class Client {
 
 	/**
 	 * {@// TODO: enhance javadoc }
-	 * {@// TODO: check logout HTTP response about error. (https://dev.onedrive.com/auth/msa_oauth.htm#errors) }
 	 *
-	 * @throws RuntimeException if it isn't login when called.
+	 * @throws ErrorResponseException if raises error while logout.
 	 */
-	@SneakyThrows(MalformedURLException.class)
-	public void logout() throws IllegalStateException {
-		if (!isLogin()) throw new IllegalStateException("Already Logout!!");
-
+	@SneakyThrows(UnsupportedEncodingException.class)
+	public void logout() throws ErrorResponseException {
 		String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
 				clientId, redirectURL);
 
 		HttpsResponse response = new HttpsRequest(url).doGet();
 
 		if (response.getCode() != HttpsURLConnection.HTTP_MOVED_TEMP) {
-			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Fail to logout.");
+			String[] split = response.getUrl().getRef().split("&");
+			throw new ErrorResponseException(
+					HttpsURLConnection.HTTP_MOVED_TEMP,
+					response.getCode(),
+					split[0].substring(split[0].indexOf('=') + 1),
+					URLDecoder.decode(split[1].substring(split[1].indexOf('=') + 1), "UTF-8"));
 		}
 
 		authCode = null;
@@ -369,7 +464,7 @@ public class Client {
 	 * {@// TODO: Enhance javadoc }
 	 * {@// TODO: handling error if `id`'s item isn't folder item. }
 	 *
-	 * @param id folder id.
+	 * @param id folder's id.
 	 * @return folder object
 	 */
 	@NotNull
@@ -473,7 +568,6 @@ public class Client {
 		return requestTool.doGetObject(pointer.toASCIIApi(), BaseItem.class);
 	}
 
-
 	@NotNull
 	public BaseItem[] getShared() {
 		checkExpired();
@@ -507,58 +601,88 @@ public class Client {
 	 */
 
 
-	@NotNull
-	public String copyItem(@NotNull String srcId, @NotNull String destId) {
+	/**
+	 * request to copy {@code srcId} item to new location of {@code destId}.
+	 *
+	 * @param srcId  item's id that wants to be copied
+	 * @param destId location's id that wants to be placed the copied item
+	 * @return URL {@code String} that can monitor status of copying process
+	 * @throws ErrorResponseException if error happens while requesting copying operation. such as invalid copying
+	 *                                request
+	 * @throws InvalidJsonException   if fail to parse response of copying request into json. it caused by server side
+	 *                                not by SDK.
+	 */
+	public @NotNull String copyItem(@NotNull String srcId, @NotNull String destId) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
 		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
 	}
 
+	/**
+	 * Works just like {@link Client#copyItem(String, String)}} except new name of item can be designated.
+	 *
+	 * @param newName new name of item that will be copied
+	 * @see Client#copyItem(String, String)
+	 */
 	@NotNull
-	public String copyItem(@NotNull String srcId, @NotNull String destId, @NotNull String newName) {
+	public String copyItem(@NotNull String srcId, @NotNull String destId, @NotNull String newName)
+			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"},\"name\":\"" + newName + "\"}").getBytes();
 		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
 	}
 
 	@NotNull
-	public String copyItem(@NotNull String srcId, @NotNull PathPointer destPath) {
+	public String copyItem(@NotNull String srcId, @NotNull PathPointer destPath) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + destPath.toJson() + "}").getBytes();
 		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
 	}
 
 	@NotNull
-	public String copyItem(@NotNull String srcId, @NotNull PathPointer dest, @NotNull String newName) {
+	public String copyItem(@NotNull String srcId, @NotNull PathPointer dest, @NotNull String newName)
+			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + ",\"name\":\"" + newName + "\"}").getBytes();
 		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
 	}
 
-
 	@NotNull
-	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId) {
+	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
-		return copyItem(srcPath.resolveOperator(BasePointer.ACTION_COPY), content);
+		return copyItem(srcPath.resolveOperator(Operator.ACTION_COPY), content);
 	}
 
 	@NotNull
-	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId, @NotNull String newName) {
+	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId, @NotNull String newName)
+			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"},\"name\":\"" + newName + "\"}").getBytes();
-		return copyItem(srcPath.resolveOperator(BasePointer.ACTION_COPY), content);
+		return copyItem(srcPath.resolveOperator(Operator.ACTION_COPY), content);
 	}
 
 	@NotNull
-	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest) {
+	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + "}").getBytes();
-		return copyItem(src.resolveOperator(BasePointer.ACTION_COPY), content);
+		return copyItem(src.resolveOperator(Operator.ACTION_COPY), content);
 	}
 
 	@NotNull
-	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest, @NotNull String newName) {
+	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest, @NotNull String newName)
+			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + ",\"name\":\"" + newName + "\"}").getBytes();
-		return copyItem(src.resolveOperator(BasePointer.ACTION_COPY), content);
+		return copyItem(src.resolveOperator(Operator.ACTION_COPY), content);
 	}
 
 
+	/**
+	 * @param api     OneDrive copying api that contains item's location. Note that it must be ensured that
+	 *                {@code api} is a escaped {@code String}
+	 * @param content HTTP body
+	 * @return URL {@code String} that can monitor status of copying process
+	 * {@// TODO: end of copying process, is this link will be useless or unaccessible ? }
+	 * @throws ErrorResponseException if error happens while requesting copying operation. such as invalid copying
+	 *                                request
+	 * @throws InvalidJsonException   if fail to parse response of copying request into json. it caused by server side
+	 *                                not by SDK.
+	 */
 	@NotNull
-	private String copyItem(@NotNull String api, @NotNull byte[] content) {
+	private String copyItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		checkExpired();
 
 		HttpsResponse response = requestTool.postMetadata(api, content);
@@ -567,9 +691,15 @@ public class Client {
 		if (response.getCode() != HttpsURLConnection.HTTP_ACCEPTED) {
 			try {
 				ErrorResponse error = mapper.readValue(response.getContent(), ErrorResponse.class);
-				// TODO: custom exception
-				throw new RuntimeException("DEV: Copy failed with : " + error.getCode() +
-						", message : " + error.getMessage());
+				throw new ErrorResponseException(
+						HttpsURLConnection.HTTP_ACCEPTED,
+						response.getCode(),
+						error.getCode(),
+						error.getMessage()
+				);
+			}
+			catch (JsonProcessingException e) {
+				throw new InvalidJsonException(e, response.getCode(), response.getContent());
 			}
 			catch (IOException e) {
 				e.printStackTrace();
@@ -592,58 +722,63 @@ public class Client {
 	*************************************************************
 	 */
 
-
 	@NotNull
-	public BaseItem moveItem(@NotNull String srcId, @NotNull String destId) {
+	public BaseItem moveItem(@NotNull String srcId, @NotNull String destId) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
 		return moveItem(ITEM_ID_PREFIX + srcId, content);
 	}
 
 	@NotNull
-	public BaseItem moveItem(@NotNull String srcId, @NotNull PathPointer destPath) {
+	public BaseItem moveItem(@NotNull String srcId, @NotNull PathPointer destPath) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + destPath.toJson() + "}").getBytes();
 		return moveItem(ITEM_ID_PREFIX + srcId, content);
 	}
 
 	@NotNull
-	public BaseItem moveItem(@NotNull PathPointer srcPath, @NotNull String destId) {
+	public BaseItem moveItem(@NotNull PathPointer srcPath, @NotNull String destId) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
 		return moveItem(srcPath.toASCIIApi(), content);
 	}
 
 	@NotNull
-	public BaseItem moveItem(@NotNull BasePointer src, @NotNull BasePointer dest) {
+	public BaseItem moveItem(@NotNull BasePointer src, @NotNull BasePointer dest) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + "}").getBytes();
 		return moveItem(src.toASCIIApi(), content);
 	}
 
 	@NotNull
-	private BaseItem moveItem(@NotNull String api, @NotNull byte[] content) {
+	private BaseItem moveItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		checkExpired();
 
 		HttpsClientHandler responseHandler = requestTool.patchMetadata(api, content);
 
 		HttpResponse response = responseHandler.getBlockingResponse();
-		InputStream result = responseHandler.getResultStream();
+		GrowDirectByteInputStream result = responseHandler.getResultStream();
 
 
 		try {
 			// if http response code is 200 OK
-			if (response.status().equals(HttpResponseStatus.OK)) {
+			if (response.status().code() != HttpResponseStatus.OK.code()) {
 				return mapper.readValue(result, BaseItem.class);
 			}
 			// or something else
 			else {
 				ErrorResponse error = mapper.readValue(result, ErrorResponse.class);
-				// TODO: custom exception
-				throw new RuntimeException("DEV: Update response is not 200 OK. Error code : " + error.getCode() +
-						", message : " + error.getMessage());
+				throw new ErrorResponseException(
+						HttpResponseStatus.OK.code(),
+						response.status().code(),
+						error.getCode(),
+						error.getMessage()
+				);
 			}
+		}
+		catch (JsonProcessingException e) {
+			throw new InvalidJsonException(e, response.status().code(), result.getRawBuffer());
 		}
 		catch (IOException e) {
 			e.printStackTrace();
 			// TODO: custom exception
-			throw new RuntimeException("DEV: Can't serialize object. Contact author.");
+			throw new RuntimeException("DEV: Unrecognizable error response.");
 		}
 	}
 
@@ -671,7 +806,7 @@ public class Client {
 	 * @throws RuntimeException If creating folder or converting response is fails.
 	 */
 	@NotNull
-	public FolderItem createFolder(@NotNull String parentId, @NotNull String name) {
+	public FolderItem createFolder(@NotNull String parentId, @NotNull String name) throws ErrorResponseException {
 		byte[] content = ("{\"name\":\"" + name + "\",\"folder\":{}}").getBytes();
 		return createFolder("/drive/items/" + parentId + "/children", content);
 	}
@@ -688,31 +823,49 @@ public class Client {
 	 * @throws RuntimeException If creating folder or converting response is fails.
 	 */
 	@NotNull
-	public FolderItem createFolder(@NotNull BasePointer parent, @NotNull String name) {
+	public FolderItem createFolder(@NotNull BasePointer parent, @NotNull String name) throws ErrorResponseException {
 		byte[] content = ("{\"name\":\"" + name + "\",\"folder\":{}}").getBytes();
-		return createFolder(parent.resolveOperator(BasePointer.CHILDREN), content);
+		return createFolder(parent.resolveOperator(Operator.CHILDREN), content);
 	}
 
 	@NotNull
-	private FolderItem createFolder(@NotNull String api, @NotNull byte[] content) {
+	private FolderItem createFolder(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		checkExpired();
 
 		HttpsResponse response = requestTool.postMetadata(api, content);
 
 		// if response code isn't 201 Created
 		if (response.getCode() != HttpsURLConnection.HTTP_CREATED) {
-			// TODO: custom exception
-			throw new RuntimeException("Create folder fails.");
+			try {
+				ErrorResponse error = mapper.readValue(response.getContent(), ErrorResponse.class);
+				throw new ErrorResponseException(
+						HttpsURLConnection.HTTP_ACCEPTED,
+						response.getCode(),
+						error.getCode(),
+						error.getMessage()
+				);
+			}
+			catch (JsonProcessingException e) {
+				throw new InvalidJsonException(e, response.getCode(), response.getContent());
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+				// TODO: custom exception
+				throw new RuntimeException("DEV: Unrecognizable error response. contact author");
+			}
 		}
 
 
 		try {
 			return mapper.readValue(response.getContent(), FolderItem.class);
 		}
+		catch (JsonProcessingException e) {
+			throw new InvalidJsonException(e, response.getCode(), response.getContent());
+		}
 		catch (IOException e) {
 			e.printStackTrace();
 			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Converting response to json is fail.");
+			throw new RuntimeException("DEV: Unrecognizable error response. contact author");
 		}
 	}
 

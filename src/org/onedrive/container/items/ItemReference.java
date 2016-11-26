@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.PathPointer;
 
 /**
@@ -23,10 +24,13 @@ public class ItemReference {
 	@Getter(onMethod = @__(@JsonIgnore)) @Nullable protected final PathPointer pathPointer;
 	@Getter @Nullable @JsonProperty("path") protected final String rawPath;
 
+	/**
+	 * @throws IllegalArgumentException It's because of constructor {@link PathPointer#PathPointer(String, String)}.
+	 */
 	@JsonCreator
 	protected ItemReference(@JsonProperty("driveId") @NotNull String driveId,
 							@JsonProperty("id") @Nullable String id,
-							@JsonProperty("path") @Nullable String asciiPath) throws IllegalArgumentException {
+							@JsonProperty("path") @Nullable String asciiPath) {
 		this.driveId = driveId;
 		this.id = id;
 		this.rawPath = asciiPath;

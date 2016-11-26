@@ -20,7 +20,7 @@ public class IdPointer extends BasePointer {
 	@NotNull private final String path;
 
 
-	public IdPointer(@NotNull String id) throws IllegalArgumentException {
+	public IdPointer(@NotNull String id) {
 		if (!idPattern.matcher(id).matches())
 			throw new IllegalArgumentException("`id` isn't match with regex \"[a-fA-F0-9!]+\"");
 
@@ -29,7 +29,7 @@ public class IdPointer extends BasePointer {
 		this.path = "/drive/items/" + id;
 	}
 
-	public IdPointer(@NotNull String id, @Nullable String driveId) throws IllegalArgumentException {
+	public IdPointer(@NotNull String id, @Nullable String driveId) {
 		if (!idPattern.matcher(id).matches())
 			throw new IllegalArgumentException("`id` isn't match with regex \"[a-fA-F0-9!]+\"");
 
@@ -40,14 +40,14 @@ public class IdPointer extends BasePointer {
 
 	@NotNull
 	@Override
-	public String resolveOperator(@NotNull String operator) {
-		return path + '/' + operator;
+	public String toJson() {
+		return "{\"id\":\"" + path + "\"}";
 	}
 
 	@NotNull
 	@Override
-	public String toJson() {
-		return "{\"id\":\"" + path + "\"}";
+	public String resolveOperator(@NotNull Operator op) {
+		return path + '/' + op.getString();
 	}
 
 	@NotNull

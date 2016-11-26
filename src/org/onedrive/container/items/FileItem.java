@@ -4,20 +4,25 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
-import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
-import org.onedrive.exceptions.FileDownFailException;
+import org.onedrive.container.items.pointer.IdPointer;
+import org.onedrive.exceptions.ErrorResponseException;
+import org.onedrive.exceptions.InvalidJsonException;
+import org.onedrive.network.ErrorResponse;
 import org.onedrive.network.legacy.HttpsResponse;
 import org.onedrive.utils.OneDriveRequest;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
@@ -39,9 +44,14 @@ public class FileItem extends BaseItem {
 	@Getter @Nullable protected PhotoFacet photo;
 	@Getter @Nullable protected VideoFacet video;
 
+	/**
+	 * @throws IllegalArgumentException It's solely because of construction of {@link IdPointer}.
+	 * @see IdPointer#IdPointer(String, String)
+	 * @see IdPointer#IdPointer(String)
+	 */
 	@JsonCreator
 	protected FileItem(@JacksonInject("OneDriveClient") Client client,
-					   @JsonProperty("id") String id,
+					   @JsonProperty("id") @NotNull String id,
 					   @JsonProperty("audio") @Nullable AudioFacet audio,
 					   @JsonProperty("createdBy") IdentitySet createdBy,
 					   @JsonProperty("createdDateTime") String createdDateTime,
@@ -64,7 +74,7 @@ public class FileItem extends BaseItem {
 					   @JsonProperty("size") long size,
 					   @JsonProperty("video") @Nullable VideoFacet video,
 					   @JsonProperty("webDavUrl") String webDavUrl,
-					   @JsonProperty("webUrl") String webUrl) throws IllegalArgumentException {
+					   @JsonProperty("webUrl") String webUrl) {
 		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
 				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
 				size, webDavUrl, webUrl);
@@ -78,69 +88,93 @@ public class FileItem extends BaseItem {
 	}
 
 	/**
-	 * @see FileItem#download(Path)
+	 * Works just like {@link FileItem#download(Path, String)}} except new name of item will automatically set with
+	 * {@link FileItem#getName()}.
+	 *
+	 * @param path Folder path. It could be relative path (like . or ..). Note that this parameter <b>isn't
+	 *             path of item that will be downloaded</b>. It must point parent directory of the item.
+	 * @see FileItem#download(Path, String)
 	 */
-	public void download(@NotNull String path) throws IOException, FileDownFailException, IllegalArgumentException {
+	public void download(@NotNull String path) throws IOException, ErrorResponseException {
 		this.download(Paths.get(path));
 	}
 
 	/**
+	 * Works just like {@link FileItem#download(Path, String)}}.
+	 *
+	 * @param path    Folder path. It could be relative path (like . or ..). Note that this parameter <b>isn't
+	 *                path of item that will be downloaded</b>. It must point parent directory of the item.
+	 * @param newName new file name.
 	 * @see FileItem#download(Path, String)
 	 */
-	public void download(@NotNull String path, @NotNull String newName)
-			throws IOException, FileDownFailException, IllegalArgumentException {
+	public void download(@NotNull String path, @NotNull String newName) throws IOException, ErrorResponseException {
 		this.download(Paths.get(path), newName);
 	}
 
 	/**
-	 * Download file from OneDrive to {@code folderPath}.<br>
-	 * It could be relative path (like . or ..).<br>
-	 * Downloaded file will automatically name as {@code getName()}.<br>
+	 * Works just like {@link FileItem#download(Path, String)}} except new name of item will automatically set with
+	 * {@link FileItem#getName()}.
 	 *
-	 * @param folderPath Folder path. It always treated as folder even if it contains extension.
-	 * @throws SecurityException        If a required system property value cannot be accessed, or if a security
-	 *                                  manager exists and its SecurityManager.checkRead method denies read access to
-	 *                                  the file
-	 * @throws FileDownFailException    If fail to download with not 200 OK response.
-	 * @throws IllegalArgumentException If {@code folderPath} is exists and is not directory.
+	 * @param folderPath Folder path. It could be relative path (like . or ..). Note that this parameter <b>isn't
+	 *                   path of item that will be downloaded</b>. It must point parent directory of the item.
+	 * @see FileItem#download(Path, String)
 	 */
-	public void download(@NotNull Path folderPath)
-			throws IOException, FileDownFailException, IllegalArgumentException {
+	public void download(@NotNull Path folderPath) throws IOException, ErrorResponseException {
 		download(folderPath, this.getName());
 	}
 
 	/**
-	 * Download file from OneDrive to {@code folderPath} with {@code newName}.<br>
+	 * Download file from OneDrive to {@code folderPath} with {@code newName}.
 	 * It could be relative path (like . or ..).<br>
 	 * If {@code newName} is already exists in {@code folderPath} or {@code folderPath} is not folder,
 	 * it will throw {@link IllegalArgumentException}.
+	 * {@// TODO: handling overwriting file }
 	 *
-	 * @param folderPath Folder path. It always treated as folder even if it contains extension.
+	 * @param folderPath Folder path. It could be relative path (like . or ..). Note that this parameter <b>isn't
+	 *                   path of item that will be downloaded</b>. It must point parent directory of the item.
 	 * @param newName    new file name.
 	 * @throws SecurityException        If a required system property value cannot be accessed, or if a security
 	 *                                  manager exists and its SecurityManager.checkRead method denies read access to
 	 *                                  the file
-	 * @throws FileDownFailException    If fail to download with not 200 OK response.
 	 * @throws IllegalArgumentException If {@code folderPath} is exists and is not directory.
+	 * @throws ErrorResponseException   if error happens while requesting downloading operation. such as trying to
+	 *                                  download already deleted file.
+	 * @throws InvalidJsonException     if fail to parse response of copying request into json. it caused by server
+	 *                                  side not by SDK.
+	 * @throws IOException              if an I/O error occurs
 	 */
-	public void download(@NotNull Path folderPath, String newName)
-			throws IOException, FileDownFailException, IllegalArgumentException {
+	public void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException {
 		Path parent = folderPath.toAbsolutePath();
 		folderPath = parent.resolve(newName);
+		// it's illegal if and only if `folderPath` exists but not directory.
 		if (Files.exists(parent) && !Files.isDirectory(parent))
 			throw new IllegalArgumentException("`folderPath` argument must pointing directory.");
 
 		Files.createDirectories(parent);
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/items/" + id + "/content", client.getFullToken());
+		HttpsResponse response = OneDriveRequest.doGet(Client.ITEM_ID_PREFIX + id + "/content", client.getFullToken());
 
-		if (response.getCode() != 200) {
-			// TODO: custom exception
-			throw new FileDownFailException(
-					String.format("File download fails with %d %s", response.getCode(), response.getMessage()));
+		if (response.getCode() != HttpURLConnection.HTTP_OK) {
+			try {
+				ErrorResponse error = client.getMapper().readValue(response.getContent(), ErrorResponse.class);
+				throw new ErrorResponseException(
+						HttpsURLConnection.HTTP_OK,
+						response.getCode(),
+						error.getCode(),
+						error.getMessage()
+				);
+			}
+			catch (JsonProcessingException e) {
+				throw new InvalidJsonException(e, response.getCode(), response.getContent());
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+				// TODO: custom exception
+				throw new RuntimeException("DEV: Unrecognizable error response. contact author");
+			}
 		}
 
-		val fileChannel = AsynchronousFileChannel.open(
+		AsynchronousFileChannel fileChannel = AsynchronousFileChannel.open(
 				folderPath,
 				StandardOpenOption.CREATE,
 				StandardOpenOption.WRITE);

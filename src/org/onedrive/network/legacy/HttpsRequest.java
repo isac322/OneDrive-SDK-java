@@ -1,13 +1,14 @@
 package org.onedrive.network.legacy;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import lombok.SneakyThrows;
 import lombok.val;
 import org.jetbrains.annotations.NotNull;
+import org.onedrive.exceptions.InternalException;
 
 import javax.net.ssl.HttpsURLConnection;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
@@ -22,10 +23,19 @@ import java.util.Map;
  */
 public class HttpsRequest {
 	public static final String NETWORK_ERR_MSG = "Network connection error. Please retry later or contact API author.";
-	protected final HttpsURLConnection httpConnection;
+	private final HttpsURLConnection httpConnection;
 
-	public HttpsRequest(@NotNull String url) throws MalformedURLException {
-		this(new URL(url));
+	@SneakyThrows(MalformedURLException.class)
+	public HttpsRequest(@NotNull String url) {
+		URL url1 = new URL(url);
+		try {
+			httpConnection = (HttpsURLConnection) url1.openConnection();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			// TODO: custom exception
+			throw new RuntimeException(NETWORK_ERR_MSG);
+		}
 	}
 
 	public HttpsRequest(@NotNull URL url) {
@@ -34,6 +44,7 @@ public class HttpsRequest {
 		}
 		catch (IOException e) {
 			e.printStackTrace();
+			// TODO: custom exception
 			throw new RuntimeException(NETWORK_ERR_MSG);
 		}
 	}
@@ -63,8 +74,7 @@ public class HttpsRequest {
 			return sendContent(content);
 		}
 		catch (ProtocolException e) {
-			e.printStackTrace();
-			throw new RuntimeException("Can not use \"POST\" method.");
+			throw new UnsupportedOperationException("unsupported method POST. contact author with stacktrace", e);
 		}
 	}
 
@@ -81,8 +91,7 @@ public class HttpsRequest {
 			return sendContent(content);
 		}
 		catch (ProtocolException e) {
-			e.printStackTrace();
-			throw new RuntimeException("Can not use \"PATCH\" method.");
+			throw new UnsupportedOperationException("unsupported method PATCH. contact author with stacktrace", e);
 		}
 	}
 
@@ -112,8 +121,7 @@ public class HttpsRequest {
 			return makeResponse();
 		}
 		catch (ProtocolException e) {
-			e.printStackTrace();
-			throw new RuntimeException(NETWORK_ERR_MSG);
+			throw new UnsupportedOperationException("unsupported method DELETE. contact author with stacktrace", e);
 		}
 	}
 
@@ -124,14 +132,11 @@ public class HttpsRequest {
 			return makeResponse();
 		}
 		catch (ProtocolException e) {
-			e.printStackTrace();
-			throw new RuntimeException(NETWORK_ERR_MSG);
+			throw new UnsupportedOperationException("unsupported method GET. contact author with stacktrace", e);
 		}
 	}
 
 	/**
-	 * {@// TODO: handling NOT 200 OK response.}
-	 *
 	 * @return Response object.
 	 * @throws RuntimeException fail to network connection or fail to read response.
 	 */
@@ -143,18 +148,32 @@ public class HttpsRequest {
 			Map<String, List<String>> header = httpConnection.getHeaderFields();
 			URL url = httpConnection.getURL();
 
+			ByteBuf byteStream = Unpooled.buffer(1024);
+			InputStream body;
+
+			if (code < 400)
+				body = httpConnection.getInputStream();
+			else
+				body = httpConnection.getErrorStream();
+
+			byte[] buffer = new byte[512];
+
+			int readBytes;
+			while ((readBytes = body.read(buffer)) > 0) {
+				byteStream.writeBytes(buffer, 0, readBytes);
+			}
+			body.close();
+			return new HttpsResponse(url, code, message, header, byteStream.array());
+
+			// which one is better?
+			/*
 			val byteStream = new ByteArrayOutputStream();
 			BufferedInputStream body;
 
-			if (code < 400) {
+			if (code < 400)
 				body = new BufferedInputStream(httpConnection.getInputStream());
-			}
-			else {
-				// TODO: should be tested about not 4XX response code.
+			else
 				body = new BufferedInputStream(httpConnection.getErrorStream());
-				// TODO: for debug
-				// throw new RuntimeException("4XX response received.");
-			}
 
 			int bytes;
 			while ((bytes = body.read()) != -1) {
@@ -164,9 +183,11 @@ public class HttpsRequest {
 			byteStream.close();
 			body.close();
 			return new HttpsResponse(url, code, message, header, byteStream.toByteArray());
+			*/
 		}
 		catch (IOException e) {
 			e.printStackTrace();
+			// TODO: custom exception
 			throw new RuntimeException(NETWORK_ERR_MSG);
 		}
 		finally {
