@@ -11,17 +11,17 @@ import java.io.InputStream;
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
-public class GrowDirectByteInputStream extends InputStream {
+public class DirectByteInputStream extends InputStream {
 	protected byte[] buffer;
 	@Getter protected int in = -1, out = 0;
 	protected int capacity;
 	protected boolean closed;
 
-	public GrowDirectByteInputStream() {
+	public DirectByteInputStream() {
 		this(1024);
 	}
 
-	public GrowDirectByteInputStream(int capacity) {
+	public DirectByteInputStream(int capacity) {
 		if (capacity < 0)
 			throw new IllegalArgumentException("Argument capacity's value \"" + capacity + "\" is negative.");
 		this.capacity = capacity;

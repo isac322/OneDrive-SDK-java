@@ -13,9 +13,9 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.onedrive.exceptions.ErrorResponseException;
+import org.onedrive.exceptions.InternalException;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 
 public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> {
@@ -24,7 +24,7 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 	protected final CountDownLatch channelLatch;
 	protected ChannelHandlerContext channelContext;
 	protected HttpResponse response;
-	@NotNull @Getter GrowDirectByteInputStream resultStream;
+	@NotNull @Getter DirectByteInputStream resultStream;
 
 
 	public HttpsClientHandler(@Nullable AsyncHttpsResponseHandler onComplete) {
@@ -32,7 +32,7 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 		responseLatch = new CountDownLatch(1);
 		channelLatch = new CountDownLatch(1);
 
-		resultStream = new GrowDirectByteInputStream();
+		resultStream = new DirectByteInputStream();
 	}
 
 
@@ -88,7 +88,13 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 				resultStream.close();
 
 				if (onComplete != null) {
-					onComplete.handle(resultStream, response);
+					try {
+						onComplete.handle(resultStream, response);
+					}
+					catch (ErrorResponseException e) {
+						e.printStackTrace();
+						throw new InternalException("Error occur while handling onComplete in HttpsClientHandler", e);
+					}
 				}
 
 				ctx.close();

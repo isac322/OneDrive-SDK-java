@@ -1,9 +1,7 @@
 package org.onedrive.network;
 
 import io.netty.handler.codec.http.HttpResponse;
-import org.jetbrains.annotations.NotNull;
-
-import java.io.InputStream;
+import org.onedrive.exceptions.ErrorResponseException;
 
 /**
  * {@// TODO: Enhance javadoc}
@@ -11,5 +9,5 @@ import java.io.InputStream;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public interface AsyncHttpsResponseHandler {
-	void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response);
+	void handle(DirectByteInputStream resultStream, HttpResponse response) throws ErrorResponseException;
 }

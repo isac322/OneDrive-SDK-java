@@ -23,11 +23,10 @@ import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.AsyncHttpsResponseHandler;
-import org.onedrive.network.GrowDirectByteInputStream;
+import org.onedrive.network.DirectByteInputStream;
 import org.onedrive.network.HttpsClientHandler;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Iterator;
@@ -115,7 +114,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 									  @NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
 		for (JsonNode child : array) {
 			if (child.isObject()) {
-				BaseItem item = client.getMapper().convertValue(child, BaseItem.class);
+				BaseItem item = client.mapper().convertValue(child, BaseItem.class);
 
 				if (item instanceof FolderItem) {
 					folder.add((FolderItem) item);
@@ -145,19 +144,17 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		while (nextLink != null) {
 			@NotNull
 			HttpsClientHandler httpsHandler =
-					client.getRequestTool().doAsync(
-							new URI(nextLink),
-							HttpMethod.GET,
+					client.requestTool().doAsync(
+							HttpMethod.GET, new URI(nextLink),
 							new AsyncHttpsResponseHandler() {
 								@Override
-								public void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response) {
-									GrowDirectByteInputStream result = (GrowDirectByteInputStream) resultStream;
+								public void handle(DirectByteInputStream resultStream, HttpResponse response) {
 									try {
-										jsonObject[0] = (ObjectNode) client.getMapper().readTree(resultStream);
+										jsonObject[0] = (ObjectNode) client.mapper().readTree(resultStream);
 									}
 									catch (JsonProcessingException e) {
 										throw new InvalidJsonException(
-												e, response.status().code(), result.getRawBuffer()
+												e, response.status().code(), resultStream.getRawBuffer()
 										);
 									}
 									catch (IOException e) {
@@ -191,8 +188,8 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		addChildren(client, array, all, folder, file);
 	}
 
-	protected void fetchChildren() {
-		ObjectNode content = client.getRequestTool().doGetJson(Client.ITEM_ID_PREFIX + id + "/children");
+	protected void fetchChildren() throws ErrorResponseException {
+		ObjectNode content = client.requestTool().doGetJson(Client.ITEM_ID_PREFIX + id + "/children");
 
 		allChildren = new CopyOnWriteArrayList<>();
 		folderChildren = new CopyOnWriteArrayList<>();
@@ -299,21 +296,21 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 
 	@SuppressWarnings("ConstantConditions")
 	@NotNull
-	public List<BaseItem> getAllChildren() {
+	public List<BaseItem> getAllChildren() throws ErrorResponseException {
 		if (!isChildrenFetched()) fetchChildren();
 		return allChildren;
 	}
 
 	@SuppressWarnings("ConstantConditions")
 	@NotNull
-	public List<FolderItem> getFolderChildren() {
+	public List<FolderItem> getFolderChildren() throws ErrorResponseException {
 		if (!isChildrenFetched()) fetchChildren();
 		return folderChildren;
 	}
 
 	@SuppressWarnings("ConstantConditions")
 	@NotNull
-	public List<FileItem> getFileChildren() {
+	public List<FileItem> getFileChildren() throws ErrorResponseException {
 		if (!isChildrenFetched()) fetchChildren();
 		return fileChildren;
 	}
@@ -331,7 +328,14 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	@NotNull
 	@Override
 	public Iterator<BaseItem> iterator() {
-		return new ChildrenIterator(getAllChildren().iterator());
+		try {
+			return new ChildrenIterator(getAllChildren().iterator());
+		}
+		catch (ErrorResponseException e) {
+			e.printStackTrace();
+			// TODO: custom exception
+			throw new RuntimeException(e);
+		}
 	}
 
 	private class ChildrenIterator implements Iterator<BaseItem> {

@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.onedrive.utils.OneDriveRequest;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -164,7 +165,7 @@ public class PathPointer extends BasePointer {
 	@NotNull
 	@Override
 	public URI toURI() throws URISyntaxException {
-		return new URI("https", "api.onedrive.com/v1.0", path, null);
+		return new URI(OneDriveRequest.SCHEME, OneDriveRequest.HOST, path, null);
 	}
 
 	@NotNull

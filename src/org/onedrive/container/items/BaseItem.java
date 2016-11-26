@@ -28,7 +28,6 @@ import org.onedrive.network.ErrorResponse;
 import org.onedrive.network.HttpsClientHandler;
 import org.onedrive.network.legacy.HttpsRequest;
 import org.onedrive.network.legacy.HttpsResponse;
-import org.onedrive.utils.OneDriveRequest;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
@@ -119,12 +118,12 @@ abstract public class BaseItem {
 
 
 	public void delete() throws ErrorResponseException {
-		HttpsResponse response = OneDriveRequest.doDelete(Client.ITEM_ID_PREFIX + id, client.getFullToken());
+		HttpsResponse response = client.requestTool().newRequest(Client.ITEM_ID_PREFIX + id).doDelete();
 
 		// if response isn't 204 No Content
 		if (response.getCode() != HttpsURLConnection.HTTP_NO_CONTENT) {
 			try {
-				ErrorResponse error = client.getMapper().readValue(response.getContent(), ErrorResponse.class);
+				ErrorResponse error = client.mapper().readValue(response.getContent(), ErrorResponse.class);
 				throw new ErrorResponseException(
 						HttpsURLConnection.HTTP_NO_CONTENT,
 						response.getCode(),
@@ -191,7 +190,7 @@ abstract public class BaseItem {
 	private void update(byte[] content) throws ErrorResponseException {
 		try {
 			HttpsClientHandler responseHandler =
-					client.getRequestTool().patchMetadata(Client.ITEM_ID_PREFIX + id, content);
+					client.requestTool().patchMetadata(Client.ITEM_ID_PREFIX + id, content);
 
 			HttpResponse response = responseHandler.getBlockingResponse();
 			InputStream result = responseHandler.getResultStream();
@@ -199,12 +198,12 @@ abstract public class BaseItem {
 
 			// if http response code is 200 OK
 			if (response.status().code() == HttpResponseStatus.OK.code()) {
-				BaseItem newItem = client.getMapper().readValue(result, BaseItem.class);
+				BaseItem newItem = client.mapper().readValue(result, BaseItem.class);
 				this.refreshBy(newItem);
 			}
 			// or something else
 			else {
-				ErrorResponse error = client.getMapper().readValue(result, ErrorResponse.class);
+				ErrorResponse error = client.mapper().readValue(result, ErrorResponse.class);
 				throw new ErrorResponseException(
 						HttpsURLConnection.HTTP_ACCEPTED,
 						response.status().code(),
@@ -401,8 +400,7 @@ abstract public class BaseItem {
 				return codec.convertValue(node, RemoteFolderItem.class);
 			}
 			else {
-				// TODO: custom exception
-				throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+				throw new InvalidJsonException("Json doesn't have any type (file or folder or package etc.)");
 			}
 		}
 	}

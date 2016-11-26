@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
+import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
 
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -75,9 +76,9 @@ public class RemoteFolderItem extends FolderItem {
 	}
 
 	@Override
-	protected void fetchChildren() {
+	protected void fetchChildren() throws ErrorResponseException {
 		// children of remote folder can be obtained only by real drive's id and real id.
-		ObjectNode content = client.getRequestTool().doGetJson(
+		ObjectNode content = client.requestTool().doGetJson(
 				String.format("/drives/%s/items/%s/children", getRealDriveID(), getRealID()));
 
 		allChildren = new CopyOnWriteArrayList<>();

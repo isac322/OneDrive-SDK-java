@@ -18,7 +18,6 @@ import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.ErrorResponse;
 import org.onedrive.network.legacy.HttpsResponse;
-import org.onedrive.utils.OneDriveRequest;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
@@ -152,11 +151,12 @@ public class FileItem extends BaseItem {
 
 		Files.createDirectories(parent);
 
-		HttpsResponse response = OneDriveRequest.doGet(Client.ITEM_ID_PREFIX + id + "/content", client.getFullToken());
+		HttpsResponse response =
+				client.requestTool().newRequest(Client.ITEM_ID_PREFIX + id + "/content").doGet();
 
 		if (response.getCode() != HttpURLConnection.HTTP_OK) {
 			try {
-				ErrorResponse error = client.getMapper().readValue(response.getContent(), ErrorResponse.class);
+				ErrorResponse error = client.mapper().readValue(response.getContent(), ErrorResponse.class);
 				throw new ErrorResponseException(
 						HttpsURLConnection.HTTP_OK,
 						response.getCode(),

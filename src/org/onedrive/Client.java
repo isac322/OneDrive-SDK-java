@@ -1,5 +1,6 @@
 package org.onedrive;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -11,8 +12,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
@@ -27,8 +28,8 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.ErrorResponse;
-import org.onedrive.network.GrowDirectByteInputStream;
+import org.onedrive.network.AsyncHttpsResponseHandler;
+import org.onedrive.network.DirectByteInputStream;
 import org.onedrive.network.HttpsClientHandler;
 import org.onedrive.network.legacy.HttpsRequest;
 import org.onedrive.network.legacy.HttpsResponse;
@@ -39,6 +40,7 @@ import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
@@ -70,8 +72,8 @@ public class Client {
 	 * Only one {@code mapper} per a {@code Client} object.<br>
 	 * It makes possible to multi client usage
 	 */
-	@Getter private final ObjectMapper mapper;
-	@Getter @NotNull private final OneDriveRequest requestTool;
+	private final ObjectMapper mapper;
+	@NotNull private final OneDriveRequest requestTool;
 
 	private long lastRefresh;
 	@Getter private long expirationTime;
@@ -308,10 +310,7 @@ public class Client {
 	 */
 	@NotNull
 	private String getToken(String httpBody) {
-		HttpsRequest request = new HttpsRequest("https://login.live.com/oauth20_token.srf");
-		request.setHeader("Content-Type", "application/x-www-form-urlencoded");
-
-		HttpsResponse response = request.doPost(httpBody);
+		HttpsResponse response = new HttpsRequest("https://login.live.com/oauth20_token.srf").doPost(httpBody);
 
 		JsonNode json;
 		try {
@@ -425,14 +424,15 @@ public class Client {
 
 
 	@NotNull
-	public Drive getDefaultDrive() {
+	public Drive getDefaultDrive() throws ErrorResponseException {
 		checkExpired();
 
-		return requestTool.doGetObject("/drive", Drive.class);
+		HttpsResponse response = requestTool.newRequest("/drive").doGet();
+		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, Drive.class);
 	}
 
 	@NotNull
-	public Drive[] getAllDrive() {
+	public Drive[] getAllDrive() throws ErrorResponseException {
 		checkExpired();
 
 		ObjectNode jsonResponse = requestTool.doGetJson("/drives");
@@ -453,10 +453,11 @@ public class Client {
 
 
 	@NotNull
-	public FolderItem getRootDir() {
+	public FolderItem getRootDir() throws ErrorResponseException {
 		checkExpired();
 
-		return requestTool.doGetObject("/drive/root:/?expand=children", FolderItem.class);
+		HttpsResponse response = requestTool.newRequest("/drive/root:/?expand=children").doGet();
+		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, FolderItem.class);
 	}
 
 
@@ -468,36 +469,44 @@ public class Client {
 	 * @return folder object
 	 */
 	@NotNull
-	public FolderItem getFolder(@NotNull String id) {
+	public FolderItem getFolder(@NotNull String id) throws ErrorResponseException {
 		return getFolder(id, true);
 	}
 
 	// TODO: handling error if `id`'s item isn't folder item.
 	@NotNull
-	public FolderItem getFolder(@NotNull String id, boolean childrenFetching) {
+	public FolderItem getFolder(@NotNull String id, boolean childrenFetching) throws ErrorResponseException {
 		checkExpired();
 
+		HttpsResponse response;
+
 		if (childrenFetching)
-			return requestTool.doGetObject(ITEM_ID_PREFIX + id + "?expand=children", FolderItem.class);
+			response = requestTool.newRequest(ITEM_ID_PREFIX + id + "?expand=children").doGet();
 		else
-			return requestTool.doGetObject(ITEM_ID_PREFIX + id, FolderItem.class);
+			response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
+
+		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, FolderItem.class);
 	}
 
 	// TODO: handling error if `pointer`'s item isn't folder item.
 	@NotNull
-	public FolderItem getFolder(@NotNull BasePointer pointer) {
+	public FolderItem getFolder(@NotNull BasePointer pointer) throws ErrorResponseException {
 		return getFolder(pointer, true);
 	}
 
 	// TODO: handling error if `pointer`'s item isn't folder item.
 	@NotNull
-	public FolderItem getFolder(@NotNull BasePointer pointer, boolean childrenFetching) {
+	public FolderItem getFolder(@NotNull BasePointer pointer, boolean childrenFetching) throws ErrorResponseException {
 		checkExpired();
 
+		HttpsResponse response;
+
 		if (childrenFetching)
-			return requestTool.doGetObject(pointer.toASCIIApi() + "?expand=children", FolderItem.class);
+			response = requestTool.newRequest(pointer.toASCIIApi() + "?expand=children").doGet();
 		else
-			return requestTool.doGetObject(pointer.toASCIIApi(), FolderItem.class);
+			response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
+
+		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, FolderItem.class);
 	}
 
 
@@ -519,26 +528,24 @@ public class Client {
 	 * @return file object
 	 */
 	@NotNull
-	public FileItem getFile(@NotNull String id) {
+	public FileItem getFile(@NotNull String id) throws ErrorResponseException {
 		try {
 			return (FileItem) getItem(id);
 		}
 		catch (ClassCastException e) {
 			e.printStackTrace();
-			// TODO: custom exception
-			throw new RuntimeException("Given `id` isn't file type id!. id : " + id);
+			throw new IllegalArgumentException("Given `id` isn't file type id!. id : " + id);
 		}
 	}
 
 	@NotNull
-	public FileItem getFile(@NotNull BasePointer pointer) {
+	public FileItem getFile(@NotNull BasePointer pointer) throws ErrorResponseException {
 		try {
 			return (FileItem) getItem(pointer);
 		}
 		catch (ClassCastException e) {
 			e.printStackTrace();
-			// TODO: custom exception
-			throw new RuntimeException("Given `pointer` isn't file type pointer!. pointer : " + pointer);
+			throw new IllegalArgumentException("Given `pointer` isn't file type pointer!. pointer : " + pointer);
 		}
 	}
 
@@ -555,37 +562,63 @@ public class Client {
 
 
 	@NotNull
-	public BaseItem getItem(@NotNull String id) {
+	public BaseItem getItem(@NotNull String id) throws ErrorResponseException {
 		checkExpired();
 
-		return requestTool.doGetObject(ITEM_ID_PREFIX + id, BaseItem.class);
+		HttpsResponse response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
+		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, BaseItem.class);
 	}
 
 	@NotNull
-	public BaseItem getItem(@NotNull BasePointer pointer) {
+	public BaseItem getItem(@NotNull BasePointer pointer) throws ErrorResponseException {
 		checkExpired();
 
-		return requestTool.doGetObject(pointer.toASCIIApi(), BaseItem.class);
+		HttpsResponse response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
+		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, BaseItem.class);
 	}
 
 	@NotNull
-	public BaseItem[] getShared() {
+	public BaseItem[] getShared() throws ErrorResponseException {
 		checkExpired();
 
 		ArrayNode values = (ArrayNode) requestTool.doGetJson("/drive/shared").get("value");
 
 		int size = values.size();
-		BaseItem[] items = new BaseItem[size];
-
+		final BaseItem[] items = new BaseItem[size];
+		HttpsClientHandler[] handlers = new HttpsClientHandler[size];
 
 		for (int i = 0; i < size; i++) {
-			ObjectNode jsonResponse = requestTool.doGetJson(
-					ITEM_ID_PREFIX + values.get(i).get("id").asText() + "?expand=children"
-			);
+			JsonNode id = values.get(i).get("id");
 
-			items[i] = mapper.convertValue(jsonResponse, BaseItem.class);
+			// if response doesn't have `id` field or `id` isn't text
+			if (id == null || !id.isTextual()) {
+				throw new InvalidJsonException(i + "th shared element doesn't have `id` field");
+			}
+
+			// for inner class access
+			final int finalI = i;
+			handlers[i] = requestTool.doAsync(
+					HttpMethod.GET,
+					ITEM_ID_PREFIX + id.asText() + "?expand=children",
+					new AsyncHttpsResponseHandler() {
+						@Override
+						public void handle(DirectByteInputStream resultStream, HttpResponse response)
+								throws ErrorResponseException {
+							items[finalI] = requestTool.parseAndHandle(response, resultStream,
+									HttpURLConnection.HTTP_OK, BaseItem.class);
+						}
+					});
 		}
 
+		for (HttpsClientHandler handler : handlers) {
+			try {
+				handler.getBlockingCloseFuture().sync();
+			}
+			catch (InterruptedException e) {
+				e.printStackTrace();
+				throw new InternalException("Interrupted error in syncing.", e);
+			}
+		}
 		return items;
 	}
 
@@ -687,26 +720,8 @@ public class Client {
 
 		HttpsResponse response = requestTool.postMetadata(api, content);
 
-		// if not 202 Accepted
-		if (response.getCode() != HttpsURLConnection.HTTP_ACCEPTED) {
-			try {
-				ErrorResponse error = mapper.readValue(response.getContent(), ErrorResponse.class);
-				throw new ErrorResponseException(
-						HttpsURLConnection.HTTP_ACCEPTED,
-						response.getCode(),
-						error.getCode(),
-						error.getMessage()
-				);
-			}
-			catch (JsonProcessingException e) {
-				throw new InvalidJsonException(e, response.getCode(), response.getContent());
-			}
-			catch (IOException e) {
-				e.printStackTrace();
-				// TODO: custom exception
-				throw new RuntimeException("DEV: Unrecognizable error response.");
-			}
-		}
+		// if not 202 Accepted raise ErrorResponseException
+		requestTool.errorHandling(response, HttpURLConnection.HTTP_ACCEPTED);
 
 		return response.getHeader().get("Location").get(0);
 	}
@@ -753,33 +768,9 @@ public class Client {
 		HttpsClientHandler responseHandler = requestTool.patchMetadata(api, content);
 
 		HttpResponse response = responseHandler.getBlockingResponse();
-		GrowDirectByteInputStream result = responseHandler.getResultStream();
+		DirectByteInputStream result = responseHandler.getResultStream();
 
-
-		try {
-			// if http response code is 200 OK
-			if (response.status().code() != HttpResponseStatus.OK.code()) {
-				return mapper.readValue(result, BaseItem.class);
-			}
-			// or something else
-			else {
-				ErrorResponse error = mapper.readValue(result, ErrorResponse.class);
-				throw new ErrorResponseException(
-						HttpResponseStatus.OK.code(),
-						response.status().code(),
-						error.getCode(),
-						error.getMessage()
-				);
-			}
-		}
-		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.status().code(), result.getRawBuffer());
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-			// TODO: custom exception
-			throw new RuntimeException("DEV: Unrecognizable error response.");
-		}
+		return requestTool.parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);
 	}
 
 
@@ -834,39 +825,7 @@ public class Client {
 
 		HttpsResponse response = requestTool.postMetadata(api, content);
 
-		// if response code isn't 201 Created
-		if (response.getCode() != HttpsURLConnection.HTTP_CREATED) {
-			try {
-				ErrorResponse error = mapper.readValue(response.getContent(), ErrorResponse.class);
-				throw new ErrorResponseException(
-						HttpsURLConnection.HTTP_ACCEPTED,
-						response.getCode(),
-						error.getCode(),
-						error.getMessage()
-				);
-			}
-			catch (JsonProcessingException e) {
-				throw new InvalidJsonException(e, response.getCode(), response.getContent());
-			}
-			catch (IOException e) {
-				e.printStackTrace();
-				// TODO: custom exception
-				throw new RuntimeException("DEV: Unrecognizable error response. contact author");
-			}
-		}
-
-
-		try {
-			return mapper.readValue(response.getContent(), FolderItem.class);
-		}
-		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.getCode(), response.getContent());
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-			// TODO: custom exception
-			throw new RuntimeException("DEV: Unrecognizable error response. contact author");
-		}
+		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_CREATED, FolderItem.class);
 	}
 
 
@@ -923,6 +882,17 @@ public class Client {
 		return fullToken;
 	}
 
+	@NotNull
+	@JsonIgnore
+	public OneDriveRequest requestTool() {
+		return requestTool;
+	}
+
+	@NotNull
+	@JsonIgnore
+	public ObjectMapper mapper() {
+		return mapper;
+	}
 
 	@JsonIgnoreType
 	private static class IgnoreMe {

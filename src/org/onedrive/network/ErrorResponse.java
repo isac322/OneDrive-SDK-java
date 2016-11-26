@@ -20,7 +20,7 @@ public class ErrorResponse {
 
 	@JsonCreator
 	protected ErrorResponse(@NotNull @JsonProperty("code") String code,
-						 @NotNull @JsonProperty("message") String message) {
+							@NotNull @JsonProperty("message") String message) {
 		this.code = code;
 		this.message = message;
 	}
