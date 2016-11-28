@@ -1,4 +1,4 @@
-package org.onedrive.network;
+package org.onedrive.network.async;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;

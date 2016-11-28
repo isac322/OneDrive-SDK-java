@@ -28,11 +28,11 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.AsyncHttpsResponseHandler;
+import org.onedrive.network.async.AsyncHttpsResponseHandler;
 import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.HttpsClientHandler;
-import org.onedrive.network.legacy.HttpsRequest;
-import org.onedrive.network.legacy.HttpsResponse;
+import org.onedrive.network.async.HttpsClientHandler;
+import org.onedrive.network.sync.HttpsRequest;
+import org.onedrive.network.sync.HttpsResponse;
 import org.onedrive.utils.AuthServer;
 import org.onedrive.utils.OneDriveRequest;
 
@@ -879,6 +879,7 @@ public class Client {
 			throws IOException, ErrorResponseException {
 		Path parentBackup = parent.toAbsolutePath();
 		parent = parentBackup.resolve(fileName);
+
 		// it's illegal if and only if `parent` exists but not directory.
 		if (Files.exists(parentBackup) && !Files.isDirectory(parentBackup))
 			throw new IllegalArgumentException(parentBackup + " already exists and isn't folder.");
@@ -897,6 +898,32 @@ public class Client {
 		ByteBuffer contentBuf = ByteBuffer.wrap(response.getContent(), 0, response.getLength());
 
 		fileChannel.write(contentBuf, 0);
+	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Deleting item
+	*
+	*************************************************************
+	 */
+
+
+	public void deleteItem(@NotNull String id) throws ErrorResponseException {
+		HttpsResponse response = requestTool.newRequest(Client.ITEM_ID_PREFIX + id).doDelete();
+
+		// if response isn't 204 No Content
+		requestTool.errorHandling(response, HttpURLConnection.HTTP_NO_CONTENT);
+	}
+
+	public void deleteItem(@NotNull BasePointer id) throws ErrorResponseException {
+		HttpsResponse response = requestTool.newRequest(id.toASCIIApi()).doDelete();
+
+		// if response isn't 204 No Content
+		requestTool.errorHandling(response, HttpURLConnection.HTTP_NO_CONTENT);
 	}
 
 

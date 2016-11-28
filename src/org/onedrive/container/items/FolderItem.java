@@ -22,9 +22,9 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.AsyncHttpsResponseHandler;
+import org.onedrive.network.async.AsyncHttpsResponseHandler;
 import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.HttpsClientHandler;
+import org.onedrive.network.async.HttpsClientHandler;
 
 import java.io.IOException;
 import java.net.URI;

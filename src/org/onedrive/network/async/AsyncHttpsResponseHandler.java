@@ -1,7 +1,8 @@
-package org.onedrive.network;
+package org.onedrive.network.async;
 
 import io.netty.handler.codec.http.HttpResponse;
 import org.onedrive.exceptions.ErrorResponseException;
+import org.onedrive.network.DirectByteInputStream;
 
 /**
  * {@// TODO: Enhance javadoc}

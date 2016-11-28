@@ -1,4 +1,4 @@
-package org.onedrive.network.legacy;
+package org.onedrive.network.sync;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

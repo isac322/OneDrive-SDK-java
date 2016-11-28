@@ -17,8 +17,11 @@ import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.*;
-import org.onedrive.network.legacy.HttpsRequest;
-import org.onedrive.network.legacy.HttpsResponse;
+import org.onedrive.network.async.AsyncHttpsResponseHandler;
+import org.onedrive.network.async.HttpsClient;
+import org.onedrive.network.async.HttpsClientHandler;
+import org.onedrive.network.sync.HttpsRequest;
+import org.onedrive.network.sync.HttpsResponse;
 
 import java.io.IOException;
 import java.net.*;

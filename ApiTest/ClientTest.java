@@ -15,11 +15,11 @@ import org.onedrive.container.facet.AudioFacet;
 import org.onedrive.container.items.*;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
-import org.onedrive.network.AsyncHttpsResponseHandler;
+import org.onedrive.network.async.AsyncHttpsResponseHandler;
 import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.HttpsClientHandler;
-import org.onedrive.network.legacy.HttpsRequest;
-import org.onedrive.network.legacy.HttpsResponse;
+import org.onedrive.network.async.HttpsClientHandler;
+import org.onedrive.network.sync.HttpsRequest;
+import org.onedrive.network.sync.HttpsResponse;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;

@@ -2,7 +2,6 @@ package org.onedrive.container.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,12 +23,9 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.ErrorResponse;
-import org.onedrive.network.HttpsClientHandler;
-import org.onedrive.network.legacy.HttpsRequest;
-import org.onedrive.network.legacy.HttpsResponse;
+import org.onedrive.network.async.HttpsClientHandler;
+import org.onedrive.network.sync.HttpsRequest;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 
@@ -118,28 +114,7 @@ abstract public class BaseItem {
 
 
 	public void delete() throws ErrorResponseException {
-		HttpsResponse response = client.requestTool().newRequest(Client.ITEM_ID_PREFIX + id).doDelete();
-
-		// if response isn't 204 No Content
-		if (response.getCode() != HttpsURLConnection.HTTP_NO_CONTENT) {
-			try {
-				ErrorResponse error = client.mapper().readValue(response.getContent(), ErrorResponse.class);
-				throw new ErrorResponseException(
-						HttpsURLConnection.HTTP_NO_CONTENT,
-						response.getCode(),
-						error.getCode(),
-						error.getMessage()
-				);
-			}
-			catch (JsonProcessingException e) {
-				throw new InvalidJsonException(e, response.getCode(), response.getContent());
-			}
-			catch (IOException e) {
-				e.printStackTrace();
-				// TODO: custom exception
-				throw new RuntimeException("DEV: Unrecognizable error response. contact author");
-			}
-		}
+		client.deleteItem(this.id);
 	}
 
 

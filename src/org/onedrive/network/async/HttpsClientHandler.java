@@ -1,4 +1,4 @@
-package org.onedrive.network;
+package org.onedrive.network.async;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
+import org.onedrive.network.DirectByteInputStream;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -79,8 +80,8 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 			ByteBuf byteBuf = content.content();
 			int remaining = byteBuf.readableBytes();
 			resultStream.ensureRemain(remaining);
-			byteBuf.readBytes(resultStream.getRawBuffer(), resultStream.in + 1, remaining);
-			resultStream.jumpTo(resultStream.in + remaining);
+			byteBuf.readBytes(resultStream.getRawBuffer(), resultStream.getIn() + 1, remaining);
+			resultStream.jumpTo(resultStream.getIn() + remaining);
 
 			if (content instanceof LastHttpContent) {
 //				System.err.println("} END OF CONTENT");
@@ -114,7 +115,6 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 				new ChannelFutureListener() {
 					@Override
 					public void operationComplete(ChannelFuture future) throws Exception {
-						assert response != null;
 						beforeCloseHandler.handle(resultStream, response);
 					}
 				});
