@@ -174,10 +174,10 @@ public class ClientTest extends TestCase {
 		System.out.println(rootDir.getETag());
 		System.out.println(rootDir.getName());
 		System.out.println(rootDir.getSize());
-		System.out.println(rootDir.getFolderChildren().get(1).getAllChildren().get(0)
+		System.out.println(rootDir.folderChildren().get(1).allChildren().get(0)
 				.getParentReference()
 				.getPathPointer());
-		System.out.println(rootDir.getFolderChildren().get(1));
+		System.out.println(rootDir.folderChildren().get(1));
 	}
 
 	private void dfs(FolderItem folders, String tab) throws IOException, ErrorResponseException {
@@ -195,7 +195,7 @@ public class ClientTest extends TestCase {
 				FolderItem folder = (FolderItem) item;
 
 				assertNotNull(folder.getParentReference());
-				assertEquals(folder.childrenCount(), folder.getAllChildren().size());
+				assertEquals(folder.childrenCount(), folder.allChildren().size());
 				dfs(folder, tab);
 			}
 			else if (item instanceof FileItem) {
@@ -283,7 +283,7 @@ public class ClientTest extends TestCase {
 	public void testJacksonWrite() throws JsonProcessingException, ErrorResponseException {
 		getClient();
 
-		BaseItem item = ((FolderItem) client.getRootDir().getAllChildren().get(1)).getAllChildren().get(0);
+		BaseItem item = ((FolderItem) client.getRootDir().allChildren().get(1)).allChildren().get(0);
 
 
 		ObjectMapper mapper = new ObjectMapper();
@@ -366,17 +366,19 @@ public class ClientTest extends TestCase {
 		test.delete();
 	}
 
-	public void testUpdate() throws ErrorResponseException {
+	public void testUpdate() throws ErrorResponseException, IOException {
 		getClient();
 
 		FileItem file = client.getFile("D4FD82CA6DF96A47!26026");
 
 		file.setDescription("testtestsetsetsetsetsetsetsetsetset");
 
+		file.download("./test.tx/");
+
 		file.refresh();
 	}
 
-	public void testUpdateRoot() throws ErrorResponseException {
+	public void testUpdateRoot() throws ErrorResponseException, IOException {
 		getClient();
 
 		FolderItem root = client.getRootDir();
@@ -521,7 +523,7 @@ public class ClientTest extends TestCase {
 		System.out.println(items[0].getId());
 		System.out.println(items[0].getName());
 		System.out.println(items[0].childrenCount());
-		System.out.println(items[0].getAllChildren().size());
+		System.out.println(items[0].allChildren().size());
 	}
 
 	public void testOneDrivePath() throws ErrorResponseException {
@@ -535,8 +537,8 @@ public class ClientTest extends TestCase {
 			System.out.println(object.getName() + '\t' + object.getId() + '\t' + object.getDriveId());
 		}
 
-		FileItem mp3 = rootDir.getFileChildren().get(2);
-		client.copyItem(mp3.getPathPointer(), rootDir.getFolderChildren().get(0).getId());
+		FileItem mp3 = rootDir.fileChildren().get(2);
+		client.copyItem(mp3.getPathPointer(), rootDir.folderChildren().get(0).getId());
 	}
 
 	public void testOneDriveCopy() throws ErrorResponseException {
@@ -544,12 +546,12 @@ public class ClientTest extends TestCase {
 
 		FolderItem rootDir = client.getRootDir();
 
-		RemoteFolderItem testFiles = (RemoteFolderItem) rootDir.getFolderChildren().get(0);
+		RemoteFolderItem testFiles = (RemoteFolderItem) rootDir.folderChildren().get(0);
 
 		System.out.println(testFiles.getName() + '\t' + testFiles.getId() + '\t' + testFiles.getDriveId() + '\t' +
 				testFiles.getRealDriveID());
 
-		FileItem testTxt = rootDir.getFileChildren().get(1);
+		FileItem testTxt = rootDir.fileChildren().get(1);
 		System.out.println(testTxt.getName());
 		client.copyItem(testTxt.getPathPointer(), testFiles.getPathPointer());
 
@@ -566,7 +568,7 @@ public class ClientTest extends TestCase {
 		getClient();
 
 		RemoteFolderItem item = (RemoteFolderItem) client.getItem("D4FD82CA6DF96A47!2578116");
-		System.out.println(item.getAllChildren());
+		System.out.println(item.allChildren());
 
 		item.refresh();
 	}

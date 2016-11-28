@@ -162,7 +162,7 @@ public class HttpsRequest {
 				byteStream.writeBytes(buffer, 0, readBytes);
 			}
 			body.close();
-			return new HttpsResponse(url, code, message, header, byteStream.array());
+			return new HttpsResponse(url, code, message, header, byteStream.array(), byteStream.writerIndex());
 
 			// which one is better?
 			/*

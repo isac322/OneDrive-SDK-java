@@ -142,10 +142,10 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 										@NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
 		final ObjectNode jsonObject[] = new ObjectNode[1];
 		while (nextLink != null) {
-			@NotNull
 			HttpsClientHandler httpsHandler =
 					client.requestTool().doAsync(
-							HttpMethod.GET, new URI(nextLink),
+							HttpMethod.GET,
+							new URI(nextLink),
 							new AsyncHttpsResponseHandler() {
 								@Override
 								public void handle(DirectByteInputStream resultStream, HttpResponse response) {
@@ -179,17 +179,18 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			else
 				nextLink = null;
 
-			if (jsonObject[0].has("value"))
-				array = jsonObject[0].get("value");
-			else
-				throw new InvalidJsonException("Empty response while expanding children list.");
+			array = jsonObject[0].get("value");
 		}
 
 		addChildren(client, array, all, folder, file);
 	}
 
 	protected void fetchChildren() throws ErrorResponseException {
-		ObjectNode content = client.requestTool().doGetJson(Client.ITEM_ID_PREFIX + id + "/children");
+		_fetchChildren(Client.ITEM_ID_PREFIX + id + "/children");
+	}
+
+	protected void _fetchChildren(String url) throws ErrorResponseException {
+		ObjectNode content = client.requestTool().doGetJson(url);
 
 		allChildren = new CopyOnWriteArrayList<>();
 		folderChildren = new CopyOnWriteArrayList<>();
@@ -197,9 +198,6 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 
 		JsonNode value = content.get("value");
 		JsonNode nextLink = content.get("@odata.nextLink");
-
-		if (!value.isArray() || (nextLink != null && !nextLink.isTextual()))
-			throw new InvalidJsonException("`value` isn't array or `nextLink` isn't text");
 
 		// TODO: if-none-match request header handling.
 		// TODO: not 200 OK response handling.
@@ -249,7 +247,6 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		allChildren = null;
 
 		if (isRoot()) {
-			assert pathPointer == null;
 			assert parentReference == null;
 			pathPointer = new PathPointer("/", getDriveId());
 		}
@@ -294,23 +291,20 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		return parentReference.driveId;
 	}
 
-	@SuppressWarnings("ConstantConditions")
 	@NotNull
-	public List<BaseItem> getAllChildren() throws ErrorResponseException {
+	public List<BaseItem> allChildren() throws ErrorResponseException {
 		if (!isChildrenFetched()) fetchChildren();
 		return allChildren;
 	}
 
-	@SuppressWarnings("ConstantConditions")
 	@NotNull
-	public List<FolderItem> getFolderChildren() throws ErrorResponseException {
+	public List<FolderItem> folderChildren() throws ErrorResponseException {
 		if (!isChildrenFetched()) fetchChildren();
 		return folderChildren;
 	}
 
-	@SuppressWarnings("ConstantConditions")
 	@NotNull
-	public List<FileItem> getFileChildren() throws ErrorResponseException {
+	public List<FileItem> fileChildren() throws ErrorResponseException {
 		if (!isChildrenFetched()) fetchChildren();
 		return fileChildren;
 	}
@@ -329,7 +323,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	@Override
 	public Iterator<BaseItem> iterator() {
 		try {
-			return new ChildrenIterator(getAllChildren().iterator());
+			return new ChildrenIterator(allChildren().iterator());
 		}
 		catch (ErrorResponseException e) {
 			e.printStackTrace();

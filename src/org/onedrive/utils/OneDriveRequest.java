@@ -23,6 +23,8 @@ import org.onedrive.network.legacy.HttpsResponse;
 import java.io.IOException;
 import java.net.*;
 
+import static com.fasterxml.jackson.databind.DeserializationFeature.UNWRAP_ROOT_VALUE;
+
 /**
  * {@// TODO: Enhance javadoc}
  * {@// TODO: Support OneDrive for Business}
@@ -277,12 +279,38 @@ public class OneDriveRequest {
 	public void errorHandling(@NotNull HttpsResponse response, int expectedCode) throws ErrorResponseException {
 		if (response.getCode() != expectedCode) {
 			try {
-				ErrorResponse error = mapper.readValue(response.getContent(), ErrorResponse.class);
+				ErrorResponse error = mapper
+						.readerFor(ErrorResponse.class)
+						.with(UNWRAP_ROOT_VALUE)
+						.readValue(response.getContent());
 				throw new ErrorResponseException(expectedCode, response.getCode(),
 						error.getCode(), error.getMessage());
 			}
 			catch (JsonProcessingException e) {
 				throw new InvalidJsonException(e, response.getCode(), response.getContent());
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+				// TODO: custom exception
+				throw new RuntimeException("DEV: Unrecognizable json response.", e);
+			}
+		}
+	}
+
+	public void errorHandling(@NotNull HttpResponse response, @NotNull DirectByteInputStream inputStream,
+							  int expectedCode)
+			throws ErrorResponseException {
+		if (response.status().code() != expectedCode) {
+			try {
+				ErrorResponse error = mapper
+						.readerFor(ErrorResponse.class)
+						.with(UNWRAP_ROOT_VALUE)
+						.readValue(inputStream);
+				throw new ErrorResponseException(expectedCode, response.status().code(),
+						error.getCode(), error.getMessage());
+			}
+			catch (JsonProcessingException e) {
+				throw new InvalidJsonException(e, response.status().code(), inputStream.getRawBuffer());
 			}
 			catch (IOException e) {
 				e.printStackTrace();
@@ -300,7 +328,10 @@ public class OneDriveRequest {
 				return mapper.readValue(response.getContent(), classType);
 			}
 			else {
-				ErrorResponse error = mapper.readValue(response.getContent(), ErrorResponse.class);
+				ErrorResponse error = mapper
+						.readerFor(ErrorResponse.class)
+						.with(UNWRAP_ROOT_VALUE)
+						.readValue(response.getContent());
 				throw new ErrorResponseException(expectedCode, response.getCode(),
 						error.getCode(), error.getMessage());
 			}
@@ -323,7 +354,10 @@ public class OneDriveRequest {
 				return mapper.readValue(inputStream, classType);
 			}
 			else {
-				ErrorResponse error = mapper.readValue(inputStream, ErrorResponse.class);
+				ErrorResponse error = mapper
+						.readerFor(ErrorResponse.class)
+						.with(UNWRAP_ROOT_VALUE)
+						.readValue(inputStream);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
 						error.getCode(), error.getMessage());
 			}

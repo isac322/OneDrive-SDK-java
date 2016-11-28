@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -24,6 +23,7 @@ import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
+import org.onedrive.network.DirectByteInputStream;
 import org.onedrive.network.ErrorResponse;
 import org.onedrive.network.HttpsClientHandler;
 import org.onedrive.network.legacy.HttpsRequest;
@@ -31,7 +31,7 @@ import org.onedrive.network.legacy.HttpsResponse;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
-import java.io.InputStream;
+import java.net.HttpURLConnection;
 
 /**
  * https://dev.onedrive.com/resources/item.htm
@@ -188,33 +188,16 @@ abstract public class BaseItem {
 	}
 
 	private void update(byte[] content) throws ErrorResponseException {
-		try {
-			HttpsClientHandler responseHandler =
-					client.requestTool().patchMetadata(Client.ITEM_ID_PREFIX + id, content);
+		HttpsClientHandler responseHandler =
+				client.requestTool().patchMetadata(Client.ITEM_ID_PREFIX + id, content);
 
-			HttpResponse response = responseHandler.getBlockingResponse();
-			InputStream result = responseHandler.getResultStream();
+		HttpResponse response = responseHandler.getBlockingResponse();
+		DirectByteInputStream result = responseHandler.getResultStream();
 
+		BaseItem newItem =
+				client.requestTool().parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);
 
-			// if http response code is 200 OK
-			if (response.status().code() == HttpResponseStatus.OK.code()) {
-				BaseItem newItem = client.mapper().readValue(result, BaseItem.class);
-				this.refreshBy(newItem);
-			}
-			// or something else
-			else {
-				ErrorResponse error = client.mapper().readValue(result, ErrorResponse.class);
-				throw new ErrorResponseException(
-						HttpsURLConnection.HTTP_ACCEPTED,
-						response.status().code(),
-						error.getCode(),
-						error.getMessage()
-				);
-			}
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
+		this.refreshBy(newItem);
 	}
 
 

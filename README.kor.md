@@ -28,7 +28,6 @@
 - 파일 or 폴더 검색 (by name or content)
 - 파일 생성, 내용 업로드 (async)
 - 공유 기능
-- 폴더채로 다운
 - Maven
 - 문서화
 - support custom redirect url when login
@@ -199,7 +198,6 @@ client.copyItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 
 ### 6. 파일 다운로드
 
-- 현재까지는 다운로드 받고싶은 아이템의 객치를 통해서만 가능.
 - 현재까지는 synchronous한 방식으로만 가능. (async도 조만간 완료)
 
 ```java
@@ -224,6 +222,9 @@ file.download(Paths.get(path));
 
 // download by path object with new name
 file.download(Paths.get(path), "newName");
+
+
+client.download(new PathPointer("/{item-path}"), Paths.get(path));
 ```
 
 ### 7. 폴더, 파일 이동

@@ -12,19 +12,19 @@ import java.net.URISyntaxException;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 abstract public class BasePointer {
-	@Nullable abstract public String getDriveId();
+	abstract public @Nullable String getDriveId();
 
-	@NotNull abstract public URI toURI() throws URISyntaxException;
+	abstract public @NotNull URI toURI() throws URISyntaxException;
 
-	@NotNull abstract public String toApi();
+	abstract public @NotNull String toApi();
 
-	@NotNull abstract public String toASCIIApi();
+	abstract public @NotNull String toASCIIApi();
 
-	@NotNull @Override public String toString() {
+	@Override public @NotNull String toString() {
 		return toApi();
 	}
 
-	@NotNull abstract public String toJson();
+	abstract public @NotNull String toJson();
 
-	@NotNull abstract public String resolveOperator(@NotNull Operator op);
+	abstract public @NotNull String resolveOperator(@NotNull Operator op);
 }

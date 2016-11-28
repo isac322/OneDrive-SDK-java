@@ -44,6 +44,11 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -597,6 +602,7 @@ public class Client {
 
 			// for inner class access
 			final int finalI = i;
+
 			handlers[i] = requestTool.doAsync(
 					HttpMethod.GET,
 					ITEM_ID_PREFIX + id.asText() + "?expand=children",
@@ -615,7 +621,6 @@ public class Client {
 				handler.getBlockingCloseFuture().sync();
 			}
 			catch (InterruptedException e) {
-				e.printStackTrace();
 				throw new InternalException("Interrupted error in syncing.", e);
 			}
 		}
@@ -645,7 +650,8 @@ public class Client {
 	 * @throws InvalidJsonException   if fail to parse response of copying request into json. it caused by server side
 	 *                                not by SDK.
 	 */
-	public @NotNull String copyItem(@NotNull String srcId, @NotNull String destId) throws ErrorResponseException {
+	@NotNull
+	public String copyItem(@NotNull String srcId, @NotNull String destId) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
 		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
 	}
@@ -708,7 +714,7 @@ public class Client {
 	 *                {@code api} is a escaped {@code String}
 	 * @param content HTTP body
 	 * @return URL {@code String} that can monitor status of copying process
-	 * {@// TODO: end of copying process, is this link will be useless or unaccessible ? }
+	 * {@// TODO: end of copying process, is this link will be useless or inaccessible ? }
 	 * @throws ErrorResponseException if error happens while requesting copying operation. such as invalid copying
 	 *                                request
 	 * @throws InvalidJsonException   if fail to parse response of copying request into json. it caused by server side
@@ -827,6 +833,74 @@ public class Client {
 
 		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_CREATED, FolderItem.class);
 	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Downloading files
+	*
+	*************************************************************
+	 */
+
+
+	public void download(@NotNull String fileId, @NotNull Path parent) throws ErrorResponseException, IOException {
+		ObjectNode jsonNodes = requestTool.doGetJson(ITEM_ID_PREFIX + fileId + "?select=name,file,folder");
+
+		if (jsonNodes.has("folder"))
+			throw new IllegalArgumentException("given " + fileId + " is ID of folder. only ID of file is accepted");
+
+		_download(Client.ITEM_ID_PREFIX + fileId + "/content", parent, jsonNodes.get("name").asText());
+	}
+
+	public void download(@NotNull String fileId, @NotNull Path parent, @NotNull String fileName)
+			throws IOException, ErrorResponseException {
+		_download(Client.ITEM_ID_PREFIX + fileId + "/content", parent, fileName);
+	}
+
+	public void download(@NotNull BasePointer file, @NotNull Path parent) throws ErrorResponseException, IOException {
+		ObjectNode jsonNodes = requestTool.doGetJson(file.toASCIIApi() + "?select=name,file,folder");
+
+		if (jsonNodes.has("folder"))
+			throw new IllegalArgumentException(
+					"given " + file.toString() + " is pointer of folder. only pointer of file is accepted");
+
+		_download(file.resolveOperator(Operator.CONTENT), parent, jsonNodes.get("name").asText());
+	}
+
+	public void download(@NotNull BasePointer file, @NotNull Path parent, @NotNull String fileName)
+			throws ErrorResponseException, IOException {
+		_download(file.resolveOperator(Operator.CONTENT), parent, fileName);
+	}
+
+	private void _download(@NotNull String api, @NotNull Path parent, @NotNull String fileName)
+			throws IOException, ErrorResponseException {
+		Path parentBackup = parent.toAbsolutePath();
+		parent = parentBackup.resolve(fileName);
+		// it's illegal if and only if `parent` exists but not directory.
+		if (Files.exists(parentBackup) && !Files.isDirectory(parentBackup))
+			throw new IllegalArgumentException(parentBackup + " already exists and isn't folder.");
+
+		Files.createDirectories(parentBackup);
+
+		HttpsResponse response = requestTool.newRequest(api).doGet();
+
+		requestTool.errorHandling(response, HttpURLConnection.HTTP_OK);
+
+		AsynchronousFileChannel fileChannel = AsynchronousFileChannel.open(
+				parent,
+				StandardOpenOption.CREATE,
+				StandardOpenOption.WRITE);
+
+		ByteBuffer contentBuf = ByteBuffer.wrap(response.getContent(), 0, response.getLength());
+
+		fileChannel.write(contentBuf, 0);
+	}
+
+
+
 
 
 	/*
