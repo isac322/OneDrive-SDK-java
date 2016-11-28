@@ -13,14 +13,14 @@ import org.jetbrains.annotations.NotNull;
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
-@JsonRootName("error")
+@JsonRootName(value = "error")
 public class ErrorResponse {
 	@Getter @NotNull protected final String code;
 	@Getter @NotNull protected final String message;
 
 	@JsonCreator
 	protected ErrorResponse(@NotNull @JsonProperty("code") String code,
-						 @NotNull @JsonProperty("message") String message) {
+							@NotNull @JsonProperty("message") String message) {
 		this.code = code;
 		this.message = message;
 	}

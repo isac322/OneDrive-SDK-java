@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -13,9 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.onedrive.Client;
 import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
-import org.onedrive.exceptions.InvalidJsonException;
-
-import java.util.concurrent.CopyOnWriteArrayList;
+import org.onedrive.exceptions.ErrorResponseException;
 
 /**
  * {@// TODO: enhance javadoc}
@@ -75,24 +72,8 @@ public class RemoteFolderItem extends FolderItem {
 	}
 
 	@Override
-	protected void fetchChildren() {
+	protected void fetchChildren() throws ErrorResponseException {
 		// children of remote folder can be obtained only by real drive's id and real id.
-		ObjectNode content = client.getRequestTool().doGetJson(
-				String.format("/drives/%s/items/%s/children", getRealDriveID(), getRealID()));
-
-		allChildren = new CopyOnWriteArrayList<>();
-		folderChildren = new CopyOnWriteArrayList<>();
-		fileChildren = new CopyOnWriteArrayList<>();
-
-		JsonNode value = content.get("value");
-		JsonNode nextLink = content.get("@odata.nextLink");
-
-		if (!value.isArray() || (nextLink != null && !nextLink.isTextual()))
-			throw new InvalidJsonException("`value` isn't array or `nextLink` isn't text");
-
-		// TODO: if-none-match request header handling.
-		// TODO: not 200 OK response handling.
-		parseChildren(client, value, nextLink == null ? null : nextLink.asText(),
-				allChildren, folderChildren, fileChildren);
+		_fetchChildren(String.format("/drives/%s/items/%s/children", getRealDriveID(), getRealID()));
 	}
 }

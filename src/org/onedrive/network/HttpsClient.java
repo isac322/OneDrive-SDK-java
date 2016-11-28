@@ -19,6 +19,7 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.exceptions.InternalException;
+import org.onedrive.utils.OneDriveRequest;
 
 import javax.net.ssl.SSLException;
 import java.net.URI;
@@ -39,7 +40,7 @@ public final class HttpsClient {
 					   @NotNull HttpMethod method, @Nullable AsyncHttpsResponseHandler onComplete) {
 		this.group = group;
 		this.uri = uri;
-		if (!"https".equalsIgnoreCase(uri.getScheme())) {
+		if (!OneDriveRequest.SCHEME.equalsIgnoreCase(uri.getScheme())) {
 			throw new IllegalArgumentException("Wrong network scheme : \"" + uri.getScheme() + "\".");
 		}
 		this.method = method;
@@ -137,9 +138,7 @@ public final class HttpsClient {
 				// Make the connection attempt.
 				Channel ch = channelFuture.channel();
 
-				ByteBuf byteBuf = Unpooled.copiedBuffer(content);
-
-				request.content().clear().writeBytes(byteBuf);
+				request.content().clear().writeBytes(content);
 
 				// Send the HTTP request.
 				ch.writeAndFlush(request);

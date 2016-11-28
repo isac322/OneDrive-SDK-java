@@ -3,6 +3,7 @@ package org.onedrive.container.items.pointer;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.onedrive.utils.OneDriveRequest;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -53,7 +54,7 @@ public class IdPointer extends BasePointer {
 	@NotNull
 	@Override
 	public URI toURI() throws URISyntaxException {
-		return new URI("https", "api.onedrive.com/v1.0", path, null);
+		return new URI(OneDriveRequest.SCHEME, OneDriveRequest.HOST, path, null);
 	}
 
 	@NotNull

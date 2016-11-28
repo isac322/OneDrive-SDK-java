@@ -19,14 +19,17 @@ public class HttpsResponse {
 	@Getter protected final String message;
 	@Getter protected final Map<String, List<String>> header;
 	@Getter protected final byte[] content;
+	@Getter protected final int length;
 	protected String contentString;
 
-	public HttpsResponse(URL url, int code, String message, Map<String, List<String>> header, byte[] content) {
+	public HttpsResponse(URL url, int code, String message,
+						 Map<String, List<String>> header, byte[] content, int length) {
 		this.url = url;
 		this.code = code;
 		this.message = message;
 		this.header = header;
 		this.content = content;
+		this.length = length;
 	}
 
 	/**

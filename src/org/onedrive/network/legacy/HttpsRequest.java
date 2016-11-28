@@ -3,12 +3,12 @@ package org.onedrive.network.legacy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.SneakyThrows;
-import lombok.val;
 import org.jetbrains.annotations.NotNull;
-import org.onedrive.exceptions.InternalException;
 
 import javax.net.ssl.HttpsURLConnection;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
@@ -63,7 +63,6 @@ public class HttpsRequest {
 	@NotNull
 	public HttpsResponse doPost(String content) {
 		byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
-
 		return doPost(bytes);
 	}
 
@@ -79,19 +78,19 @@ public class HttpsRequest {
 	}
 
 	@NotNull
-	public HttpsResponse doPatch(String content) {
-		byte[] bytes = content.getBytes();
-		return doPatch(bytes);
+	public HttpsResponse doPut(String content) {
+		byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+		return doPost(bytes);
 	}
 
 	@NotNull
-	public HttpsResponse doPatch(byte[] content) {
+	public HttpsResponse doPut(byte[] content) {
 		try {
-			httpConnection.setRequestMethod("PATCH");
+			httpConnection.setRequestMethod("PUT");
 			return sendContent(content);
 		}
 		catch (ProtocolException e) {
-			throw new UnsupportedOperationException("unsupported method PATCH. contact author with stacktrace", e);
+			throw new UnsupportedOperationException("unsupported method PUT. contact author with stacktrace", e);
 		}
 	}
 
@@ -163,7 +162,7 @@ public class HttpsRequest {
 				byteStream.writeBytes(buffer, 0, readBytes);
 			}
 			body.close();
-			return new HttpsResponse(url, code, message, header, byteStream.array());
+			return new HttpsResponse(url, code, message, header, byteStream.array(), byteStream.writerIndex());
 
 			// which one is better?
 			/*

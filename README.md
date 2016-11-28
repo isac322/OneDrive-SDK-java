@@ -26,8 +26,7 @@ purse fast, easy to use, intuitive API.
 - downloading file (async: almost complete)
 - searching file or folder (by name or content)
 - creating file and upload it (async)
-- sharing folder or file 
-- downloading whole folder
+- sharing folder or file
 - Maven
 - documentation
 - support custom redirect url when login
@@ -199,7 +198,6 @@ client.copyItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 
 ### 6. Download file
 
-- For now, it can download only via `FileItem`'s object.
 - For now, only supports synchronous way. (async way will be supported soon)
 
 ```java
@@ -223,6 +221,9 @@ file.download(Paths.get(path));
 
 // download by path object with new name
 file.download(Paths.get(path), "newName");
+
+
+client.download(new PathPointer("/{item-path}"), Paths.get(path));
 ```
 
 ### 7. Move folder or file

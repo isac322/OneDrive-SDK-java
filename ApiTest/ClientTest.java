@@ -1,6 +1,6 @@
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -14,18 +14,15 @@ import org.onedrive.container.Drive;
 import org.onedrive.container.facet.AudioFacet;
 import org.onedrive.container.items.*;
 import org.onedrive.container.items.pointer.PathPointer;
-import org.onedrive.exceptions.BadRequestException;
 import org.onedrive.exceptions.ErrorResponseException;
-import org.onedrive.exceptions.FileDownFailException;
 import org.onedrive.network.AsyncHttpsResponseHandler;
+import org.onedrive.network.DirectByteInputStream;
 import org.onedrive.network.HttpsClientHandler;
 import org.onedrive.network.legacy.HttpsRequest;
 import org.onedrive.network.legacy.HttpsResponse;
-import org.onedrive.utils.OneDriveRequest;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
@@ -86,11 +83,11 @@ public class ClientTest extends TestCase {
 		getClient();
 
 		// Test Files (shared by someone)
-		HttpsResponse response = OneDriveRequest.doGet("/drive/items/485BEF1A80539148!115", client.getFullToken());
+		HttpsResponse response = client.requestTool().newRequest("/drive/items/485BEF1A80539148!115").doGet();
 		System.out.println(response.getContentString());
 	}
 
-	public void testGetFileItem() {
+	public void testGetFileItem() throws ErrorResponseException {
 		getClient();
 
 		BaseItem file = client.getItem("D4FD82CA6DF96A47!22159");
@@ -98,7 +95,7 @@ public class ClientTest extends TestCase {
 		System.out.println(file.getId());
 	}
 
-	public void testSharedItem() {
+	public void testSharedItem() throws ErrorResponseException {
 		getClient();
 
 		BaseItem[] shared = client.getShared();
@@ -109,7 +106,7 @@ public class ClientTest extends TestCase {
 		}
 	}
 
-	public void testDrives() {
+	public void testDrives() throws IOException, ErrorResponseException {
 		getClient();
 
 		for (Drive drive : client.getAllDrive()) {
@@ -119,7 +116,7 @@ public class ClientTest extends TestCase {
 		}
 	}
 
-	public void testDrive() {
+	public void testDrive() throws ErrorResponseException {
 		getClient();
 
 		Drive defaultDrive = client.getDefaultDrive();
@@ -130,18 +127,7 @@ public class ClientTest extends TestCase {
 	public void testPackage() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/items/D4FD82CA6DF96A47!2104",
-				client.getFullToken());
-		System.out.println(response.getCode());
-		System.out.println(response.getMessage());
-		System.out.println(response.getContentString());
-	}
-
-	public void testConflict() {
-		getClient();
-
-		HttpsResponse response = OneDriveRequest.doDelete("/drive/items/D4FD82CA6DF96A47!26026",
-				"fasdasdsdafwe");
+		HttpsResponse response = client.requestTool().newRequest("/drive/items/D4FD82CA6DF96A47!2104").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -150,14 +136,14 @@ public class ClientTest extends TestCase {
 	public void testRemoteItem() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet
-				("/drives/485bef1a80539148/items/485BEF1A80539148!115?expand=children", client.getFullToken());
+		HttpsResponse response = client.requestTool()
+				.newRequest("/drives/485bef1a80539148/items/485BEF1A80539148!115?expand=children").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		//System.out.println(response.getContentString());
 	}
 
-	public void testGetItem() {
+	public void testGetItem() throws ErrorResponseException {
 		getClient();
 
 		for (int i = 0; i < 10; i++) {
@@ -173,13 +159,13 @@ public class ClientTest extends TestCase {
 	public void testRoot() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/root:/?expand=children", client.getFullToken());
+		HttpsResponse response = client.requestTool().newRequest("/drive/root:/?expand=children").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
 	}
 
-	public void testRootDir() {
+	public void testRootDir() throws ErrorResponseException {
 		getClient();
 
 		FolderItem rootDir = client.getRootDir();
@@ -188,14 +174,13 @@ public class ClientTest extends TestCase {
 		System.out.println(rootDir.getETag());
 		System.out.println(rootDir.getName());
 		System.out.println(rootDir.getSize());
-		System.out.println(rootDir.getFolderChildren().get(1).getAllChildren().get(0)
+		System.out.println(rootDir.folderChildren().get(1).allChildren().get(0)
 				.getParentReference()
 				.getPathPointer());
-		System.out.println(rootDir.getFolderChildren().get(1));
+		System.out.println(rootDir.folderChildren().get(1));
 	}
 
-	private void dfs(FolderItem folders, String tab) throws IOException, FileDownFailException,
-			ErrorResponseException {
+	private void dfs(FolderItem folders, String tab) throws IOException, ErrorResponseException {
 		StringBuilder builder2 = new StringBuilder(tab).append(folders.getName()).append('\t');
 
 		if (folders instanceof RemoteFolderItem) builder2.append(" Remote Item");
@@ -210,7 +195,7 @@ public class ClientTest extends TestCase {
 				FolderItem folder = (FolderItem) item;
 
 				assertNotNull(folder.getParentReference());
-				assertEquals(folder.childrenCount(), folder.getAllChildren().size());
+				assertEquals(folder.childrenCount(), folder.allChildren().size());
 				dfs(folder, tab);
 			}
 			else if (item instanceof FileItem) {
@@ -240,7 +225,7 @@ public class ClientTest extends TestCase {
 		}
 	}
 
-	private void printDFS(FolderItem folders, String tab) throws IOException, FileDownFailException {
+	private void printDFS(FolderItem folders, String tab) throws IOException {
 		StringBuilder builder2 = new StringBuilder(tab).append(folders.getName()).append('\t');
 
 		if (folders instanceof RemoteFolderItem) builder2.append(" Remote Item");
@@ -288,17 +273,17 @@ public class ClientTest extends TestCase {
 	public void testSearch() {
 		getClient();
 
-		HttpsResponse response = OneDriveRequest.doGet("/drive/root/view.search?q=Gone%20in%20Six%20Characters",
-				client.getFullToken());
+		HttpsResponse response = client.requestTool()
+				.newRequest("/drive/root/view.search?q=Gone%20in%20Six%20Characters").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
 	}
 
-	public void testJacksonWrite() throws JsonProcessingException {
+	public void testJacksonWrite() throws JsonProcessingException, ErrorResponseException {
 		getClient();
 
-		BaseItem item = ((FolderItem) client.getRootDir().getAllChildren().get(1)).getAllChildren().get(0);
+		BaseItem item = ((FolderItem) client.getRootDir().allChildren().get(1)).allChildren().get(0);
 
 
 		ObjectMapper mapper = new ObjectMapper();
@@ -339,7 +324,7 @@ public class ClientTest extends TestCase {
 		System.out.println(file.copyTo("/drive/root:/test folder"));
 	}
 
-	public void testCopy2() throws MalformedURLException, JsonProcessingException {
+	public void testCopy2() throws IOException {
 		getClient();
 
 		byte[] content = ("{\"parentReference\":{\"driveId\":\"D4FD82CA6DF96A47!107\"," +
@@ -348,7 +333,7 @@ public class ClientTest extends TestCase {
 		System.out.println(new String(content));
 		System.out.println(String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!10375"));
 
-		HttpsResponse response = client.getRequestTool().postMetadata(
+		HttpsResponse response = client.requestTool().postMetadata(
 				String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!10375"),
 				content);
 
@@ -360,12 +345,13 @@ public class ClientTest extends TestCase {
 		String url = response.getHeader().get("Location").get(0);
 
 		for (int i = 0; i < 100; i++) {
-			ObjectNode jsonNodes = client.getRequestTool().doGetJson(new URL(url));
-			System.out.println(mapper.writeValueAsString(jsonNodes));
+			HttpsResponse httpsResponse = client.requestTool().newRequest(new URL(url)).doGet();
+			JsonNode jsonNode = mapper.readTree(httpsResponse.getContent());
+			System.out.println(mapper.writeValueAsString(jsonNode));
 		}
 	}
 
-	public void testCreateFolder() throws BadRequestException, ErrorResponseException {
+	public void testCreateFolder() throws ErrorResponseException {
 		getClient();
 
 		FolderItem rootDir = client.getRootDir();
@@ -380,17 +366,19 @@ public class ClientTest extends TestCase {
 		test.delete();
 	}
 
-	public void testUpdate() throws ErrorResponseException {
+	public void testUpdate() throws ErrorResponseException, IOException {
 		getClient();
 
 		FileItem file = client.getFile("D4FD82CA6DF96A47!26026");
 
 		file.setDescription("testtestsetsetsetsetsetsetsetsetset");
 
+		file.download("./test.tx/");
+
 		file.refresh();
 	}
 
-	public void testUpdateRoot() throws ErrorResponseException {
+	public void testUpdateRoot() throws ErrorResponseException, IOException {
 		getClient();
 
 		FolderItem root = client.getRootDir();
@@ -407,12 +395,12 @@ public class ClientTest extends TestCase {
 		file.setDescription("fasdffadfasdgqwe");
 
 		System.out.println();
-		System.out.println(client.getMapper().writeValueAsString(file));
+		System.out.println(client.mapper().writeValueAsString(file));
 
 		file.refresh();
 
 		System.out.println();
-		System.out.println(client.getMapper().writeValueAsString(file));
+		System.out.println(client.mapper().writeValueAsString(file));
 	}
 
 	public void testMove() throws ErrorResponseException {
@@ -429,7 +417,7 @@ public class ClientTest extends TestCase {
 		mp3.moveTo(root.newReference());
 	}
 
-	public void testRootChildren() {
+	public void testRootChildren() throws ErrorResponseException {
 		getClient();
 
 		FolderItem root = client.getRootDir();
@@ -451,12 +439,12 @@ public class ClientTest extends TestCase {
 		for (int i = 0; i < 50; i++) {
 			final long before = System.currentTimeMillis();
 			HttpsClientHandler httpsClientHandler =
-					client.getRequestTool().doAsync("/drive/root:?expand=children", HttpMethod.GET);
+					client.requestTool().doAsync(HttpMethod.GET, "/drive/root:?expand=children");
 			httpsClientHandler.addCloseListener(new AsyncHttpsResponseHandler() {
 				@Override
-				public void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response) {
+				public void handle(DirectByteInputStream resultStream, @NotNull HttpResponse response) {
 					try {
-						FolderItem root = client.getMapper().readValue(resultStream, FolderItem.class);
+						FolderItem root = client.mapper().readValue(resultStream, FolderItem.class);
 					}
 					catch (IOException e) {
 						e.printStackTrace();
@@ -479,10 +467,10 @@ public class ClientTest extends TestCase {
 			long before = System.currentTimeMillis();
 
 			HttpsResponse httpsResponse =
-					OneDriveRequest.doGet("/drive/root:?expand=children", client.getFullToken());
+					client.requestTool().newRequest("/drive/root:?expand=children").doGet();
 
 			try {
-				FolderItem root = client.getMapper().readValue(httpsResponse.getContent(), FolderItem.class);
+				FolderItem root = client.mapper().readValue(httpsResponse.getContent(), FolderItem.class);
 				now = System.currentTimeMillis();
 				sum += (now - before);
 				System.out.println("Legacy takes " + (now - before));
@@ -495,15 +483,12 @@ public class ClientTest extends TestCase {
 		System.out.println();
 	}
 
-	public void testBOJLegacy() throws JsonProcessingException, MalformedURLException {
+	public void testBOJLegacy() throws JsonProcessingException {
 		getClient();
 
-		HttpsRequest httpsRequest = new HttpsRequest(new URL("https://api.onedrive" +
-				".com/v1.0/drive/items/D4FD82CA6DF96A47!14841?expand=children"));
-
-		httpsRequest.setHeader("Authorization", client.getFullToken());
-
-		HttpsResponse httpsResponse = httpsRequest.doGet();
+		HttpsResponse httpsResponse = client.requestTool()
+				.newRequest("/drive/items/D4FD82CA6DF96A47!14841?expand=children")
+				.doGet();
 		Map<String, List<String>> header = httpsResponse.getHeader();
 		for (val entry : header.entrySet()) {
 			System.out.println(entry.getKey() + " : " + entry.getValue());
@@ -512,7 +497,7 @@ public class ClientTest extends TestCase {
 		System.out.println(httpsResponse.getContentString());
 	}
 
-	public void testChunk() throws URISyntaxException, InterruptedException {
+	public void testChunk() throws URISyntaxException, InterruptedException, ErrorResponseException {
 		getClient();
 
 		long before = System.currentTimeMillis();
@@ -520,16 +505,13 @@ public class ClientTest extends TestCase {
 
 		final FolderItem[] items = new FolderItem[1];
 		HttpsClientHandler clientHandler =
-				client.getRequestTool().doAsync("/drive/items/D4FD82CA6DF96A47!14841?expand=children", HttpMethod.GET,
+				client.requestTool().doAsync(HttpMethod.GET, "/drive/items/D4FD82CA6DF96A47!14841?expand=children",
 						new AsyncHttpsResponseHandler() {
 							@Override
-							public void handle(@NotNull InputStream resultStream, @NotNull HttpResponse response) {
-								try {
-									items[0] = client.getMapper().readValue(resultStream, FolderItem.class);
-								}
-								catch (IOException e) {
-									e.printStackTrace();
-								}
+							public void handle(DirectByteInputStream resultStream, HttpResponse response)
+									throws ErrorResponseException {
+								items[0] = client.requestTool().parseAndHandle(response, resultStream,
+										HttpURLConnection.HTTP_OK, FolderItem.class);
 							}
 						});
 
@@ -541,7 +523,7 @@ public class ClientTest extends TestCase {
 		System.out.println(items[0].getId());
 		System.out.println(items[0].getName());
 		System.out.println(items[0].childrenCount());
-		System.out.println(items[0].getAllChildren().size());
+		System.out.println(items[0].allChildren().size());
 	}
 
 	public void testOneDrivePath() throws ErrorResponseException {
@@ -555,8 +537,8 @@ public class ClientTest extends TestCase {
 			System.out.println(object.getName() + '\t' + object.getId() + '\t' + object.getDriveId());
 		}
 
-		FileItem mp3 = rootDir.getFileChildren().get(2);
-		client.copyItem(mp3.getPathPointer(), rootDir.getFolderChildren().get(0).getId());
+		FileItem mp3 = rootDir.fileChildren().get(2);
+		client.copyItem(mp3.getPathPointer(), rootDir.folderChildren().get(0).getId());
 	}
 
 	public void testOneDriveCopy() throws ErrorResponseException {
@@ -564,12 +546,12 @@ public class ClientTest extends TestCase {
 
 		FolderItem rootDir = client.getRootDir();
 
-		RemoteFolderItem testFiles = (RemoteFolderItem) rootDir.getFolderChildren().get(0);
+		RemoteFolderItem testFiles = (RemoteFolderItem) rootDir.folderChildren().get(0);
 
 		System.out.println(testFiles.getName() + '\t' + testFiles.getId() + '\t' + testFiles.getDriveId() + '\t' +
 				testFiles.getRealDriveID());
 
-		FileItem testTxt = rootDir.getFileChildren().get(1);
+		FileItem testTxt = rootDir.fileChildren().get(1);
 		System.out.println(testTxt.getName());
 		client.copyItem(testTxt.getPathPointer(), testFiles.getPathPointer());
 
@@ -586,8 +568,18 @@ public class ClientTest extends TestCase {
 		getClient();
 
 		RemoteFolderItem item = (RemoteFolderItem) client.getItem("D4FD82CA6DF96A47!2578116");
-		System.out.println(item.getAllChildren());
+		System.out.println(item.allChildren());
 
 		item.refresh();
+	}
+
+	public void testPointer2URI() {
+		getClient();
+
+		HttpsRequest httpsRequest = client.requestTool().newRequest("/drive/root:/문서");
+		HttpsResponse httpsResponse = httpsRequest.doGet();
+		System.out.println(httpsResponse.getCode());
+		System.out.println(httpsResponse.getMessage());
+		System.out.println(httpsResponse.getContentString());
 	}
 }

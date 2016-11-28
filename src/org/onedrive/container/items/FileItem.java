@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
@@ -16,19 +15,10 @@ import org.onedrive.container.facet.*;
 import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.ErrorResponse;
-import org.onedrive.network.legacy.HttpsResponse;
-import org.onedrive.utils.OneDriveRequest;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 
 /**
  * {@// TODO: Enhance javadoc}
@@ -96,7 +86,7 @@ public class FileItem extends BaseItem {
 	 * @see FileItem#download(Path, String)
 	 */
 	public void download(@NotNull String path) throws IOException, ErrorResponseException {
-		this.download(Paths.get(path));
+		client.download(this.id, Paths.get(path), this.getName());
 	}
 
 	/**
@@ -108,7 +98,7 @@ public class FileItem extends BaseItem {
 	 * @see FileItem#download(Path, String)
 	 */
 	public void download(@NotNull String path, @NotNull String newName) throws IOException, ErrorResponseException {
-		this.download(Paths.get(path), newName);
+		client.download(this.id, Paths.get(path), newName);
 	}
 
 	/**
@@ -120,7 +110,7 @@ public class FileItem extends BaseItem {
 	 * @see FileItem#download(Path, String)
 	 */
 	public void download(@NotNull Path folderPath) throws IOException, ErrorResponseException {
-		download(folderPath, this.getName());
+		client.download(this.id, folderPath, this.getName());
 	}
 
 	/**
@@ -144,44 +134,7 @@ public class FileItem extends BaseItem {
 	 * @throws IOException              if an I/O error occurs
 	 */
 	public void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException {
-		Path parent = folderPath.toAbsolutePath();
-		folderPath = parent.resolve(newName);
-		// it's illegal if and only if `folderPath` exists but not directory.
-		if (Files.exists(parent) && !Files.isDirectory(parent))
-			throw new IllegalArgumentException("`folderPath` argument must pointing directory.");
-
-		Files.createDirectories(parent);
-
-		HttpsResponse response = OneDriveRequest.doGet(Client.ITEM_ID_PREFIX + id + "/content", client.getFullToken());
-
-		if (response.getCode() != HttpURLConnection.HTTP_OK) {
-			try {
-				ErrorResponse error = client.getMapper().readValue(response.getContent(), ErrorResponse.class);
-				throw new ErrorResponseException(
-						HttpsURLConnection.HTTP_OK,
-						response.getCode(),
-						error.getCode(),
-						error.getMessage()
-				);
-			}
-			catch (JsonProcessingException e) {
-				throw new InvalidJsonException(e, response.getCode(), response.getContent());
-			}
-			catch (IOException e) {
-				e.printStackTrace();
-				// TODO: custom exception
-				throw new RuntimeException("DEV: Unrecognizable error response. contact author");
-			}
-		}
-
-		AsynchronousFileChannel fileChannel = AsynchronousFileChannel.open(
-				folderPath,
-				StandardOpenOption.CREATE,
-				StandardOpenOption.WRITE);
-
-		ByteBuffer contentBuf = ByteBuffer.wrap(response.getContent());
-
-		fileChannel.write(contentBuf, 0);
+		client.download(this.id, folderPath, newName);
 	}
 
 
