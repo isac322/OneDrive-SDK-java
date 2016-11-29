@@ -23,8 +23,8 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.async.HttpsClientHandler;
-import org.onedrive.network.sync.HttpsRequest;
+import org.onedrive.network.async.AsyncRequestHandler;
+import org.onedrive.network.sync.SyncRequest;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -112,9 +112,9 @@ abstract public class BaseItem {
 		}
 	}
 
-
-	public void delete() throws ErrorResponseException {
-		client.deleteItem(this.id);
+	@Override
+	public String toString() {
+		return '<' + id + ", " + pathPointer + '>';
 	}
 
 
@@ -163,7 +163,7 @@ abstract public class BaseItem {
 	}
 
 	private void update(byte[] content) throws ErrorResponseException {
-		HttpsClientHandler responseHandler =
+		AsyncRequestHandler responseHandler =
 				client.requestTool().patchMetadata(Client.ITEM_ID_PREFIX + id, content);
 
 		HttpResponse response = responseHandler.getBlockingResponse();
@@ -174,6 +174,23 @@ abstract public class BaseItem {
 
 		this.refreshBy(newItem);
 	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Deleting
+	*
+	* *************************************************************
+	 */
+
+
+	public void delete() throws ErrorResponseException {
+		client.deleteItem(this.id);
+	}
+
 
 
 
@@ -240,6 +257,7 @@ abstract public class BaseItem {
 
 
 
+
 	/*
 	*************************************************************
 	*
@@ -277,6 +295,8 @@ abstract public class BaseItem {
 	}
 
 
+
+
 	/*
 	*************************************************************
 	*
@@ -292,6 +312,8 @@ abstract public class BaseItem {
 		assert parentReference != null;
 		return parentReference.driveId;
 	}
+
+
 
 
 	/*
@@ -314,6 +336,8 @@ abstract public class BaseItem {
 	}
 
 
+
+
 	/*
 	*************************************************************
 	*
@@ -332,28 +356,28 @@ abstract public class BaseItem {
 			if (node.has("file")) {
 				if (node.has("folder") || node.has("package") || node.has("remoteItem")) {
 					// TODO: custom exception
-					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
+					throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
 				return codec.convertValue(node, FileItem.class);
 			}
 			else if (node.has("folder")) {
 				if (node.has("file") || node.has("package") || node.has("remoteItem")) {
 					// TODO: custom exception
-					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
+					throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
 				return codec.convertValue(node, FolderItem.class);
 			}
 			else if (node.has("package")) {
 				if (node.has("folder") || node.has("file") || node.has("remoteItem")) {
 					// TODO: custom exception
-					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
+					throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
 				return codec.convertValue(node, PackageItem.class);
 			}
 			else if (node.has("remoteItem")) {
 				if (node.has("folder") || node.has("file") || node.has("file")) {
 					// TODO: custom exception
-					throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Duplicated type.");
+					throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Duplicated type.");
 				}
 				return codec.convertValue(node, RemoteFolderItem.class);
 			}

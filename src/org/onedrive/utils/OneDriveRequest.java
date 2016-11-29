@@ -17,11 +17,11 @@ import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.*;
-import org.onedrive.network.async.AsyncHttpsResponseHandler;
-import org.onedrive.network.async.HttpsClient;
-import org.onedrive.network.async.HttpsClientHandler;
-import org.onedrive.network.sync.HttpsRequest;
-import org.onedrive.network.sync.HttpsResponse;
+import org.onedrive.network.async.AsyncResponseHandler;
+import org.onedrive.network.async.AsyncRequest;
+import org.onedrive.network.async.AsyncRequestHandler;
+import org.onedrive.network.sync.SyncRequest;
+import org.onedrive.network.sync.SyncResponse;
 
 import java.io.IOException;
 import java.net.*;
@@ -55,7 +55,7 @@ public class OneDriveRequest {
 
 	/**
 	 * <h1>Refrain to use this method. you can find API that wants to process in {@link Client}.</h1>
-	 * Make {@link HttpsRequest} object with given {@code api} for programmer's convenience.<br>
+	 * Make {@link SyncRequest} object with given {@code api} for programmer's convenience.<br>
 	 * <br>
 	 * {@code api} must fallow API form. Note that it must be encoded. otherwise this will not work properly.
 	 * <br>
@@ -66,13 +66,13 @@ public class OneDriveRequest {
 	 *
 	 * @param api API to request. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
 	 *            <tt>/drive/root:/{item-path}</tt>)
-	 * @return {@link HttpsRequest} object that linked to {@code api} with access token.
+	 * @return {@link SyncRequest} object that linked to {@code api} with access token.
 	 * @throws InternalException If api form is invalid. It is mainly because of {@code api} that starting with
 	 *                           <tt>"http"</tt> or <tt>"https"</tt>.
 	 * @see OneDriveRequest#newRequest(String)
 	 */
 	@NotNull
-	public HttpsRequest newRequest(@NotNull String api) {
+	public SyncRequest newRequest(@NotNull String api) {
 		try {
 			URL requestUrl = new URL(BASE_URL + api);
 			return newRequest(requestUrl);
@@ -87,7 +87,7 @@ public class OneDriveRequest {
 
 	/**
 	 * <h1>Refrain to use this method. you can find API that wants to process in {@link Client}.</h1>
-	 * Make {@link HttpsRequest} object with given {@code url} for programmer's convenience.<br>
+	 * Make {@link SyncRequest} object with given {@code url} for programmer's convenience.<br>
 	 * <br>
 	 * {@code url} must fallow API form and contain full URL. Note that it must be encoded. otherwise this will not
 	 * work properly.
@@ -99,11 +99,11 @@ public class OneDriveRequest {
 	 * {@code OneDriveRequest.newRequest(new URL(BASE + "/drive/root:/Documents"))}
 	 *
 	 * @param url full URL of API to request. Note that it must be encoded.
-	 * @return {@link HttpsRequest} object that linked to {@code url} with access token.
+	 * @return {@link SyncRequest} object that linked to {@code url} with access token.
 	 */
 	@NotNull
-	public HttpsRequest newRequest(@NotNull URL url) {
-		HttpsRequest request = new HttpsRequest(url);
+	public SyncRequest newRequest(@NotNull URL url) {
+		SyncRequest request = new SyncRequest(url);
 		request.setHeader("Authorization", client.getFullToken());
 		return request;
 	}
@@ -120,47 +120,47 @@ public class OneDriveRequest {
 
 
 	@NotNull
-	public HttpsClientHandler doAsync(@NotNull HttpMethod method, @NotNull String api) {
-		HttpsClient httpsClient;
+	public AsyncRequestHandler doAsync(@NotNull HttpMethod method, @NotNull String api) {
+		AsyncRequest asyncRequest;
 		try {
-			httpsClient = new HttpsClient(group, new URI(BASE_URL + api), method);
+			asyncRequest = new AsyncRequest(group, new URI(BASE_URL + api), method);
 		}
 		catch (URISyntaxException e) {
 			e.printStackTrace();
 			throw new IllegalArgumentException("Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".");
 		}
-		httpsClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		return httpsClient.send();
+		asyncRequest.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
+		return asyncRequest.send();
 	}
 
 	@NotNull
-	public HttpsClientHandler doAsync(@NotNull HttpMethod method, @NotNull URI uri) {
-		HttpsClient httpsClient = new HttpsClient(group, uri, method);
-		httpsClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		return httpsClient.send();
+	public AsyncRequestHandler doAsync(@NotNull HttpMethod method, @NotNull URI uri) {
+		AsyncRequest asyncRequest = new AsyncRequest(group, uri, method);
+		asyncRequest.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
+		return asyncRequest.send();
 	}
 
 	@NotNull
-	public HttpsClientHandler doAsync(@NotNull HttpMethod method, @NotNull String api,
-									  @NotNull AsyncHttpsResponseHandler onComplete) {
-		HttpsClient httpsClient;
+	public AsyncRequestHandler doAsync(@NotNull HttpMethod method, @NotNull String api,
+									   @NotNull AsyncResponseHandler onComplete) {
+		AsyncRequest asyncRequest;
 		try {
-			httpsClient = new HttpsClient(group, new URI(BASE_URL + api), method, onComplete);
+			asyncRequest = new AsyncRequest(group, new URI(BASE_URL + api), method, onComplete);
 		}
 		catch (URISyntaxException e) {
 			e.printStackTrace();
 			throw new IllegalArgumentException("Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".");
 		}
-		httpsClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		return httpsClient.send();
+		asyncRequest.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
+		return asyncRequest.send();
 	}
 
 	@NotNull
-	public HttpsClientHandler doAsync(@NotNull HttpMethod method, @NotNull URI uri,
-									  @NotNull AsyncHttpsResponseHandler onComplete) {
-		HttpsClient httpsClient = new HttpsClient(group, uri, method, onComplete);
-		httpsClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		return httpsClient.send();
+	public AsyncRequestHandler doAsync(@NotNull HttpMethod method, @NotNull URI uri,
+									   @NotNull AsyncResponseHandler onComplete) {
+		AsyncRequest asyncRequest = new AsyncRequest(group, uri, method, onComplete);
+		asyncRequest.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
+		return asyncRequest.send();
 	}
 
 
@@ -199,7 +199,7 @@ public class OneDriveRequest {
 	 * @see ObjectNode
 	 */
 	public ObjectNode doGetJson(@NotNull String api) throws ErrorResponseException {
-		HttpsResponse response = newRequest(api).doGet();
+		SyncResponse response = newRequest(api).doGet();
 
 		try {
 			if (response.getCode() == HttpURLConnection.HTTP_OK) {
@@ -221,16 +221,16 @@ public class OneDriveRequest {
 		}
 	}
 
-	public HttpsResponse postMetadata(@NotNull String api, byte[] content) {
-		HttpsRequest request = newRequest(api);
+	public SyncResponse postMetadata(@NotNull String api, byte[] content) {
+		SyncRequest request = newRequest(api);
 		request.setHeader("Content-Type", "application/json");
 		request.setHeader("Prefer", "respond-async");
 		return request.doPost(content);
 	}
 
 	@NotNull
-	public HttpsClientHandler patchMetadata(@NotNull String api, byte[] content) {
-		HttpsClientHandler clientHandler = patchMetadataAsync(api, content, null);
+	public AsyncRequestHandler patchMetadata(@NotNull String api, byte[] content) {
+		AsyncRequestHandler clientHandler = patchMetadataAsync(api, content, null);
 
 		try {
 			clientHandler.getBlockingCloseFuture().sync();
@@ -244,28 +244,28 @@ public class OneDriveRequest {
 	}
 
 	@NotNull
-	public HttpsClientHandler patchMetadataAsync(@NotNull String api, byte[] content) {
+	public AsyncRequestHandler patchMetadataAsync(@NotNull String api, byte[] content) {
 		return patchMetadataAsync(api, content, null);
 	}
 
 	@NotNull
-	public HttpsClientHandler patchMetadataAsync(@NotNull String api, byte[] content,
-												 @Nullable AsyncHttpsResponseHandler handler) {
-		HttpsClient httpsClient;
+	public AsyncRequestHandler patchMetadataAsync(@NotNull String api, byte[] content,
+												  @Nullable AsyncResponseHandler handler) {
+		AsyncRequest asyncRequest;
 		try {
-			httpsClient = new HttpsClient(group, new URI(BASE_URL + api), HttpMethod.PATCH, handler);
+			asyncRequest = new AsyncRequest(group, new URI(BASE_URL + api), HttpMethod.PATCH, handler);
 		}
 		catch (URISyntaxException e) {
 			e.printStackTrace();
 			throw new IllegalArgumentException("Wrong character in `api` at " + e.getIndex(), e);
 		}
 
-		httpsClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		httpsClient.setHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-		httpsClient.setHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(content.length));
-		httpsClient.setHeader("Prefer", "respond-async");
+		asyncRequest.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
+		asyncRequest.setHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+		asyncRequest.setHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(content.length));
+		asyncRequest.setHeader("Prefer", "respond-async");
 
-		return httpsClient.send(content);
+		return asyncRequest.send(content);
 	}
 
 
@@ -279,7 +279,7 @@ public class OneDriveRequest {
 	 *********************************************/
 
 
-	public void errorHandling(@NotNull HttpsResponse response, int expectedCode) throws ErrorResponseException {
+	public void errorHandling(@NotNull SyncResponse response, int expectedCode) throws ErrorResponseException {
 		if (response.getCode() != expectedCode) {
 			try {
 				ErrorResponse error = mapper
@@ -324,7 +324,7 @@ public class OneDriveRequest {
 	}
 
 
-	public <T> T parseAndHandle(@NotNull HttpsResponse response, int expectedCode, Class<T> classType)
+	public <T> T parseAndHandle(@NotNull SyncResponse response, int expectedCode, Class<T> classType)
 			throws ErrorResponseException {
 		try {
 			if (response.getCode() == expectedCode) {

@@ -15,11 +15,11 @@ import org.onedrive.container.facet.AudioFacet;
 import org.onedrive.container.items.*;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
-import org.onedrive.network.async.AsyncHttpsResponseHandler;
 import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.async.HttpsClientHandler;
-import org.onedrive.network.sync.HttpsRequest;
-import org.onedrive.network.sync.HttpsResponse;
+import org.onedrive.network.async.AsyncResponseHandler;
+import org.onedrive.network.async.AsyncRequestHandler;
+import org.onedrive.network.sync.SyncRequest;
+import org.onedrive.network.sync.SyncResponse;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -83,7 +83,7 @@ public class ClientTest extends TestCase {
 		getClient();
 
 		// Test Files (shared by someone)
-		HttpsResponse response = client.requestTool().newRequest("/drive/items/485BEF1A80539148!115").doGet();
+		SyncResponse response = client.requestTool().newRequest("/drive/items/485BEF1A80539148!115").doGet();
 		System.out.println(response.getContentString());
 	}
 
@@ -127,7 +127,7 @@ public class ClientTest extends TestCase {
 	public void testPackage() {
 		getClient();
 
-		HttpsResponse response = client.requestTool().newRequest("/drive/items/D4FD82CA6DF96A47!2104").doGet();
+		SyncResponse response = client.requestTool().newRequest("/drive/items/D4FD82CA6DF96A47!2104").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -136,7 +136,7 @@ public class ClientTest extends TestCase {
 	public void testRemoteItem() {
 		getClient();
 
-		HttpsResponse response = client.requestTool()
+		SyncResponse response = client.requestTool()
 				.newRequest("/drives/485bef1a80539148/items/485BEF1A80539148!115?expand=children").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
@@ -159,7 +159,7 @@ public class ClientTest extends TestCase {
 	public void testRoot() {
 		getClient();
 
-		HttpsResponse response = client.requestTool().newRequest("/drive/root:/?expand=children").doGet();
+		SyncResponse response = client.requestTool().newRequest("/drive/root:/?expand=children").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -273,7 +273,7 @@ public class ClientTest extends TestCase {
 	public void testSearch() {
 		getClient();
 
-		HttpsResponse response = client.requestTool()
+		SyncResponse response = client.requestTool()
 				.newRequest("/drive/root/view.search?q=Gone%20in%20Six%20Characters").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
@@ -333,7 +333,7 @@ public class ClientTest extends TestCase {
 		System.out.println(new String(content));
 		System.out.println(String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!10375"));
 
-		HttpsResponse response = client.requestTool().postMetadata(
+		SyncResponse response = client.requestTool().postMetadata(
 				String.format("/drive/items/%s/action.copy", "D4FD82CA6DF96A47!10375"),
 				content);
 
@@ -345,8 +345,8 @@ public class ClientTest extends TestCase {
 		String url = response.getHeader().get("Location").get(0);
 
 		for (int i = 0; i < 100; i++) {
-			HttpsResponse httpsResponse = client.requestTool().newRequest(new URL(url)).doGet();
-			JsonNode jsonNode = mapper.readTree(httpsResponse.getContent());
+			SyncResponse syncResponse = client.requestTool().newRequest(new URL(url)).doGet();
+			JsonNode jsonNode = mapper.readTree(syncResponse.getContent());
 			System.out.println(mapper.writeValueAsString(jsonNode));
 		}
 	}
@@ -438,9 +438,9 @@ public class ClientTest extends TestCase {
 
 		for (int i = 0; i < 50; i++) {
 			final long before = System.currentTimeMillis();
-			HttpsClientHandler httpsClientHandler =
+			AsyncRequestHandler asyncRequestHandler =
 					client.requestTool().doAsync(HttpMethod.GET, "/drive/root:?expand=children");
-			httpsClientHandler.addCloseListener(new AsyncHttpsResponseHandler() {
+			asyncRequestHandler.addCloseListener(new AsyncResponseHandler() {
 				@Override
 				public void handle(DirectByteInputStream resultStream, @NotNull HttpResponse response) {
 					try {
@@ -453,7 +453,7 @@ public class ClientTest extends TestCase {
 				}
 			});
 
-			futures.add(httpsClientHandler.getBlockingCloseFuture());
+			futures.add(asyncRequestHandler.getBlockingCloseFuture());
 		}
 		for (ChannelFuture future : futures) {
 			future.sync();
@@ -466,11 +466,11 @@ public class ClientTest extends TestCase {
 		for (int i = 0; i < 50; i++) {
 			long before = System.currentTimeMillis();
 
-			HttpsResponse httpsResponse =
+			SyncResponse syncResponse =
 					client.requestTool().newRequest("/drive/root:?expand=children").doGet();
 
 			try {
-				FolderItem root = client.mapper().readValue(httpsResponse.getContent(), FolderItem.class);
+				FolderItem root = client.mapper().readValue(syncResponse.getContent(), FolderItem.class);
 				now = System.currentTimeMillis();
 				sum += (now - before);
 				System.out.println("Legacy takes " + (now - before));
@@ -486,15 +486,15 @@ public class ClientTest extends TestCase {
 	public void testBOJLegacy() throws JsonProcessingException {
 		getClient();
 
-		HttpsResponse httpsResponse = client.requestTool()
+		SyncResponse syncResponse = client.requestTool()
 				.newRequest("/drive/items/D4FD82CA6DF96A47!14841?expand=children")
 				.doGet();
-		Map<String, List<String>> header = httpsResponse.getHeader();
+		Map<String, List<String>> header = syncResponse.getHeader();
 		for (val entry : header.entrySet()) {
 			System.out.println(entry.getKey() + " : " + entry.getValue());
 		}
 
-		System.out.println(httpsResponse.getContentString());
+		System.out.println(syncResponse.getContentString());
 	}
 
 	public void testChunk() throws URISyntaxException, InterruptedException, ErrorResponseException {
@@ -504,9 +504,9 @@ public class ClientTest extends TestCase {
 		System.out.println("send begin");
 
 		final FolderItem[] items = new FolderItem[1];
-		HttpsClientHandler clientHandler =
+		AsyncRequestHandler clientHandler =
 				client.requestTool().doAsync(HttpMethod.GET, "/drive/items/D4FD82CA6DF96A47!14841?expand=children",
-						new AsyncHttpsResponseHandler() {
+						new AsyncResponseHandler() {
 							@Override
 							public void handle(DirectByteInputStream resultStream, HttpResponse response)
 									throws ErrorResponseException {
@@ -576,10 +576,25 @@ public class ClientTest extends TestCase {
 	public void testPointer2URI() {
 		getClient();
 
-		HttpsRequest httpsRequest = client.requestTool().newRequest("/drive/root:/문서");
-		HttpsResponse httpsResponse = httpsRequest.doGet();
-		System.out.println(httpsResponse.getCode());
-		System.out.println(httpsResponse.getMessage());
-		System.out.println(httpsResponse.getContentString());
+		SyncRequest syncRequest = client.requestTool().newRequest("/drive/root:/문서");
+		SyncResponse syncResponse = syncRequest.doGet();
+		System.out.println(syncResponse.getCode());
+		System.out.println(syncResponse.getMessage());
+		System.out.println(syncResponse.getContentString());
+	}
+
+	// simple upload (< 100MB)
+	public void testUpload() {
+		getClient();
+
+		String newName = "newFile.txt";
+		byte[] content = "testtest".getBytes();
+
+		SyncResponse response = client.requestTool().newRequest(
+				"/drive/items/D4FD82CA6DF96A47!107:/" + newName + ":/content").doPut(content);
+
+		System.out.println(response.getCode());
+		System.out.println(response.getMessage());
+		System.out.println(response.getContentString());
 	}
 }

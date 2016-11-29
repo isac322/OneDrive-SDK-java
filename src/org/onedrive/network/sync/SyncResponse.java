@@ -13,7 +13,7 @@ import java.util.Map;
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
-public class HttpsResponse {
+public class SyncResponse {
 	@Getter protected final URL url;
 	@Getter protected final int code;
 	@Getter protected final String message;
@@ -22,8 +22,8 @@ public class HttpsResponse {
 	@Getter protected final int length;
 	protected String contentString;
 
-	public HttpsResponse(URL url, int code, String message,
-						 Map<String, List<String>> header, byte[] content, int length) {
+	public SyncResponse(URL url, int code, String message,
+						Map<String, List<String>> header, byte[] content, int length) {
 		this.url = url;
 		this.code = code;
 		this.message = message;

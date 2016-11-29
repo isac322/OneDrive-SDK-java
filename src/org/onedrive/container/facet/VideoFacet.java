@@ -3,7 +3,7 @@ package org.onedrive.container.facet;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
-import org.onedrive.network.sync.HttpsRequest;
+import org.onedrive.network.sync.SyncRequest;
 
 /**
  * <a href="https://dev.onedrive.com/facets/video_facet.htm">https://dev.onedrive.com/facets/video_facet.htm</a>
@@ -21,10 +21,7 @@ public class VideoFacet {
 	protected VideoFacet(@JsonProperty("bitrate") Long bitrate,
 						 @JsonProperty("duration") Long duration,
 						 @JsonProperty("height") Long height,
-						 @JsonProperty("width") Long width) throws IllegalArgumentException {
-		if (bitrate == null || duration == null || height == null || width == null) {
-			throw new IllegalArgumentException(HttpsRequest.NETWORK_ERR_MSG);
-		}
+						 @JsonProperty("width") Long width) {
 		this.bitrate = bitrate;
 		this.duration = duration;
 		this.height = height;

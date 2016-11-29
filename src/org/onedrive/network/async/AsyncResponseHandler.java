@@ -9,6 +9,6 @@ import org.onedrive.network.DirectByteInputStream;
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
-public interface AsyncHttpsResponseHandler {
+public interface AsyncResponseHandler {
 	void handle(DirectByteInputStream resultStream, HttpResponse response) throws ErrorResponseException;
 }

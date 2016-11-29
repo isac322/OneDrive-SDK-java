@@ -22,20 +22,20 @@ import org.onedrive.utils.OneDriveRequest;
 import javax.net.ssl.SSLException;
 import java.net.URI;
 
-public final class HttpsClient {
+public final class AsyncRequest {
 	@NotNull protected final EventLoopGroup group;
 	@NotNull @Getter protected final URI uri;
 	@NotNull @Getter protected final HttpMethod method;
 	@NotNull protected final DefaultFullHttpRequest request;
-	@Nullable @Getter @Setter protected AsyncHttpsResponseHandler onComplete;
+	@Nullable @Getter @Setter protected AsyncResponseHandler onComplete;
 
 
-	public HttpsClient(@NotNull EventLoopGroup group, @NotNull URI uri, @NotNull HttpMethod method) {
+	public AsyncRequest(@NotNull EventLoopGroup group, @NotNull URI uri, @NotNull HttpMethod method) {
 		this(group, uri, method, null);
 	}
 
-	public HttpsClient(@NotNull EventLoopGroup group, @NotNull URI uri,
-					   @NotNull HttpMethod method, @Nullable AsyncHttpsResponseHandler onComplete) {
+	public AsyncRequest(@NotNull EventLoopGroup group, @NotNull URI uri,
+						@NotNull HttpMethod method, @Nullable AsyncResponseHandler onComplete) {
 		this.group = group;
 		this.uri = uri;
 		if (!OneDriveRequest.SCHEME.equalsIgnoreCase(uri.getScheme())) {
@@ -64,7 +64,7 @@ public final class HttpsClient {
 	}
 
 	@NotNull
-	public HttpsClientHandler send() {
+	public AsyncRequestHandler send() {
 		String host = uri.getHost();
 		int port = 443;
 
@@ -78,13 +78,13 @@ public final class HttpsClient {
 			throw new InternalException("Internal SSL error while constructing. contact author.", e);
 		}
 
-		final HttpsClientHandler httpsHandler = new HttpsClientHandler(onComplete);
+		final AsyncRequestHandler httpsHandler = new AsyncRequestHandler(onComplete);
 
 		// Configure the client.
 		Bootstrap b = new Bootstrap()
 				.group(group)
 				.channel(NioSocketChannel.class)
-				.handler(new HttpsClientInitializer(sslCtx, httpsHandler));
+				.handler(new AsyncRequestInitializer(sslCtx, httpsHandler));
 
 
 		final ChannelFuture channelFuture = b.connect(host, port);
@@ -106,7 +106,7 @@ public final class HttpsClient {
 	}
 
 	@NotNull
-	public HttpsClientHandler send(final byte[] content) {
+	public AsyncRequestHandler send(final byte[] content) {
 		String host = uri.getHost();
 		int port = 443;
 
@@ -120,13 +120,13 @@ public final class HttpsClient {
 			throw new InternalException("Internal SSL error while constructing. contact author.", e);
 		}
 
-		final HttpsClientHandler httpsHandler = new HttpsClientHandler(onComplete);
+		final AsyncRequestHandler httpsHandler = new AsyncRequestHandler(onComplete);
 
 		// Configure the client.
 		Bootstrap b = new Bootstrap()
 				.group(group)
 				.channel(NioSocketChannel.class)
-				.handler(new HttpUploadClientInitializer(sslCtx, httpsHandler));
+				.handler(new AsyncRequestInitializer(sslCtx, httpsHandler));
 
 
 		final ChannelFuture channelFuture = b.connect(host, port);

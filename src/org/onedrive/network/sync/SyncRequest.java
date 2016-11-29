@@ -21,12 +21,12 @@ import java.util.Map;
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
-public class HttpsRequest {
+public class SyncRequest {
 	public static final String NETWORK_ERR_MSG = "Network connection error. Please retry later or contact API author.";
 	private final HttpsURLConnection httpConnection;
 
 	@SneakyThrows(MalformedURLException.class)
-	public HttpsRequest(@NotNull String url) {
+	public SyncRequest(@NotNull String url) {
 		URL url1 = new URL(url);
 		try {
 			httpConnection = (HttpsURLConnection) url1.openConnection();
@@ -38,7 +38,7 @@ public class HttpsRequest {
 		}
 	}
 
-	public HttpsRequest(@NotNull URL url) {
+	public SyncRequest(@NotNull URL url) {
 		try {
 			httpConnection = (HttpsURLConnection) url.openConnection();
 		}
@@ -61,13 +61,13 @@ public class HttpsRequest {
 	}
 
 	@NotNull
-	public HttpsResponse doPost(String content) {
+	public SyncResponse doPost(String content) {
 		byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
 		return doPost(bytes);
 	}
 
 	@NotNull
-	public HttpsResponse doPost(byte[] content) {
+	public SyncResponse doPost(byte[] content) {
 		try {
 			httpConnection.setRequestMethod("POST");
 			return sendContent(content);
@@ -78,13 +78,13 @@ public class HttpsRequest {
 	}
 
 	@NotNull
-	public HttpsResponse doPut(String content) {
+	public SyncResponse doPut(String content) {
 		byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
 		return doPost(bytes);
 	}
 
 	@NotNull
-	public HttpsResponse doPut(byte[] content) {
+	public SyncResponse doPut(byte[] content) {
 		try {
 			httpConnection.setRequestMethod("PUT");
 			return sendContent(content);
@@ -94,7 +94,7 @@ public class HttpsRequest {
 		}
 	}
 
-	public HttpsResponse sendContent(byte[] content) {
+	public SyncResponse sendContent(byte[] content) {
 		try {
 			httpConnection.setDoOutput(true);
 
@@ -114,7 +114,7 @@ public class HttpsRequest {
 	}
 
 	@NotNull
-	public HttpsResponse doDelete() {
+	public SyncResponse doDelete() {
 		try {
 			httpConnection.setRequestMethod("DELETE");
 			return makeResponse();
@@ -125,7 +125,7 @@ public class HttpsRequest {
 	}
 
 	@NotNull
-	public HttpsResponse doGet() {
+	public SyncResponse doGet() {
 		try {
 			httpConnection.setRequestMethod("GET");
 			return makeResponse();
@@ -140,7 +140,7 @@ public class HttpsRequest {
 	 * @throws RuntimeException fail to network connection or fail to read response.
 	 */
 	@NotNull
-	protected HttpsResponse makeResponse() {
+	protected SyncResponse makeResponse() {
 		try {
 			int code = httpConnection.getResponseCode();
 			String message = httpConnection.getResponseMessage();
@@ -162,7 +162,7 @@ public class HttpsRequest {
 				byteStream.writeBytes(buffer, 0, readBytes);
 			}
 			body.close();
-			return new HttpsResponse(url, code, message, header, byteStream.array(), byteStream.writerIndex());
+			return new SyncResponse(url, code, message, header, byteStream.array(), byteStream.writerIndex());
 
 			// which one is better?
 			/*
@@ -181,7 +181,7 @@ public class HttpsRequest {
 
 			byteStream.close();
 			body.close();
-			return new HttpsResponse(url, code, message, header, byteStream.toByteArray());
+			return new SyncResponse(url, code, message, header, byteStream.toByteArray());
 			*/
 		}
 		catch (IOException e) {

@@ -22,9 +22,9 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.async.AsyncHttpsResponseHandler;
+import org.onedrive.network.async.AsyncResponseHandler;
 import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.async.HttpsClientHandler;
+import org.onedrive.network.async.AsyncRequestHandler;
 
 import java.io.IOException;
 import java.net.URI;
@@ -142,11 +142,11 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 										@NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
 		final ObjectNode jsonObject[] = new ObjectNode[1];
 		while (nextLink != null) {
-			HttpsClientHandler httpsHandler =
+			AsyncRequestHandler httpsHandler =
 					client.requestTool().doAsync(
 							HttpMethod.GET,
 							new URI(nextLink),
-							new AsyncHttpsResponseHandler() {
+							new AsyncResponseHandler() {
 								@Override
 								public void handle(DirectByteInputStream resultStream, HttpResponse response) {
 									try {

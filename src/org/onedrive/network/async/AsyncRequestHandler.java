@@ -19,8 +19,8 @@ import org.onedrive.network.DirectByteInputStream;
 
 import java.util.concurrent.CountDownLatch;
 
-public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> {
-	@Nullable protected final AsyncHttpsResponseHandler onComplete;
+public class AsyncRequestHandler extends SimpleChannelInboundHandler<HttpObject> {
+	@Nullable protected final AsyncResponseHandler onComplete;
 	protected final CountDownLatch responseLatch;
 	protected final CountDownLatch channelLatch;
 	protected ChannelHandlerContext channelContext;
@@ -28,7 +28,7 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 	@NotNull @Getter DirectByteInputStream resultStream;
 
 
-	public HttpsClientHandler(@Nullable AsyncHttpsResponseHandler onComplete) {
+	public AsyncRequestHandler(@Nullable AsyncResponseHandler onComplete) {
 		this.onComplete = onComplete;
 		responseLatch = new CountDownLatch(1);
 		channelLatch = new CountDownLatch(1);
@@ -94,7 +94,7 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 					}
 					catch (ErrorResponseException e) {
 						e.printStackTrace();
-						throw new InternalException("Error occur while handling onComplete in HttpsClientHandler", e);
+						throw new InternalException("Error occur while handling onComplete in AsyncRequestHandler", e);
 					}
 				}
 
@@ -110,7 +110,7 @@ public class HttpsClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 	}
 
 
-	public void addCloseListener(@NotNull final AsyncHttpsResponseHandler beforeCloseHandler) {
+	public void addCloseListener(@NotNull final AsyncResponseHandler beforeCloseHandler) {
 		getBlockingCloseFuture().addListener(
 				new ChannelFutureListener() {
 					@Override

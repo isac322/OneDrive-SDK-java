@@ -28,11 +28,11 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.async.AsyncHttpsResponseHandler;
 import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.async.HttpsClientHandler;
-import org.onedrive.network.sync.HttpsRequest;
-import org.onedrive.network.sync.HttpsResponse;
+import org.onedrive.network.async.AsyncResponseHandler;
+import org.onedrive.network.async.AsyncRequestHandler;
+import org.onedrive.network.sync.SyncRequest;
+import org.onedrive.network.sync.SyncResponse;
 import org.onedrive.utils.AuthServer;
 import org.onedrive.utils.OneDriveRequest;
 
@@ -182,7 +182,7 @@ public class Client {
 	 *                                       SDK.
 	 * @throws RuntimeException              if login is unsuccessful.
 	 */
-	private void login() {
+	public void login() {
 		if (!isLogin()) {
 			authCode = getCode();
 			redeemToken();
@@ -251,7 +251,7 @@ public class Client {
 		catch (InterruptedException e) {
 			e.printStackTrace();
 			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG + " Lock Error In " + this.getClass().getName());
+			throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Lock Error In " + this.getClass().getName());
 		}
 
 		String code = server.close();
@@ -259,7 +259,7 @@ public class Client {
 
 		if (code == null) {
 			// TODO: custom exception
-			throw new RuntimeException(HttpsRequest.NETWORK_ERR_MSG);
+			throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG);
 		}
 
 		return code;
@@ -315,7 +315,7 @@ public class Client {
 	 */
 	@NotNull
 	private String getToken(String httpBody) {
-		HttpsResponse response = new HttpsRequest("https://login.live.com/oauth20_token.srf").doPost(httpBody);
+		SyncResponse response = new SyncRequest("https://login.live.com/oauth20_token.srf").doPost(httpBody);
 
 		JsonNode json;
 		try {
@@ -397,7 +397,7 @@ public class Client {
 		String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
 				clientId, redirectURL);
 
-		HttpsResponse response = new HttpsRequest(url).doGet();
+		SyncResponse response = new SyncRequest(url).doGet();
 
 		if (response.getCode() != HttpsURLConnection.HTTP_MOVED_TEMP) {
 			String[] split = response.getUrl().getRef().split("&");
@@ -432,7 +432,7 @@ public class Client {
 	public Drive getDefaultDrive() throws ErrorResponseException {
 		checkExpired();
 
-		HttpsResponse response = requestTool.newRequest("/drive").doGet();
+		SyncResponse response = requestTool.newRequest("/drive").doGet();
 		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, Drive.class);
 	}
 
@@ -461,7 +461,7 @@ public class Client {
 	public FolderItem getRootDir() throws ErrorResponseException {
 		checkExpired();
 
-		HttpsResponse response = requestTool.newRequest("/drive/root:/?expand=children").doGet();
+		SyncResponse response = requestTool.newRequest("/drive/root:/?expand=children").doGet();
 		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, FolderItem.class);
 	}
 
@@ -483,7 +483,7 @@ public class Client {
 	public FolderItem getFolder(@NotNull String id, boolean childrenFetching) throws ErrorResponseException {
 		checkExpired();
 
-		HttpsResponse response;
+		SyncResponse response;
 
 		if (childrenFetching)
 			response = requestTool.newRequest(ITEM_ID_PREFIX + id + "?expand=children").doGet();
@@ -504,7 +504,7 @@ public class Client {
 	public FolderItem getFolder(@NotNull BasePointer pointer, boolean childrenFetching) throws ErrorResponseException {
 		checkExpired();
 
-		HttpsResponse response;
+		SyncResponse response;
 
 		if (childrenFetching)
 			response = requestTool.newRequest(pointer.toASCIIApi() + "?expand=children").doGet();
@@ -570,7 +570,7 @@ public class Client {
 	public BaseItem getItem(@NotNull String id) throws ErrorResponseException {
 		checkExpired();
 
-		HttpsResponse response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
+		SyncResponse response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
 		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, BaseItem.class);
 	}
 
@@ -578,7 +578,7 @@ public class Client {
 	public BaseItem getItem(@NotNull BasePointer pointer) throws ErrorResponseException {
 		checkExpired();
 
-		HttpsResponse response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
+		SyncResponse response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
 		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, BaseItem.class);
 	}
 
@@ -590,7 +590,7 @@ public class Client {
 
 		int size = values.size();
 		final BaseItem[] items = new BaseItem[size];
-		HttpsClientHandler[] handlers = new HttpsClientHandler[size];
+		AsyncRequestHandler[] handlers = new AsyncRequestHandler[size];
 
 		for (int i = 0; i < size; i++) {
 			JsonNode id = values.get(i).get("id");
@@ -606,7 +606,7 @@ public class Client {
 			handlers[i] = requestTool.doAsync(
 					HttpMethod.GET,
 					ITEM_ID_PREFIX + id.asText() + "?expand=children",
-					new AsyncHttpsResponseHandler() {
+					new AsyncResponseHandler() {
 						@Override
 						public void handle(DirectByteInputStream resultStream, HttpResponse response)
 								throws ErrorResponseException {
@@ -616,7 +616,7 @@ public class Client {
 					});
 		}
 
-		for (HttpsClientHandler handler : handlers) {
+		for (AsyncRequestHandler handler : handlers) {
 			try {
 				handler.getBlockingCloseFuture().sync();
 			}
@@ -724,7 +724,7 @@ public class Client {
 	private String copyItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		checkExpired();
 
-		HttpsResponse response = requestTool.postMetadata(api, content);
+		SyncResponse response = requestTool.postMetadata(api, content);
 
 		// if not 202 Accepted raise ErrorResponseException
 		requestTool.errorHandling(response, HttpURLConnection.HTTP_ACCEPTED);
@@ -771,7 +771,7 @@ public class Client {
 	private BaseItem moveItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		checkExpired();
 
-		HttpsClientHandler responseHandler = requestTool.patchMetadata(api, content);
+		AsyncRequestHandler responseHandler = requestTool.patchMetadata(api, content);
 
 		HttpResponse response = responseHandler.getBlockingResponse();
 		DirectByteInputStream result = responseHandler.getResultStream();
@@ -829,7 +829,7 @@ public class Client {
 	private FolderItem createFolder(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		checkExpired();
 
-		HttpsResponse response = requestTool.postMetadata(api, content);
+		SyncResponse response = requestTool.postMetadata(api, content);
 
 		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_CREATED, FolderItem.class);
 	}
@@ -886,7 +886,7 @@ public class Client {
 
 		Files.createDirectories(parentBackup);
 
-		HttpsResponse response = requestTool.newRequest(api).doGet();
+		SyncResponse response = requestTool.newRequest(api).doGet();
 
 		requestTool.errorHandling(response, HttpURLConnection.HTTP_OK);
 
@@ -913,14 +913,14 @@ public class Client {
 
 
 	public void deleteItem(@NotNull String id) throws ErrorResponseException {
-		HttpsResponse response = requestTool.newRequest(Client.ITEM_ID_PREFIX + id).doDelete();
+		SyncResponse response = requestTool.newRequest(Client.ITEM_ID_PREFIX + id).doDelete();
 
 		// if response isn't 204 No Content
 		requestTool.errorHandling(response, HttpURLConnection.HTTP_NO_CONTENT);
 	}
 
 	public void deleteItem(@NotNull BasePointer id) throws ErrorResponseException {
-		HttpsResponse response = requestTool.newRequest(id.toASCIIApi()).doDelete();
+		SyncResponse response = requestTool.newRequest(id.toASCIIApi()).doDelete();
 
 		// if response isn't 204 No Content
 		requestTool.errorHandling(response, HttpURLConnection.HTTP_NO_CONTENT);
@@ -947,39 +947,39 @@ public class Client {
 		return authCode != null && accessToken != null && userId != null && refreshToken != null;
 	}
 
-	@SuppressWarnings("ConstantConditions")
-	@NotNull public String getTokenType() {
+	public @NotNull String getTokenType() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return tokenType;
 	}
 
-	@SuppressWarnings("ConstantConditions")
-	@NotNull public String getAccessToken() {
+	public @NotNull String getAccessToken() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return accessToken;
 	}
 
-	@SuppressWarnings("ConstantConditions")
-	@NotNull public String getUserId() {
+	public @NotNull String getUserId() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return userId;
 	}
 
-	@SuppressWarnings("ConstantConditions")
-	@NotNull public String getRefreshToken() {
+	public @NotNull String getRefreshToken() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return refreshToken;
 	}
 
-	@SuppressWarnings("ConstantConditions")
-	@NotNull public String getAuthCode() {
+	public @NotNull String getAuthCode() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return authCode;
 	}
 
-	@SuppressWarnings("ConstantConditions")
-	@NotNull public String getFullToken() {
+	public @NotNull String getFullToken() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return fullToken;
 	}
 
