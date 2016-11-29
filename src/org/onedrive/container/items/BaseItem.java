@@ -23,6 +23,7 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.async.AsyncResponseFuture;
+import org.onedrive.network.async.AsyncResponseHandler;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.utils.DirectByteInputStream;
 
@@ -163,16 +164,20 @@ abstract public class BaseItem {
 	}
 
 	private void update(byte[] content) throws ErrorResponseException {
+		final BaseItem[] newItem = new BaseItem[1];
 		AsyncResponseFuture responseFuture =
-				client.requestTool().patchMetadata(Client.ITEM_ID_PREFIX + id, content);
+				client.requestTool().patchMetadataAsync(Client.ITEM_ID_PREFIX + id, content,
+						new AsyncResponseHandler() {
+							@Override
+							public void handle(DirectByteInputStream result, HttpResponse response)
+									throws ErrorResponseException {
+								newItem[0] = client.requestTool()
+										.parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);
+							}
+						});
 
-		HttpResponse response = responseFuture.blockingResponse();
-		DirectByteInputStream result = responseFuture.resultStream();
-
-		BaseItem newItem =
-				client.requestTool().parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);
-
-		this.refreshBy(newItem);
+		responseFuture.syncUninterruptibly();
+		this.refreshBy(newItem[0]);
 	}
 
 

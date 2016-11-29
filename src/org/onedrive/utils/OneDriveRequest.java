@@ -251,13 +251,6 @@ public class OneDriveRequest {
 		return request.doPost(content);
 	}
 
-	public AsyncResponseFuture patchMetadata(@NotNull String api, byte[] content) {
-		AsyncResponseFuture responseFuture = patchMetadataAsync(api, content, null);
-		responseFuture.syncUninterruptibly();
-
-		return responseFuture;
-	}
-
 	public AsyncResponseFuture patchMetadataAsync(@NotNull String api, byte[] content) {
 		return patchMetadataAsync(api, content, null);
 	}

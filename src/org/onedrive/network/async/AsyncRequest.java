@@ -123,10 +123,10 @@ public final class AsyncRequest {
 			throw new InternalException("Internal SSL error while constructing. contact author.", e);
 		}
 
-		DirectByteInputStream resultStream = new DirectByteInputStream();
-		HttpResponse[] responses = new HttpResponse[1];
-		CountDownLatch responseLatch = new CountDownLatch(1);
-		final AsyncRequestHandler httpsHandler = new AsyncRequestHandler(resultStream, responses, responseLatch);
+		final DirectByteInputStream resultStream = new DirectByteInputStream();
+		final HttpResponse[] responses = new HttpResponse[1];
+		final CountDownLatch responseLatch = new CountDownLatch(1);
+		AsyncRequestHandler httpsHandler = new AsyncRequestHandler(resultStream, responses, responseLatch);
 
 		// Configure the client.
 		Bootstrap b = new Bootstrap()

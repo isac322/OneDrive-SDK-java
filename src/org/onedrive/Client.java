@@ -764,12 +764,21 @@ public class Client {
 	private BaseItem moveItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		checkExpired();
 
-		AsyncResponseFuture responseFuture = requestTool.patchMetadata(api, content);
+		final BaseItem[] newItem = new BaseItem[1];
+		AsyncResponseFuture responseFuture =
+				requestTool.patchMetadataAsync(api, content,
+						new AsyncResponseHandler() {
+							@Override
+							public void handle(DirectByteInputStream result, HttpResponse response)
+									throws ErrorResponseException {
+								newItem[0] = requestTool
+										.parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);
+							}
+						});
 
-		HttpResponse response = responseFuture.blockingResponse();
-		DirectByteInputStream result = responseFuture.resultStream();
+		responseFuture.syncUninterruptibly();
 
-		return requestTool.parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);
+		return newItem[0];
 	}
 
 
