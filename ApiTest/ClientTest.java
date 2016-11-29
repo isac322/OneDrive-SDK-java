@@ -15,11 +15,12 @@ import org.onedrive.container.facet.AudioFacet;
 import org.onedrive.container.items.*;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
-import org.onedrive.network.DirectByteInputStream;
+import org.onedrive.network.async.AsyncRequest;
+import org.onedrive.network.async.AsyncResponseFuture;
 import org.onedrive.network.async.AsyncResponseHandler;
-import org.onedrive.network.async.AsyncRequestHandler;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
+import org.onedrive.utils.DirectByteInputStream;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -36,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ClientTest extends TestCase {
 	private static Client client;
-	ObjectMapper mapper = new ObjectMapper();
+	private ObjectMapper mapper = new ObjectMapper();
 
 	private static Client getClient() {
 		if (client == null) {
@@ -438,13 +439,13 @@ public class ClientTest extends TestCase {
 
 		for (int i = 0; i < 50; i++) {
 			final long before = System.currentTimeMillis();
-			AsyncRequestHandler asyncRequestHandler =
+			AsyncResponseFuture responseFuture =
 					client.requestTool().doAsync(HttpMethod.GET, "/drive/root:?expand=children");
-			asyncRequestHandler.addCloseListener(new AsyncResponseHandler() {
+			responseFuture.addCompleteHandler(new AsyncResponseHandler() {
 				@Override
-				public void handle(DirectByteInputStream resultStream, @NotNull HttpResponse response) {
+				public void handle(DirectByteInputStream result, @NotNull HttpResponse response) {
 					try {
-						FolderItem root = client.mapper().readValue(resultStream, FolderItem.class);
+						FolderItem root = client.mapper().readValue(result, FolderItem.class);
 					}
 					catch (IOException e) {
 						e.printStackTrace();
@@ -453,7 +454,7 @@ public class ClientTest extends TestCase {
 				}
 			});
 
-			futures.add(asyncRequestHandler.getBlockingCloseFuture());
+			futures.add(responseFuture.channel().closeFuture());
 		}
 		for (ChannelFuture future : futures) {
 			future.sync();
@@ -504,20 +505,20 @@ public class ClientTest extends TestCase {
 		System.out.println("send begin");
 
 		final FolderItem[] items = new FolderItem[1];
-		AsyncRequestHandler clientHandler =
+		AsyncResponseFuture responseFuture =
 				client.requestTool().doAsync(HttpMethod.GET, "/drive/items/D4FD82CA6DF96A47!14841?expand=children",
 						new AsyncResponseHandler() {
 							@Override
-							public void handle(DirectByteInputStream resultStream, HttpResponse response)
+							public void handle(DirectByteInputStream result, HttpResponse response)
 									throws ErrorResponseException {
-								items[0] = client.requestTool().parseAndHandle(response, resultStream,
+								items[0] = client.requestTool().parseAndHandle(response, result,
 										HttpURLConnection.HTTP_OK, FolderItem.class);
 							}
 						});
 
 		System.out.println("send done. " + (System.currentTimeMillis() - before));
 
-		clientHandler.getBlockingCloseFuture().sync();
+		responseFuture.syncUninterruptibly();
 
 		System.out.println(items[0].isRoot());
 		System.out.println(items[0].getId());
@@ -584,7 +585,7 @@ public class ClientTest extends TestCase {
 	}
 
 	// simple upload (< 100MB)
-	public void testUpload() {
+	public void testSimpleUpload() {
 		getClient();
 
 		String newName = "newFile.txt";
@@ -596,5 +597,34 @@ public class ClientTest extends TestCase {
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
+	}
+
+	public void testUpload() throws InterruptedException {
+		getClient();
+
+		AsyncRequest asyncRequest = client.requestTool().newAsyncRequest(
+				HttpMethod.GET,
+				"/drive/root",
+				new AsyncResponseHandler() {
+					@Override
+					public void handle(DirectByteInputStream result, HttpResponse response)
+							throws ErrorResponseException {
+						try {
+							TimeUnit.SECONDS.sleep(1);
+						}
+						catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						System.out.println("DONE IN");
+					}
+				});
+
+		AsyncResponseFuture future = asyncRequest.send();
+		while (!future.channel().closeFuture().isDone()) {
+			System.out.println("...");
+			TimeUnit.MILLISECONDS.sleep(100);
+		}
+		System.out.println("DONE OUT");
+		TimeUnit.SECONDS.sleep(3);
 	}
 }

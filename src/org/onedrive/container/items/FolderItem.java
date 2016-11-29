@@ -22,9 +22,9 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
+import org.onedrive.network.async.AsyncResponseFuture;
 import org.onedrive.network.async.AsyncResponseHandler;
-import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.async.AsyncRequestHandler;
+import org.onedrive.utils.DirectByteInputStream;
 
 import java.io.IOException;
 import java.net.URI;
@@ -142,19 +142,19 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 										@NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
 		final ObjectNode jsonObject[] = new ObjectNode[1];
 		while (nextLink != null) {
-			AsyncRequestHandler httpsHandler =
+			AsyncResponseFuture responseFuture =
 					client.requestTool().doAsync(
 							HttpMethod.GET,
 							new URI(nextLink),
 							new AsyncResponseHandler() {
 								@Override
-								public void handle(DirectByteInputStream resultStream, HttpResponse response) {
+								public void handle(DirectByteInputStream result, HttpResponse response) {
 									try {
-										jsonObject[0] = (ObjectNode) client.mapper().readTree(resultStream);
+										jsonObject[0] = (ObjectNode) client.mapper().readTree(result);
 									}
 									catch (JsonProcessingException e) {
 										throw new InvalidJsonException(
-												e, response.status().code(), resultStream.getRawBuffer()
+												e, response.status().code(), result.getRawBuffer()
 										);
 									}
 									catch (IOException e) {
@@ -166,13 +166,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 							});
 
 			addChildren(client, array, all, folder, file);
-			try {
-				httpsHandler.getBlockingCloseFuture().sync();
-			}
-			catch (InterruptedException e) {
-				e.printStackTrace();
-				// TODO: custom exception
-			}
+			responseFuture.syncUninterruptibly();
 
 			if (jsonObject[0].has("@odata.nextLink"))
 				nextLink = jsonObject[0].get("@odata.nextLink").asText();

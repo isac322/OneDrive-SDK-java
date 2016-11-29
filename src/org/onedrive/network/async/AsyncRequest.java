@@ -17,10 +17,12 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.exceptions.InternalException;
+import org.onedrive.utils.DirectByteInputStream;
 import org.onedrive.utils.OneDriveRequest;
 
 import javax.net.ssl.SSLException;
 import java.net.URI;
+import java.util.concurrent.CountDownLatch;
 
 public final class AsyncRequest {
 	@NotNull protected final EventLoopGroup group;
@@ -63,8 +65,7 @@ public final class AsyncRequest {
 		request.headers().set(header, value);
 	}
 
-	@NotNull
-	public AsyncRequestHandler send() {
+	public AsyncResponseFuture send() {
 		String host = uri.getHost();
 		int port = 443;
 
@@ -78,7 +79,10 @@ public final class AsyncRequest {
 			throw new InternalException("Internal SSL error while constructing. contact author.", e);
 		}
 
-		final AsyncRequestHandler httpsHandler = new AsyncRequestHandler(onComplete);
+		DirectByteInputStream resultStream = new DirectByteInputStream();
+		HttpResponse[] responses = new HttpResponse[1];
+		CountDownLatch responseLatch = new CountDownLatch(1);
+		final AsyncRequestHandler httpsHandler = new AsyncRequestHandler(resultStream, responses, responseLatch);
 
 		// Configure the client.
 		Bootstrap b = new Bootstrap()
@@ -102,11 +106,10 @@ public final class AsyncRequest {
 			}
 		});
 
-		return httpsHandler;
+		return new AsyncResponseFuture(resultStream, channelFuture.channel(), responses, responseLatch, onComplete);
 	}
 
-	@NotNull
-	public AsyncRequestHandler send(final byte[] content) {
+	public AsyncResponseFuture send(final byte[] content) {
 		String host = uri.getHost();
 		int port = 443;
 
@@ -120,7 +123,10 @@ public final class AsyncRequest {
 			throw new InternalException("Internal SSL error while constructing. contact author.", e);
 		}
 
-		final AsyncRequestHandler httpsHandler = new AsyncRequestHandler(onComplete);
+		DirectByteInputStream resultStream = new DirectByteInputStream();
+		HttpResponse[] responses = new HttpResponse[1];
+		CountDownLatch responseLatch = new CountDownLatch(1);
+		final AsyncRequestHandler httpsHandler = new AsyncRequestHandler(resultStream, responses, responseLatch);
 
 		// Configure the client.
 		Bootstrap b = new Bootstrap()
@@ -146,6 +152,6 @@ public final class AsyncRequest {
 			}
 		});
 
-		return httpsHandler;
+		return new AsyncResponseFuture(resultStream, channelFuture.channel(), responses, responseLatch, onComplete);
 	}
 }

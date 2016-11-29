@@ -16,10 +16,10 @@ import org.onedrive.Client;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.*;
-import org.onedrive.network.async.AsyncResponseHandler;
+import org.onedrive.network.ErrorResponse;
 import org.onedrive.network.async.AsyncRequest;
-import org.onedrive.network.async.AsyncRequestHandler;
+import org.onedrive.network.async.AsyncResponseFuture;
+import org.onedrive.network.async.AsyncResponseHandler;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
 
@@ -41,7 +41,7 @@ public class OneDriveRequest {
 	 * OneDrive API base URL.
 	 */
 	public static final String BASE_URL = SCHEME + "://" + HOST;
-	@Getter protected final EventLoopGroup group;
+	@Getter protected static final EventLoopGroup group = new NioEventLoopGroup();
 	private final ObjectMapper mapper;
 	@Getter private final Client client;
 
@@ -49,7 +49,6 @@ public class OneDriveRequest {
 	public OneDriveRequest(@NotNull Client client, @NotNull ObjectMapper mapper) {
 		this.client = client;
 		this.mapper = mapper;
-		group = new NioEventLoopGroup();
 	}
 
 
@@ -109,6 +108,34 @@ public class OneDriveRequest {
 	}
 
 
+	@NotNull
+	public AsyncRequest newAsyncRequest(@NotNull HttpMethod method, @NotNull String api) {
+		try {
+			AsyncRequest asyncRequest = new AsyncRequest(group, new URI(BASE_URL + api), method);
+			asyncRequest.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
+			return asyncRequest;
+		}
+		catch (URISyntaxException e) {
+			e.printStackTrace();
+			throw new IllegalArgumentException("Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".");
+		}
+	}
+
+	@NotNull
+	public AsyncRequest newAsyncRequest(@NotNull HttpMethod method, @NotNull String api,
+										@NotNull AsyncResponseHandler handler) {
+		try {
+			AsyncRequest asyncRequest = new AsyncRequest(group, new URI(BASE_URL + api), method, handler);
+			asyncRequest.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
+			return asyncRequest;
+		}
+		catch (URISyntaxException e) {
+			e.printStackTrace();
+			throw new IllegalArgumentException("Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".");
+		}
+	}
+
+
 
 
 
@@ -119,8 +146,7 @@ public class OneDriveRequest {
 	 *********************************************/
 
 
-	@NotNull
-	public AsyncRequestHandler doAsync(@NotNull HttpMethod method, @NotNull String api) {
+	public AsyncResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api) {
 		AsyncRequest asyncRequest;
 		try {
 			asyncRequest = new AsyncRequest(group, new URI(BASE_URL + api), method);
@@ -133,15 +159,13 @@ public class OneDriveRequest {
 		return asyncRequest.send();
 	}
 
-	@NotNull
-	public AsyncRequestHandler doAsync(@NotNull HttpMethod method, @NotNull URI uri) {
+	public AsyncResponseFuture doAsync(@NotNull HttpMethod method, @NotNull URI uri) {
 		AsyncRequest asyncRequest = new AsyncRequest(group, uri, method);
 		asyncRequest.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
 		return asyncRequest.send();
 	}
 
-	@NotNull
-	public AsyncRequestHandler doAsync(@NotNull HttpMethod method, @NotNull String api,
+	public AsyncResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api,
 									   @NotNull AsyncResponseHandler onComplete) {
 		AsyncRequest asyncRequest;
 		try {
@@ -155,8 +179,7 @@ public class OneDriveRequest {
 		return asyncRequest.send();
 	}
 
-	@NotNull
-	public AsyncRequestHandler doAsync(@NotNull HttpMethod method, @NotNull URI uri,
+	public AsyncResponseFuture doAsync(@NotNull HttpMethod method, @NotNull URI uri,
 									   @NotNull AsyncResponseHandler onComplete) {
 		AsyncRequest asyncRequest = new AsyncRequest(group, uri, method, onComplete);
 		asyncRequest.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
@@ -228,28 +251,18 @@ public class OneDriveRequest {
 		return request.doPost(content);
 	}
 
-	@NotNull
-	public AsyncRequestHandler patchMetadata(@NotNull String api, byte[] content) {
-		AsyncRequestHandler clientHandler = patchMetadataAsync(api, content, null);
+	public AsyncResponseFuture patchMetadata(@NotNull String api, byte[] content) {
+		AsyncResponseFuture responseFuture = patchMetadataAsync(api, content, null);
+		responseFuture.syncUninterruptibly();
 
-		try {
-			clientHandler.getBlockingCloseFuture().sync();
-		}
-		catch (InterruptedException e) {
-			e.printStackTrace();
-			throw new RuntimeException("DEV: Error while waiting patch done.");
-		}
-
-		return clientHandler;
+		return responseFuture;
 	}
 
-	@NotNull
-	public AsyncRequestHandler patchMetadataAsync(@NotNull String api, byte[] content) {
+	public AsyncResponseFuture patchMetadataAsync(@NotNull String api, byte[] content) {
 		return patchMetadataAsync(api, content, null);
 	}
 
-	@NotNull
-	public AsyncRequestHandler patchMetadataAsync(@NotNull String api, byte[] content,
+	public AsyncResponseFuture patchMetadataAsync(@NotNull String api, byte[] content,
 												  @Nullable AsyncResponseHandler handler) {
 		AsyncRequest asyncRequest;
 		try {

@@ -28,12 +28,12 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.DirectByteInputStream;
+import org.onedrive.network.async.AsyncResponseFuture;
 import org.onedrive.network.async.AsyncResponseHandler;
-import org.onedrive.network.async.AsyncRequestHandler;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
 import org.onedrive.utils.AuthServer;
+import org.onedrive.utils.DirectByteInputStream;
 import org.onedrive.utils.OneDriveRequest;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -590,7 +590,7 @@ public class Client {
 
 		int size = values.size();
 		final BaseItem[] items = new BaseItem[size];
-		AsyncRequestHandler[] handlers = new AsyncRequestHandler[size];
+		AsyncResponseFuture[] handlers = new AsyncResponseFuture[size];
 
 		for (int i = 0; i < size; i++) {
 			JsonNode id = values.get(i).get("id");
@@ -608,22 +608,15 @@ public class Client {
 					ITEM_ID_PREFIX + id.asText() + "?expand=children",
 					new AsyncResponseHandler() {
 						@Override
-						public void handle(DirectByteInputStream resultStream, HttpResponse response)
+						public void handle(DirectByteInputStream result, HttpResponse response)
 								throws ErrorResponseException {
-							items[finalI] = requestTool.parseAndHandle(response, resultStream,
+							items[finalI] = requestTool.parseAndHandle(response, result,
 									HttpURLConnection.HTTP_OK, BaseItem.class);
 						}
 					});
 		}
 
-		for (AsyncRequestHandler handler : handlers) {
-			try {
-				handler.getBlockingCloseFuture().sync();
-			}
-			catch (InterruptedException e) {
-				throw new InternalException("Interrupted error in syncing.", e);
-			}
-		}
+		for (AsyncResponseFuture handler : handlers) handler.syncUninterruptibly();
 		return items;
 	}
 
@@ -771,10 +764,10 @@ public class Client {
 	private BaseItem moveItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		checkExpired();
 
-		AsyncRequestHandler responseHandler = requestTool.patchMetadata(api, content);
+		AsyncResponseFuture responseFuture = requestTool.patchMetadata(api, content);
 
-		HttpResponse response = responseHandler.getBlockingResponse();
-		DirectByteInputStream result = responseHandler.getResultStream();
+		HttpResponse response = responseFuture.blockingResponse();
+		DirectByteInputStream result = responseFuture.resultStream();
 
 		return requestTool.parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);
 	}
@@ -900,6 +893,10 @@ public class Client {
 		fileChannel.write(contentBuf, 0);
 	}
 
+
+	public void downloadAsync(@NotNull String fileId, @NotNull Path parent) {
+
+	}
 
 
 

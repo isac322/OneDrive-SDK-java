@@ -22,9 +22,9 @@ import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.DirectByteInputStream;
-import org.onedrive.network.async.AsyncRequestHandler;
+import org.onedrive.network.async.AsyncResponseFuture;
 import org.onedrive.network.sync.SyncRequest;
+import org.onedrive.utils.DirectByteInputStream;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -163,11 +163,11 @@ abstract public class BaseItem {
 	}
 
 	private void update(byte[] content) throws ErrorResponseException {
-		AsyncRequestHandler responseHandler =
+		AsyncResponseFuture responseFuture =
 				client.requestTool().patchMetadata(Client.ITEM_ID_PREFIX + id, content);
 
-		HttpResponse response = responseHandler.getBlockingResponse();
-		DirectByteInputStream result = responseHandler.getResultStream();
+		HttpResponse response = responseFuture.blockingResponse();
+		DirectByteInputStream result = responseFuture.resultStream();
 
 		BaseItem newItem =
 				client.requestTool().parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);

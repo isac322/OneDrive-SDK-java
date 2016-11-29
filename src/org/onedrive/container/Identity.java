@@ -57,6 +57,10 @@ public class Identity {
 		return obj instanceof Identity && id.equals(((Identity) obj).getId());
 	}
 
+	@Override
+	public String toString() {
+		return displayName + ", " + id;
+	}
 
 	static class IdentityDeserializer extends JsonDeserializer<Identity> {
 		@Override
