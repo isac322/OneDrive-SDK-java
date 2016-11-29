@@ -319,7 +319,7 @@ public class OneDriveRequest {
 						error.getCode(), error.getMessage());
 			}
 			catch (JsonProcessingException e) {
-				throw new InvalidJsonException(e, response.status().code(), inputStream.getRawBuffer());
+				throw new InvalidJsonException(e, response.status().code(), inputStream.rawBuffer());
 			}
 			catch (IOException e) {
 				e.printStackTrace();
@@ -372,7 +372,7 @@ public class OneDriveRequest {
 			}
 		}
 		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.status().code(), inputStream.getRawBuffer());
+			throw new InvalidJsonException(e, response.status().code(), inputStream.rawBuffer());
 		}
 		catch (IOException e) {
 			e.printStackTrace();

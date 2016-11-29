@@ -616,7 +616,7 @@ public class Client {
 					});
 		}
 
-		for (AsyncResponseFuture handler : handlers) handler.syncUninterruptibly();
+		for (AsyncResponseFuture handler : handlers) handler.syncUntilAllDone();
 		return items;
 	}
 
@@ -776,7 +776,7 @@ public class Client {
 							}
 						});
 
-		responseFuture.syncUninterruptibly();
+		responseFuture.syncUntilAllDone();
 
 		return newItem[0];
 	}

@@ -59,7 +59,7 @@ public class AsyncRequestHandler extends SimpleChannelInboundHandler<HttpObject>
 			ByteBuf byteBuf = content.content();
 			int remaining = byteBuf.readableBytes();
 			resultStream.ensureRemain(remaining);
-			byteBuf.readBytes(resultStream.getRawBuffer(), resultStream.getIn() + 1, remaining);
+			byteBuf.readBytes(resultStream.rawBuffer(), resultStream.getIn() + 1, remaining);
 			resultStream.jumpTo(resultStream.getIn() + remaining);
 
 			if (content instanceof LastHttpContent) {

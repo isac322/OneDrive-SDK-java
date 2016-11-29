@@ -176,7 +176,7 @@ abstract public class BaseItem {
 							}
 						});
 
-		responseFuture.syncUninterruptibly();
+		responseFuture.syncUntilAllDone();
 		this.refreshBy(newItem[0]);
 	}
 

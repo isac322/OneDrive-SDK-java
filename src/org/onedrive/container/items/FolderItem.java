@@ -154,8 +154,9 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 									}
 									catch (JsonProcessingException e) {
 										throw new InvalidJsonException(
-												e, response.status().code(), result.getRawBuffer()
-										);
+												e,
+												response.status().code(),
+												result.rawBuffer());
 									}
 									catch (IOException e) {
 										e.printStackTrace();
@@ -166,7 +167,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 							});
 
 			addChildren(client, array, all, folder, file);
-			responseFuture.syncUninterruptibly();
+			responseFuture.syncUntilAllDone();
 
 			if (jsonObject[0].has("@odata.nextLink"))
 				nextLink = jsonObject[0].get("@odata.nextLink").asText();

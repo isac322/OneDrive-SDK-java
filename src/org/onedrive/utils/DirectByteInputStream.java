@@ -125,7 +125,7 @@ public class DirectByteInputStream extends InputStream {
 		ensureCapacity(in + additional + 1);
 	}
 
-	public byte[] getRawBuffer() {
+	public byte[] rawBuffer() {
 		return buffer;
 	}
 

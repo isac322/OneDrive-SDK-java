@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.utils.DirectByteInputStream;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -20,6 +21,7 @@ public class AsyncResponseFuture {
 	private final Channel channel;
 	private final HttpResponse[] responses;
 	private final CountDownLatch responseLatch;
+	private final ConcurrentHashMap<AsyncResponseHandler, CountDownLatch> allDoneMap;
 
 	AsyncResponseFuture(DirectByteInputStream result, Channel channel, HttpResponse[] response, CountDownLatch latch) {
 		this(result, channel, response, latch, null);
@@ -31,16 +33,21 @@ public class AsyncResponseFuture {
 		this.channel = channel;
 		this.responses = responses;
 		this.responseLatch = latch;
+		this.allDoneMap = new ConcurrentHashMap<>();
 
 		if (handler != null) this.addCompleteHandler(handler);
 	}
 
 
 	public void addCompleteHandler(@NotNull final AsyncResponseHandler handler) {
-		channel().closeFuture().addListener(new GenericFutureListener<Future<? super Void>>() {
+		final CountDownLatch latch = new CountDownLatch(1);
+		allDoneMap.put(handler, latch);
+
+		channel.closeFuture().addListener(new GenericFutureListener<Future<? super Void>>() {
 			@Override public void operationComplete(Future<? super Void> future) throws Exception {
 				responseLatch.await();
 				handler.handle(result, responses[0]);
+				latch.countDown();
 			}
 		});
 	}
@@ -64,7 +71,18 @@ public class AsyncResponseFuture {
 		return channel;
 	}
 
-	public ChannelFuture syncUninterruptibly() {
-		return channel.closeFuture().syncUninterruptibly();
+	public ChannelFuture syncUntilAllDone() {
+		ChannelFuture future = channel.closeFuture().syncUninterruptibly();
+
+		for (CountDownLatch latch : allDoneMap.values()) {
+			try {
+				latch.await();
+			}
+			catch (InterruptedException e) {
+				throw new InternalException("Error occur while waiting allDone-latch in AsyncResponseFuture", e);
+			}
+		}
+
+		return future;
 	}
 }
