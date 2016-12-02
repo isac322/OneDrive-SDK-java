@@ -15,7 +15,7 @@ import org.onedrive.container.facet.*;
 import org.onedrive.exceptions.ErrorResponseException;
 
 /**
- * {@// TODO: enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
@@ -54,9 +54,6 @@ public class RemoteFolderItem extends FolderItem {
 				children);
 
 		this.remoteItem = remoteItem;
-
-		if (size != null)
-			throw new IllegalArgumentException("RemoteFolderItem can't have non-null `size` argument");
 	}
 
 	@NotNull

@@ -7,11 +7,13 @@ import org.onedrive.exceptions.InternalException;
 import java.io.InputStream;
 
 /**
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class DirectByteInputStream extends InputStream {
+	@NotNull private static final IndexOutOfBoundsException INDEX_EXCEPTION =
+			new IndexOutOfBoundsException();
 	protected byte[] buffer;
 	@Getter protected int in = -1, out = 0;
 	protected int capacity;
@@ -33,9 +35,7 @@ public class DirectByteInputStream extends InputStream {
 	 */
 	@Override
 	public int read(@NotNull byte[] b, int off, int len) {
-		if (off < 0 || len < 0 || len > b.length - off) {
-			throw new IndexOutOfBoundsException();
-		}
+		if (off < 0 || len < 0 || len > b.length - off) throw INDEX_EXCEPTION;
 		else if (len == 0) return 0;
 
 		int end = off + len;
@@ -97,7 +97,6 @@ public class DirectByteInputStream extends InputStream {
 				wait(300);
 			}
 			catch (InterruptedException e) {
-				e.printStackTrace();
 				throw new InternalException("wait() is wrong.", e);
 			}
 		}

@@ -18,7 +18,7 @@ import org.onedrive.container.items.pointer.IdPointer;
  * <p>
  * Because there is only one package type item in OneDrive now, this class inherits {@link FileItem}.
  * <p>
- * {@// TODO: enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */

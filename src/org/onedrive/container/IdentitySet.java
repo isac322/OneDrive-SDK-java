@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * https://dev.onedrive.com/resources/identitySet.htm
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */

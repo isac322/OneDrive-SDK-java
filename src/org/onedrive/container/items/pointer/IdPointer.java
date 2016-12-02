@@ -3,19 +3,21 @@ package org.onedrive.container.items.pointer;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.utils.OneDriveRequest;
+import org.onedrive.utils.RequestTool;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.regex.Pattern;
 
 /**
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class IdPointer extends BasePointer {
-	private final static Pattern idPattern = Pattern.compile("[a-fA-F0-9!]+");
+	@NotNull private static final IllegalArgumentException DOESNT_MATCH =
+			new IllegalArgumentException("`id` isn't match with regex \"[a-fA-F0-9!]+\"");
+	private static final Pattern idPattern = Pattern.compile("[a-fA-F0-9!]+");
 	@Getter @Nullable private final String driveId;
 	@Getter @NotNull private final String id;
 	@NotNull private final String path;
@@ -23,7 +25,7 @@ public class IdPointer extends BasePointer {
 
 	public IdPointer(@NotNull String id) {
 		if (!idPattern.matcher(id).matches())
-			throw new IllegalArgumentException("`id` isn't match with regex \"[a-fA-F0-9!]+\"");
+			throw DOESNT_MATCH;
 
 		this.id = id;
 		this.driveId = null;
@@ -32,7 +34,7 @@ public class IdPointer extends BasePointer {
 
 	public IdPointer(@NotNull String id, @Nullable String driveId) {
 		if (!idPattern.matcher(id).matches())
-			throw new IllegalArgumentException("`id` isn't match with regex \"[a-fA-F0-9!]+\"");
+			throw DOESNT_MATCH;
 
 		this.id = id;
 		this.driveId = driveId;
@@ -54,7 +56,7 @@ public class IdPointer extends BasePointer {
 	@NotNull
 	@Override
 	public URI toURI() throws URISyntaxException {
-		return new URI(OneDriveRequest.SCHEME, OneDriveRequest.HOST, path, null);
+		return new URI(RequestTool.SCHEME, RequestTool.HOST, path, null);
 	}
 
 	@NotNull

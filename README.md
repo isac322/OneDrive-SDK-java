@@ -11,7 +11,7 @@ purse fast, easy to use, intuitive API.
 - auto login authorization check and refresh
 - fetching metadata of folder, file (by id and path)
 - folder or file's metadata (size, name, path, children list and etc.)
-- downloading file (sync)
+- downloading file (sync and async)
 - delete, copy, move, change metadata(name, description) of folder or file
 - creating folder
 - [Facets](https://dev.onedrive.com/facets/facets.htm) that OneDrive support like image, video..
@@ -23,7 +23,6 @@ purse fast, easy to use, intuitive API.
 
 ### TODO
 
-- downloading file (async: almost complete)
 - searching file or folder (by name or content)
 - creating file and upload it (async)
 - sharing folder or file
@@ -196,9 +195,7 @@ client.copyItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 ```
 
 
-### 6. Download file
-
-- For now, only supports synchronous way. (async way will be supported soon)
+### 6. Download file synchronously
 
 ```java
 import java.nio.file.Paths;
@@ -226,7 +223,36 @@ file.download(Paths.get(path), "newName");
 client.download(new PathPointer("/{item-path}"), Paths.get(path));
 ```
 
-### 7. Move folder or file
+### 7. Download file asynchronously
+
+- all async job use Future & Promise mechanism.
+- more detail of `DownloadFuture` will explain later at wiki...
+
+```java
+import java.nio.file.Paths;
+import org.onedrive.container.items.FileItem;
+import org.onedrive.network.async.DownloadFuture;
+
+// assume that Client object is already constructed
+
+FileItem file = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
+String path = "/home/isac322/download";
+
+// download by path object with original file name
+file.downloadAsync(Paths.get(path));
+
+// download by path object with new name
+file.downloadAsync(Paths.get(path), "newName");
+
+
+DownloadFuture future = client.downloadAsync("{file-id}", Paths.get(path), "newName");
+
+// wait until download is done
+future.sync();
+```
+
+
+### 8. Move folder or file
 
 - It can move via either source item's object or `Client` object.
 
@@ -256,7 +282,7 @@ item.moveTo(destination.getId());
 client.moveItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX!XXXX"));
 ```
 
-### 8. Update folder or file's metadata & Refresh
+### 9. Update folder or file's metadata & Refresh
 
 - `refresh` will update all variable with fetched latest metadata. 
 - That is, if `refresh` is invoked, all variable can be changed, even if the current program did not modify the variables.

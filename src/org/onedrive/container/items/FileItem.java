@@ -15,13 +15,14 @@ import org.onedrive.container.facet.*;
 import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
+import org.onedrive.network.async.DownloadFuture;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
@@ -86,7 +87,7 @@ public class FileItem extends BaseItem {
 	 * @see FileItem#download(Path, String)
 	 */
 	public void download(@NotNull String path) throws IOException, ErrorResponseException {
-		client.download(this.id, Paths.get(path), this.getName());
+		client.download(this.id, Paths.get(path), this.name);
 	}
 
 	/**
@@ -110,7 +111,7 @@ public class FileItem extends BaseItem {
 	 * @see FileItem#download(Path, String)
 	 */
 	public void download(@NotNull Path folderPath) throws IOException, ErrorResponseException {
-		client.download(this.id, folderPath, this.getName());
+		client.download(this.id, folderPath, this.name);
 	}
 
 	/**
@@ -135,6 +136,15 @@ public class FileItem extends BaseItem {
 	 */
 	public void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException {
 		client.download(this.id, folderPath, newName);
+	}
+
+
+	public DownloadFuture downloadAsync(@NotNull Path folderPath) throws IOException {
+		return client.downloadAsync(this.id, folderPath, this.name);
+	}
+
+	public DownloadFuture downloadAsync(@NotNull Path folderPath, String newName) throws IOException {
+		return client.downloadAsync(this.id, folderPath, newName);
 	}
 
 

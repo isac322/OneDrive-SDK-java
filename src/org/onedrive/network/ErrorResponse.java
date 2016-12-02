@@ -8,8 +8,8 @@ import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * https://dev.onedrive.com/misc/errors.htm
- * {@// TODO: Enhance javadoc}
+ * <a href="https://dev.onedrive.com/misc/errors.htm">explain of error types</a>
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */

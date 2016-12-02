@@ -3,7 +3,7 @@ package org.onedrive.exceptions;
 import lombok.Getter;
 
 /**
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  * Exception that server rejects to response.<br>
  * Mostly because of invalid request, such as requesting deleting item that already deleted.<br>
  * More details of error type can be found <a href="https://dev.onedrive.com/misc/errors.htm">here</a>.

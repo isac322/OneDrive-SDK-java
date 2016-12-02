@@ -3,7 +3,7 @@ package org.onedrive.container.items.pointer;
 import lombok.Getter;
 
 /**
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */

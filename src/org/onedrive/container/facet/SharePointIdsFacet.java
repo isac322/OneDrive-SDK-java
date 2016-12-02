@@ -7,7 +7,7 @@ import lombok.Getter;
 /**
  * <a href="https://dev.onedrive.com/facets/sharepointIds_facet.htm">https://dev.onedrive
  * .com/facets/sharepointIds_facet.htm</a>
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
@@ -23,11 +23,9 @@ public class SharePointIdsFacet {
 								 @JsonProperty("webId") String webId,
 								 @JsonProperty("listId") String listId,
 								 @JsonProperty("listItemId") Long listItemId,
-								 @JsonProperty("listItemUniqueId") String listItemUniqueId)
-			throws IllegalArgumentException {
-		if (listItemId == null) {
-			throw new IllegalArgumentException("\"listItemId\" field can not be null");
-		}
+								 @JsonProperty("listItemUniqueId") String listItemUniqueId) {
+		assert listItemId != null : "listItemId field is null in SharePointIdsFacet!!";
+
 		this.siteId = siteId;
 		this.webId = webId;
 		this.listId = listId;

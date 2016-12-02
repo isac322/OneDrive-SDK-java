@@ -31,7 +31,6 @@ public final class AuthServer {
 		try {
 			authLock.acquire();
 		} catch (InterruptedException e) {
-			e.printStackTrace();
 			throw new InternalException("Lock error in AuthServer constructor.", e);
 		}
 

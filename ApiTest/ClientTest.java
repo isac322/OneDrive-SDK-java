@@ -1,11 +1,7 @@
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponse;
 import junit.framework.TestCase;
 import lombok.val;
 import org.jetbrains.annotations.NotNull;
@@ -15,12 +11,12 @@ import org.onedrive.container.facet.AudioFacet;
 import org.onedrive.container.items.*;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
-import org.onedrive.network.async.AsyncRequest;
-import org.onedrive.network.async.AsyncResponseFuture;
-import org.onedrive.network.async.AsyncResponseHandler;
+import org.onedrive.network.async.AsyncClient;
+import org.onedrive.network.async.DownloadFuture;
+import org.onedrive.network.async.ResponseFuture;
+import org.onedrive.network.async.ResponseFutureListener;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
-import org.onedrive.utils.DirectByteInputStream;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -141,19 +137,17 @@ public class ClientTest extends TestCase {
 				.newRequest("/drives/485bef1a80539148/items/485BEF1A80539148!115?expand=children").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
-		//System.out.println(response.getContentString());
+		System.out.println(response.getContentString());
 	}
 
 	public void testGetItem() throws ErrorResponseException {
 		getClient();
 
-		for (int i = 0; i < 10; i++) {
-			// BOJ
-			FolderItem folder = client.getFolder("D4FD82CA6DF96A47!14841");
-			System.out.println(folder.getName());
-			for (BaseItem item : folder) {
-				System.out.println(item.getName());
-			}
+		// BOJ
+		FolderItem folder = client.getFolder("D4FD82CA6DF96A47!14841");
+		System.out.println(folder.getName());
+		for (BaseItem item : folder) {
+			System.out.println(item.getName());
 		}
 	}
 
@@ -434,18 +428,16 @@ public class ClientTest extends TestCase {
 
 		long allBefore = System.currentTimeMillis();
 		System.out.println("Netty");
-		EventLoopGroup group = new NioEventLoopGroup();
-		ArrayList<ChannelFuture> futures = new ArrayList<>();
+		ArrayList<ResponseFuture> futures = new ArrayList<>();
 
 		for (int i = 0; i < 50; i++) {
 			final long before = System.currentTimeMillis();
-			AsyncResponseFuture responseFuture =
+			ResponseFuture responseFuture =
 					client.requestTool().doAsync(HttpMethod.GET, "/drive/root:?expand=children");
-			responseFuture.addCompleteHandler(new AsyncResponseHandler() {
-				@Override
-				public void handle(DirectByteInputStream result, @NotNull HttpResponse response) {
+			responseFuture.addListener(new ResponseFutureListener() {
+				@Override public void operationComplete(ResponseFuture future) throws Exception {
 					try {
-						FolderItem root = client.mapper().readValue(result, FolderItem.class);
+						FolderItem root = client.mapper().readValue(future.get(), FolderItem.class);
 					}
 					catch (IOException e) {
 						e.printStackTrace();
@@ -454,9 +446,9 @@ public class ClientTest extends TestCase {
 				}
 			});
 
-			futures.add(responseFuture.channel().closeFuture());
+			futures.add(responseFuture);
 		}
-		for (ChannelFuture future : futures) {
+		for (ResponseFuture future : futures) {
 			future.sync();
 		}
 		System.out.println("total : " + (System.currentTimeMillis() - allBefore));
@@ -505,13 +497,13 @@ public class ClientTest extends TestCase {
 		System.out.println("send begin");
 
 		final FolderItem[] items = new FolderItem[1];
-		AsyncResponseFuture responseFuture =
+		ResponseFuture responseFuture =
 				client.requestTool().doAsync(HttpMethod.GET, "/drive/items/D4FD82CA6DF96A47!14841?expand=children",
-						new AsyncResponseHandler() {
-							@Override
-							public void handle(DirectByteInputStream result, HttpResponse response)
-									throws ErrorResponseException {
-								items[0] = client.requestTool().parseAndHandle(response, result,
+						new ResponseFutureListener() {
+							@Override public void operationComplete(ResponseFuture future) throws Exception {
+								items[0] = client.requestTool().parseAndHandle(
+										future.response(),
+										future.get(),
 										HttpURLConnection.HTTP_OK, FolderItem.class);
 							}
 						});
@@ -584,6 +576,17 @@ public class ClientTest extends TestCase {
 		System.out.println(syncResponse.getContentString());
 	}
 
+	public void testAsyncDown() throws ErrorResponseException, IOException, InterruptedException {
+		getClient();
+
+		FileItem mp3 = client.getFile("D4FD82CA6DF96A47!24998");
+
+		DownloadFuture downloadFuture = mp3.downloadAsync(Paths.get(".")).syncUninterruptibly();
+		System.out.println(downloadFuture.isDone());
+		System.out.println(downloadFuture.isSuccess());
+		System.out.println(downloadFuture.getNow().getName() + '\t' + downloadFuture.getNow().length());
+	}
+
 	// simple upload (< 100MB)
 	public void testSimpleUpload() {
 		getClient();
@@ -602,25 +605,22 @@ public class ClientTest extends TestCase {
 	public void testUpload() throws InterruptedException {
 		getClient();
 
-		AsyncRequest asyncRequest = client.requestTool().newAsyncRequest(
-				HttpMethod.GET,
-				"/drive/root",
-				new AsyncResponseHandler() {
-					@Override
-					public void handle(DirectByteInputStream result, HttpResponse response)
-							throws ErrorResponseException {
-						try {
-							TimeUnit.SECONDS.sleep(1);
-						}
-						catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-						System.out.println("DONE IN");
-					}
-				});
+		AsyncClient asyncClient = client.requestTool().newAsyncRequest(HttpMethod.GET, "/drive/root");
 
-		AsyncResponseFuture future = asyncRequest.send();
-		while (!future.channel().closeFuture().isDone()) {
+		ResponseFuture future = asyncClient.execute();
+		future.addListener(new ResponseFutureListener() {
+			@Override public void operationComplete(ResponseFuture future) throws Exception {
+				try {
+					TimeUnit.SECONDS.sleep(1);
+				}
+				catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				System.out.println("DONE IN");
+			}
+		});
+
+		while (!future.isDone()) {
 			System.out.println("...");
 			TimeUnit.MILLISECONDS.sleep(100);
 		}

@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.utils.OneDriveRequest;
+import org.onedrive.utils.RequestTool;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -14,7 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  * {@// TODO: this class can be static factory!. consider this later (if path is same, give caller same object to
  * save memory}
  * In OneDrive, <a href='https://dev.onedrive.com/README.htm#item-resource'>item</a> referencing can be represented by
@@ -165,7 +165,7 @@ public class PathPointer extends BasePointer {
 	@NotNull
 	@Override
 	public URI toURI() throws URISyntaxException {
-		return new URI(OneDriveRequest.SCHEME, OneDriveRequest.HOST, path, null);
+		return new URI(RequestTool.SCHEME, RequestTool.HOST, path, null);
 	}
 
 	@NotNull

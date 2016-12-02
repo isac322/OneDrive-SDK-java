@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * <a href="https://dev.onedrive.com/facets/filesysteminfo_facet.htm">https://dev.onedrive
  * .com/facets/filesysteminfo_facet.htm</a>
- * {@// TODO: enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */

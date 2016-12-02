@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponse;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -22,8 +21,8 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.async.AsyncResponseFuture;
-import org.onedrive.network.async.AsyncResponseHandler;
+import org.onedrive.network.async.ResponseFuture;
+import org.onedrive.network.async.ResponseFutureListener;
 import org.onedrive.utils.DirectByteInputStream;
 
 import java.io.IOException;
@@ -32,9 +31,10 @@ import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 
 /**
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
@@ -101,38 +101,35 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		}
 
 		if (isRoot()) {
-			assert pathPointer == null;
-			assert parentReference == null;
+			assert pathPointer == null : "`pathPointer` isn't null in FolderItem";
+			assert parentReference == null : "`parentReference` isn't null in FolderItem";
 			pathPointer = new PathPointer("/", getDriveId());
 		}
-		else if (parentReference == null)
-			throw new IllegalArgumentException(
-					"FolderItem that not root dir can't have null `parentReference` argument");
+		else {
+			assert parentReference != null : "FolderItem that not root dir can't have null `parentReference` argument";
+		}
 	}
 
 	protected static void addChildren(@NotNull Client client, @NotNull JsonNode array, @NotNull List<BaseItem> all,
 									  @NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
 		for (JsonNode child : array) {
-			if (child.isObject()) {
-				BaseItem item = client.mapper().convertValue(child, BaseItem.class);
+			if (!child.isObject())
+				// if child isn't object
+				throw new InvalidJsonException("Response isn't object in JSON. response : " + child);
 
-				if (item instanceof FolderItem) {
-					folder.add((FolderItem) item);
-				}
-				else if (item instanceof FileItem) {
-					file.add((FileItem) item);
-				}
-				else if (!(item instanceof PackageItem)) {
-					// if child is neither FolderItem nor FileItem nor PackageItem.
-					// TODO: custom exception
-					throw new UnsupportedOperationException("Children object must file or folder of package");
-				}
-				all.add(item);
+			BaseItem item = client.mapper().convertValue(child, BaseItem.class);
+
+			if (item instanceof FolderItem) {
+				folder.add((FolderItem) item);
 			}
-			// if child is neither FolderItem nor FileItem nor PackageItem.
-			else
-				// TODO: custom exception
-				throw new UnsupportedOperationException("Children object must file or folder of package");
+			else if (item instanceof FileItem) {
+				file.add((FileItem) item);
+			}
+			else {
+				// if child is neither FolderItem nor FileItem nor PackageItem.
+				assert item instanceof PackageItem : "Wrong item type";
+			}
+			all.add(item);
 		}
 	}
 
@@ -142,32 +139,41 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 										@NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
 		final ObjectNode jsonObject[] = new ObjectNode[1];
 		while (nextLink != null) {
-			AsyncResponseFuture responseFuture =
-					client.requestTool().doAsync(
-							HttpMethod.GET,
-							new URI(nextLink),
-							new AsyncResponseHandler() {
-								@Override
-								public void handle(DirectByteInputStream result, HttpResponse response) {
-									try {
-										jsonObject[0] = (ObjectNode) client.mapper().readTree(result);
-									}
-									catch (JsonProcessingException e) {
-										throw new InvalidJsonException(
-												e,
-												response.status().code(),
-												result.rawBuffer());
-									}
-									catch (IOException e) {
-										e.printStackTrace();
-										// TODO: custom exception
-										throw new RuntimeException("DEV: Unrecognizable error response.");
-									}
-								}
-							});
+			final CountDownLatch latch = new CountDownLatch(1);
+
+			ResponseFuture responseFuture = client.requestTool().doAsync(
+					HttpMethod.GET,
+					new URI(nextLink),
+					new ResponseFutureListener() {
+						@Override public void operationComplete(ResponseFuture future) throws Exception {
+							DirectByteInputStream result = future.get();
+
+							try {
+								jsonObject[0] = (ObjectNode) client.mapper().readTree(result);
+							}
+							catch (JsonProcessingException e) {
+								throw new InvalidJsonException(
+										e,
+										future.response().status().code(),
+										result.rawBuffer());
+							}
+							catch (IOException e) {
+								// TODO: custom exception
+								throw new RuntimeException("DEV: Unrecognizable json response.", e);
+							}
+							latch.countDown();
+						}
+					});
 
 			addChildren(client, array, all, folder, file);
-			responseFuture.syncUntilAllDone();
+
+			responseFuture.syncUninterruptibly();
+			try {
+				latch.await();
+			}
+			catch (InterruptedException e) {
+				throw new InternalException("Exception occurs while waiting lock in BaseItem#update()", e);
+			}
 
 			if (jsonObject[0].has("@odata.nextLink"))
 				nextLink = jsonObject[0].get("@odata.nextLink").asText();
@@ -242,12 +248,12 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		allChildren = null;
 
 		if (isRoot()) {
-			assert parentReference == null;
+			assert parentReference == null : "`parentReference` isn't null in FolderItem";
 			pathPointer = new PathPointer("/", getDriveId());
 		}
-		else if (parentReference == null)
-			throw new IllegalArgumentException(
-					"FolderItem that not root dir can't have null `parentReference` argument");
+		else {
+			assert parentReference != null : "FolderItem that not root dir can't have null `parentReference` argument";
+		}
 	}
 
 
@@ -321,7 +327,6 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			return new ChildrenIterator(allChildren().iterator());
 		}
 		catch (ErrorResponseException e) {
-			e.printStackTrace();
 			// TODO: custom exception
 			throw new RuntimeException(e);
 		}

@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponse;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
@@ -28,13 +27,14 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.async.AsyncResponseFuture;
-import org.onedrive.network.async.AsyncResponseHandler;
+import org.onedrive.network.async.AsyncDownloadClient;
+import org.onedrive.network.async.DownloadFuture;
+import org.onedrive.network.async.ResponseFuture;
+import org.onedrive.network.async.ResponseFutureListener;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
 import org.onedrive.utils.AuthServer;
-import org.onedrive.utils.DirectByteInputStream;
-import org.onedrive.utils.OneDriveRequest;
+import org.onedrive.utils.RequestTool;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
@@ -49,8 +49,7 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -60,9 +59,7 @@ import java.util.concurrent.Semaphore;
  */
 public class Client {
 	public static final String ITEM_ID_PREFIX = "/drive/items/";
-
-	public static final ExecutorService threadPool =
-			Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+	@NotNull private static final IllegalStateException LOGIN_FIRST = new IllegalStateException("Do login first!!");
 
 	/*
 	for resolve tricky issue of Jackson.
@@ -78,7 +75,7 @@ public class Client {
 	 * It makes possible to multi client usage
 	 */
 	private final ObjectMapper mapper;
-	@NotNull private final OneDriveRequest requestTool;
+	@NotNull private final RequestTool requestTool;
 
 	private long lastRefresh;
 	@Getter private long expirationTime;
@@ -160,7 +157,7 @@ public class Client {
 		// in serialization, ignore null values.
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
-		requestTool = new OneDriveRequest(this, mapper);
+		requestTool = new RequestTool(this, mapper);
 
 		if (autoLogin) login();
 	}
@@ -236,12 +233,10 @@ public class Client {
 			Desktop.getDesktop().browse(new URI(url));
 		}
 		catch (URISyntaxException e) {
-			e.printStackTrace();
 			throw new InternalException(
 					"Fail to create URI object. probably wrong url on SDK code, contact the author", e);
 		}
 		catch (IOException e) {
-			e.printStackTrace();
 			throw new UnsupportedOperationException("Can not find default browser for authentication.", e);
 		}
 
@@ -249,7 +244,6 @@ public class Client {
 			answerLock.acquire();
 		}
 		catch (InterruptedException e) {
-			e.printStackTrace();
 			// TODO: custom exception
 			throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Lock Error In " + this.getClass().getName());
 		}
@@ -295,7 +289,7 @@ public class Client {
 	 */
 	@NotNull
 	public String refreshToken() {
-		if (!isLogin()) throw new IllegalStateException("Do login first!!");
+		if (!isLogin()) throw LOGIN_FIRST;
 
 		return getToken(
 				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&refresh_token=%s&grant_type" +
@@ -322,11 +316,9 @@ public class Client {
 			json = mapper.readTree(response.getContent());
 		}
 		catch (JsonProcessingException e) {
-			e.printStackTrace();
 			throw new InvalidJsonException(e, response.getCode(), response.getContent());
 		}
 		catch (IOException e) {
-			e.printStackTrace();
 			throw new InternalException("Probably error while read from source in json parsing", e);
 		}
 
@@ -381,14 +373,14 @@ public class Client {
 	 * @throws InternalException     if the underlying input source has problems during parsing response body.
 	 */
 	private void checkExpired() {
-		if (!isLogin()) throw new IllegalStateException("Do login first!!");
+		if (!isLogin()) throw LOGIN_FIRST;
 
 		if (isExpired()) refreshToken();
 	}
 
 
 	/**
-	 * {@// TODO: enhance javadoc }
+	 * {@// TODO: Enhance javadoc }
 	 *
 	 * @throws ErrorResponseException if raises error while logout.
 	 */
@@ -538,8 +530,7 @@ public class Client {
 			return (FileItem) getItem(id);
 		}
 		catch (ClassCastException e) {
-			e.printStackTrace();
-			throw new IllegalArgumentException("Given `id` isn't file type id!. id : " + id);
+			throw new IllegalArgumentException("Given `id` isn't file type id!. id : " + id, e);
 		}
 	}
 
@@ -549,8 +540,7 @@ public class Client {
 			return (FileItem) getItem(pointer);
 		}
 		catch (ClassCastException e) {
-			e.printStackTrace();
-			throw new IllegalArgumentException("Given `pointer` isn't file type pointer!. pointer : " + pointer);
+			throw new IllegalArgumentException("Given `pointer` isn't file type pointer!. pointer : " + pointer, e);
 		}
 	}
 
@@ -590,33 +580,44 @@ public class Client {
 
 		int size = values.size();
 		final BaseItem[] items = new BaseItem[size];
-		AsyncResponseFuture[] handlers = new AsyncResponseFuture[size];
+		ResponseFuture[] handlers = new ResponseFuture[size];
+		final CountDownLatch[] latches = new CountDownLatch[size];
 
 		for (int i = 0; i < size; i++) {
 			JsonNode id = values.get(i).get("id");
 
 			// if response doesn't have `id` field or `id` isn't text
-			if (id == null || !id.isTextual()) {
-				throw new InvalidJsonException(i + "th shared element doesn't have `id` field");
-			}
+			assert !(id == null || !id.isTextual()) : i + "th shared element doesn't have `id` field";
 
 			// for inner class access
 			final int finalI = i;
 
+			latches[i] = new CountDownLatch(1);
 			handlers[i] = requestTool.doAsync(
 					HttpMethod.GET,
 					ITEM_ID_PREFIX + id.asText() + "?expand=children",
-					new AsyncResponseHandler() {
-						@Override
-						public void handle(DirectByteInputStream result, HttpResponse response)
-								throws ErrorResponseException {
-							items[finalI] = requestTool.parseAndHandle(response, result,
-									HttpURLConnection.HTTP_OK, BaseItem.class);
+					new ResponseFutureListener() {
+						@Override public void operationComplete(ResponseFuture future) throws Exception {
+							items[finalI] = requestTool.parseAndHandle(
+									future.response(),
+									future.get(),
+									HttpURLConnection.HTTP_OK,
+									BaseItem.class);
+							latches[finalI].countDown();
 						}
 					});
 		}
 
-		for (AsyncResponseFuture handler : handlers) handler.syncUntilAllDone();
+		for (ResponseFuture handler : handlers) handler.syncUninterruptibly();
+		for (CountDownLatch latch : latches) {
+			try {
+				latch.await();
+			}
+			catch (InterruptedException e) {
+				throw new InternalException("Exception occurs while waiting lock in Client#getShared()", e);
+			}
+		}
+
 		return items;
 	}
 
@@ -764,19 +765,28 @@ public class Client {
 	private BaseItem moveItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		checkExpired();
 
+		final CountDownLatch latch = new CountDownLatch(1);
 		final BaseItem[] newItem = new BaseItem[1];
-		AsyncResponseFuture responseFuture =
+		ResponseFuture responseFuture =
 				requestTool.patchMetadataAsync(api, content,
-						new AsyncResponseHandler() {
-							@Override
-							public void handle(DirectByteInputStream result, HttpResponse response)
-									throws ErrorResponseException {
-								newItem[0] = requestTool
-										.parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);
+						new ResponseFutureListener() {
+							@Override public void operationComplete(ResponseFuture future) throws Exception {
+								newItem[0] = requestTool.parseAndHandle(
+										future.response(),
+										future.get(),
+										HttpURLConnection.HTTP_OK,
+										BaseItem.class);
+								latch.countDown();
 							}
 						});
 
-		responseFuture.syncUntilAllDone();
+		responseFuture.syncUninterruptibly();
+		try {
+			latch.await();
+		}
+		catch (InterruptedException e) {
+			throw new InternalException("Exception occurs while waiting lock in BaseItem#update()", e);
+		}
 
 		return newItem[0];
 	}
@@ -903,8 +913,55 @@ public class Client {
 	}
 
 
-	public void downloadAsync(@NotNull String fileId, @NotNull Path parent) {
+	public DownloadFuture downloadAsync(@NotNull String fileId, @NotNull Path downloadFolder, @NotNull String fileName)
+			throws IOException {
+		Path parentBackup = downloadFolder.toAbsolutePath();
+		downloadFolder = parentBackup.resolve(fileName);
 
+		// it's illegal if and only if `downloadFolder` exists but not directory.
+		if (Files.exists(parentBackup) && !Files.isDirectory(parentBackup))
+			throw new IllegalArgumentException(parentBackup + " already exists and isn't folder.");
+
+		Files.createDirectories(parentBackup);
+
+		String fullUrl = RequestTool.BASE_URL + Client.ITEM_ID_PREFIX + fileId + "/content";
+		try {
+			return new AsyncDownloadClient(
+					RequestTool.getGroup(),
+					new URI(fullUrl),
+					downloadFolder,
+					getFullToken(),
+					requestTool).execute();
+		}
+		catch (URISyntaxException e) {
+			throw new IllegalArgumentException("Wrong fileId (" + fileId + "), full URL : \"" + fullUrl + "\".", e);
+		}
+	}
+
+	public DownloadFuture downloadAsync(@NotNull BasePointer pointer,
+										@NotNull Path downloadFolder, @NotNull String fileName) throws IOException {
+
+		Path parentBackup = downloadFolder.toAbsolutePath();
+		downloadFolder = parentBackup.resolve(fileName);
+
+		// it's illegal if and only if `downloadFolder` exists but not directory.
+		if (Files.exists(parentBackup) && !Files.isDirectory(parentBackup))
+			throw new IllegalArgumentException(parentBackup + " already exists and isn't folder.");
+
+		Files.createDirectories(parentBackup);
+
+		String fullUrl = RequestTool.BASE_URL + pointer.resolveOperator(Operator.CONTENT);
+		try {
+			return new AsyncDownloadClient(
+					RequestTool.getGroup(),
+					new URI(fullUrl),
+					downloadFolder,
+					getFullToken(),
+					requestTool).execute();
+		}
+		catch (URISyntaxException e) {
+			throw new IllegalArgumentException("Wrong pointer (" + pointer + "), full URL : \"" + fullUrl + "\".", e);
+		}
 	}
 
 
@@ -991,7 +1048,7 @@ public class Client {
 
 	@NotNull
 	@JsonIgnore
-	public OneDriveRequest requestTool() {
+	public RequestTool requestTool() {
 		return requestTool;
 	}
 

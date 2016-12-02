@@ -10,7 +10,7 @@
 
 - 폴더, 파일 로드 (by id and path)
 - 폴더, 파일 정보 확인 (크기, 이름, 경로, 폴더 내부 목록 등등)
-- 파일 다운로드 (sync)
+- 파일 다운로드 (sync and async)
 - 폴더, 파일의 정보(이름, 설명) 변경, 삭제, 복사, 이동
 - 폴더 생성
 - 이미지, 비디오, 등등 OneDrive에서 지원하는 [Facets](https://dev.onedrive.com/facets/facets.htm)
@@ -24,7 +24,6 @@
 
 ### 앞으로 추가할 기능
 
-- 파일 다운로드 (async: almost complete)
 - 파일 or 폴더 검색 (by name or content)
 - 파일 생성, 내용 업로드 (async)
 - 공유 기능
@@ -196,9 +195,7 @@ client.copyItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 ```
 
 
-### 6. 파일 다운로드
-
-- 현재까지는 synchronous한 방식으로만 가능. (async도 조만간 완료)
+### 6. 파일 다운로드 (synchronous)
 
 ```java
 import org.onedrive.container.items.FileItem;
@@ -227,7 +224,35 @@ file.download(Paths.get(path), "newName");
 client.download(new PathPointer("/{item-path}"), Paths.get(path));
 ```
 
-### 7. 폴더, 파일 이동
+### 7. 파일 다운로드 (asynchronously)
+
+- 모든 async 작업은 Future & Promise 매커니즘 사용.
+- 상세한 `DownloadFuture` 설명은 추후 위키에...
+
+```java
+import java.nio.file.Paths;
+import org.onedrive.container.items.FileItem;
+import org.onedrive.network.async.DownloadFuture;
+
+// assume that Client object is already constructed
+
+FileItem file = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
+String path = "/home/isac322/download";
+
+// download by path object with original file name
+file.downloadAsync(Paths.get(path));
+
+// download by path object with new name
+file.downloadAsync(Paths.get(path), "newName");
+
+
+DownloadFuture future = client.downloadAsync("{file-id}", Paths.get(path), "newName");
+
+// wait until download is done
+future.sync();
+```
+
+### 8. 폴더, 파일 이동
 
 - 이동하고싶은 아이템의 객체, 혹은 `Client` 객체를 통해서 가능.
 
@@ -257,7 +282,7 @@ item.moveTo(destination.getId());
 client.moveItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX!XXXX"));
 ```
 
-### 8. 폴더, 파일 정보 변경 or 업데이트
+### 9. 폴더, 파일 정보 변경 or 업데이트
 
 - `refresh`함수는 서버에서 최신 정보를 받아와 해당 객체의 모든 변수를 업데이트한다. 
 - 즉 `refresh`함수가 호출될 경우, 현재 프로그램이 변경하지 않은 변수라도 업데이트 될 수 있음.

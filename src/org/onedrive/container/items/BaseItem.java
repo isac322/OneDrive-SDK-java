@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.netty.handler.codec.http.HttpResponse;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,23 +20,26 @@ import org.onedrive.container.items.pointer.BasePointer;
 import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
+import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.async.AsyncResponseFuture;
-import org.onedrive.network.async.AsyncResponseHandler;
-import org.onedrive.network.sync.SyncRequest;
-import org.onedrive.utils.DirectByteInputStream;
+import org.onedrive.network.async.ResponseFuture;
+import org.onedrive.network.async.ResponseFutureListener;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * https://dev.onedrive.com/resources/item.htm
- * {@// TODO: enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 @JsonDeserialize(using = BaseItem.ItemDeserializer.class)
 abstract public class BaseItem {
+	@NotNull private static final IllegalArgumentException ILLEGAL_REFERENCE =
+			new IllegalArgumentException("Can not address destination folder. `folder`'s id and path are both null");
+
 	@JsonIgnore @NotNull protected final Client client;
 
 	@Getter @NotNull protected String id;
@@ -165,18 +167,27 @@ abstract public class BaseItem {
 
 	private void update(byte[] content) throws ErrorResponseException {
 		final BaseItem[] newItem = new BaseItem[1];
-		AsyncResponseFuture responseFuture =
+		final CountDownLatch latch = new CountDownLatch(1);
+		ResponseFuture responseFuture =
 				client.requestTool().patchMetadataAsync(Client.ITEM_ID_PREFIX + id, content,
-						new AsyncResponseHandler() {
-							@Override
-							public void handle(DirectByteInputStream result, HttpResponse response)
-									throws ErrorResponseException {
-								newItem[0] = client.requestTool()
-										.parseAndHandle(response, result, HttpURLConnection.HTTP_OK, BaseItem.class);
+						new ResponseFutureListener() {
+							@Override public void operationComplete(ResponseFuture future) throws Exception {
+								newItem[0] = client.requestTool().parseAndHandle(
+										future.response(),
+										future.get(),
+										HttpURLConnection.HTTP_OK,
+										BaseItem.class);
+								latch.countDown();
 							}
 						});
 
-		responseFuture.syncUntilAllDone();
+		responseFuture.syncUninterruptibly();
+		try {
+			latch.await();
+		}
+		catch (InterruptedException e) {
+			throw new InternalException("Exception occurs while waiting lock in BaseItem#update()", e);
+		}
 		this.refreshBy(newItem[0]);
 	}
 
@@ -225,8 +236,7 @@ abstract public class BaseItem {
 		else if (folder.pathPointer != null)
 			return this.copyTo(folder.pathPointer);
 		else
-			throw new IllegalArgumentException(
-					"Can not address destination folder. `folder`'s id and path are both null");
+			throw ILLEGAL_REFERENCE;
 	}
 
 	@NotNull
@@ -236,8 +246,7 @@ abstract public class BaseItem {
 		else if (folder.pathPointer != null)
 			return this.copyTo(folder.pathPointer, newName);
 		else
-			throw new IllegalArgumentException(
-					"Can not address destination folder. `folder`'s id and path are both null");
+			throw ILLEGAL_REFERENCE;
 	}
 
 	@NotNull
@@ -279,8 +288,7 @@ abstract public class BaseItem {
 	public void moveTo(@NotNull ItemReference reference) throws ErrorResponseException {
 		if (reference.id != null) moveTo(reference.id);
 		else if (reference.pathPointer != null) moveTo(reference.pathPointer);
-		else throw new IllegalArgumentException(
-					"Can not address destination folder. `folder`'s id and path are both null");
+		else throw ILLEGAL_REFERENCE;
 	}
 
 	public void moveTo(@NotNull String id) throws ErrorResponseException {
@@ -358,37 +366,53 @@ abstract public class BaseItem {
 			ObjectMapper codec = (ObjectMapper) parser.getCodec();
 			ObjectNode node = codec.readTree(parser);
 
+			BaseItem ret;
+			boolean isMultipleType = false;
+
+			// is the object a file??
 			if (node.has("file")) {
 				if (node.has("folder") || node.has("package") || node.has("remoteItem")) {
-					// TODO: custom exception
-					throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Duplicated type.");
+					isMultipleType = true;
 				}
-				return codec.convertValue(node, FileItem.class);
+				ret = codec.convertValue(node, FileItem.class);
 			}
+			// or folder?
 			else if (node.has("folder")) {
 				if (node.has("file") || node.has("package") || node.has("remoteItem")) {
-					// TODO: custom exception
-					throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Duplicated type.");
+					isMultipleType = true;
 				}
-				return codec.convertValue(node, FolderItem.class);
+				ret = codec.convertValue(node, FolderItem.class);
 			}
+			// or package?
 			else if (node.has("package")) {
 				if (node.has("folder") || node.has("file") || node.has("remoteItem")) {
-					// TODO: custom exception
-					throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Duplicated type.");
+					isMultipleType = true;
 				}
-				return codec.convertValue(node, PackageItem.class);
+				ret = codec.convertValue(node, PackageItem.class);
 			}
+			// or remote item?
 			else if (node.has("remoteItem")) {
 				if (node.has("folder") || node.has("file") || node.has("file")) {
-					// TODO: custom exception
-					throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Duplicated type.");
+					isMultipleType = true;
 				}
-				return codec.convertValue(node, RemoteFolderItem.class);
+				ret = codec.convertValue(node, RemoteFolderItem.class);
 			}
+			// unrecognizable object!
 			else {
-				throw new InvalidJsonException("Json doesn't have any type (file or folder or package etc.)");
+				throw new InvalidJsonException(
+						"Json doesn't have any type (file or folder or package etc.). please contact author",
+						HttpURLConnection.HTTP_OK,
+						codec.writeValueAsBytes(node));
 			}
+
+			if (isMultipleType)
+				throw new InvalidJsonException(
+						"Multiple item type is contained. please contact author.",
+						HttpURLConnection.HTTP_OK,
+						codec.writeValueAsBytes(node));
+
+			else
+				return ret;
 		}
 	}
 }

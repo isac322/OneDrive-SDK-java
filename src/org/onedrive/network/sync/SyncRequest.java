@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * {@// TODO: Enhance javadoc}
+ * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
@@ -32,9 +32,8 @@ public class SyncRequest {
 			httpConnection = (HttpsURLConnection) url1.openConnection();
 		}
 		catch (IOException e) {
-			e.printStackTrace();
 			// TODO: custom exception
-			throw new RuntimeException(NETWORK_ERR_MSG);
+			throw new RuntimeException(NETWORK_ERR_MSG, e);
 		}
 	}
 
@@ -43,9 +42,8 @@ public class SyncRequest {
 			httpConnection = (HttpsURLConnection) url.openConnection();
 		}
 		catch (IOException e) {
-			e.printStackTrace();
 			// TODO: custom exception
-			throw new RuntimeException(NETWORK_ERR_MSG);
+			throw new RuntimeException(NETWORK_ERR_MSG, e);
 		}
 	}
 
@@ -108,8 +106,8 @@ public class SyncRequest {
 			return makeResponse();
 		}
 		catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(NETWORK_ERR_MSG);
+			// TODO: custom exception
+			throw new RuntimeException(NETWORK_ERR_MSG, e);
 		}
 	}
 
@@ -158,7 +156,7 @@ public class SyncRequest {
 			byte[] buffer = new byte[512];
 
 			int readBytes;
-			while ((readBytes = body.read(buffer)) > 0) {
+			while ((readBytes = body.read(buffer)) >= 0) {
 				byteStream.writeBytes(buffer, 0, readBytes);
 			}
 			body.close();
@@ -185,9 +183,8 @@ public class SyncRequest {
 			*/
 		}
 		catch (IOException e) {
-			e.printStackTrace();
 			// TODO: custom exception
-			throw new RuntimeException(NETWORK_ERR_MSG);
+			throw new RuntimeException(NETWORK_ERR_MSG, e);
 		}
 		finally {
 			httpConnection.disconnect();

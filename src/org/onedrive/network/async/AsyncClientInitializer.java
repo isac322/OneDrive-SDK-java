@@ -10,11 +10,11 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import org.jetbrains.annotations.NotNull;
 
-public class AsyncRequestInitializer extends ChannelInitializer<SocketChannel> {
+public class AsyncClientInitializer extends ChannelInitializer<SocketChannel> {
 	private final SslContext sslCtx;
 	private final ChannelHandler handler;
 
-	public AsyncRequestInitializer(@NotNull SslContext sslCtx, @NotNull ChannelHandler handler) {
+	AsyncClientInitializer(@NotNull SslContext sslCtx, @NotNull ChannelHandler handler) {
 		this.sslCtx = sslCtx;
 		this.handler = handler;
 	}
