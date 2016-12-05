@@ -133,18 +133,6 @@ public class RequestTool {
 		}
 	}
 
-	public DownloadFuture asyncDownload(@NotNull String api, Path downloadFolder) {
-		try {
-			return new AsyncDownloadClient(
-					group, new URI(BASE_URL + api), downloadFolder,
-					client.getFullToken(), this).execute();
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException(
-					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
-		}
-	}
-
 
 
 
@@ -239,7 +227,10 @@ public class RequestTool {
 				return (ObjectNode) mapper.readTree(response.getContent());
 			}
 			else {
-				ErrorResponse error = mapper.readValue(response.getContent(), ErrorResponse.class);
+				ErrorResponse error = mapper
+						.readerFor(ErrorResponse.class)
+						.with(UNWRAP_ROOT_VALUE)
+						.readValue(response.getContent());
 				throw new ErrorResponseException(HttpURLConnection.HTTP_OK, response.getCode(),
 						error.getCode(), error.getMessage());
 			}
@@ -248,7 +239,7 @@ public class RequestTool {
 			throw new InvalidJsonException(e, response.getCode(), response.getContent());
 		}
 		catch (IOException e) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException("DEV: Unrecognizable json response.", e);
 		}
 	}
@@ -307,7 +298,7 @@ public class RequestTool {
 				throw new InvalidJsonException(e, response.getCode(), response.getContent());
 			}
 			catch (IOException e) {
-				// TODO: custom exception
+				// FIXME: custom exception
 				throw new RuntimeException("DEV: Unrecognizable json response.", e);
 			}
 		}
@@ -329,7 +320,7 @@ public class RequestTool {
 				throw new InvalidJsonException(e, response.status().code(), inputStream.rawBuffer());
 			}
 			catch (IOException e) {
-				// TODO: custom exception
+				// FIXME: custom exception
 				throw new RuntimeException("DEV: Unrecognizable json response.", e);
 			}
 		}
@@ -355,7 +346,7 @@ public class RequestTool {
 			throw new InvalidJsonException(e, response.getCode(), response.getContent());
 		}
 		catch (IOException e) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException("DEV: Unrecognizable json response.", e);
 		}
 	}
@@ -380,7 +371,7 @@ public class RequestTool {
 			throw new InvalidJsonException(e, response.status().code(), inputStream.rawBuffer());
 		}
 		catch (IOException e) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException("DEV: Unrecognizable json response.", e);
 		}
 	}

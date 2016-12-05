@@ -13,8 +13,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.QueryStringDecoder;
 import lombok.Getter;
-import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.Drive;
@@ -39,11 +39,9 @@ import org.onedrive.utils.RequestTool;
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
@@ -244,7 +242,7 @@ public class Client {
 			answerLock.acquire();
 		}
 		catch (InterruptedException e) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG + " Lock Error In " + this.getClass().getName());
 		}
 
@@ -252,7 +250,7 @@ public class Client {
 		answerLock.release();
 
 		if (code == null) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException(SyncRequest.NETWORK_ERR_MSG);
 		}
 
@@ -384,7 +382,6 @@ public class Client {
 	 *
 	 * @throws ErrorResponseException if raises error while logout.
 	 */
-	@SneakyThrows(UnsupportedEncodingException.class)
 	public void logout() throws ErrorResponseException {
 		String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
 				clientId, redirectURL);
@@ -397,7 +394,7 @@ public class Client {
 					HttpsURLConnection.HTTP_MOVED_TEMP,
 					response.getCode(),
 					split[0].substring(split[0].indexOf('=') + 1),
-					URLDecoder.decode(split[1].substring(split[1].indexOf('=') + 1), "UTF-8"));
+					QueryStringDecoder.decodeComponent(split[1].substring(split[1].indexOf('=') + 1)));
 		}
 
 		authCode = null;
@@ -873,6 +870,7 @@ public class Client {
 	}
 
 	public void download(@NotNull BasePointer file, @NotNull Path parent) throws ErrorResponseException, IOException {
+		System.out.println(file.toASCIIApi() + "?select=name,file,folder");
 		ObjectNode jsonNodes = requestTool.doGetJson(file.toASCIIApi() + "?select=name,file,folder");
 
 		if (jsonNodes.has("folder"))
@@ -913,54 +911,51 @@ public class Client {
 	}
 
 
-	public DownloadFuture downloadAsync(@NotNull String fileId, @NotNull Path downloadFolder, @NotNull String fileName)
-			throws IOException {
-		Path parentBackup = downloadFolder.toAbsolutePath();
-		downloadFolder = parentBackup.resolve(fileName);
+	public DownloadFuture downloadAsync(@NotNull String fileId, @NotNull Path downloadFolder) throws IOException {
+		return _downloadAsync(Client.ITEM_ID_PREFIX + fileId, downloadFolder, null);
+	}
 
-		// it's illegal if and only if `downloadFolder` exists but not directory.
-		if (Files.exists(parentBackup) && !Files.isDirectory(parentBackup))
-			throw new IllegalArgumentException(parentBackup + " already exists and isn't folder.");
 
-		Files.createDirectories(parentBackup);
+	public DownloadFuture downloadAsync(@NotNull String fileId, @NotNull Path downloadFolder,
+										@Nullable String newName) throws IOException {
+		return _downloadAsync(Client.ITEM_ID_PREFIX + fileId + "/content", downloadFolder, newName);
+	}
 
-		String fullUrl = RequestTool.BASE_URL + Client.ITEM_ID_PREFIX + fileId + "/content";
-		try {
-			return new AsyncDownloadClient(
-					RequestTool.getGroup(),
-					new URI(fullUrl),
-					downloadFolder,
-					getFullToken(),
-					requestTool).execute();
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException("Wrong fileId (" + fileId + "), full URL : \"" + fullUrl + "\".", e);
-		}
+	public DownloadFuture downloadAsync(@NotNull BasePointer pointer, @NotNull Path downloadFolder,
+										@Nullable String newName) throws IOException {
+		return _downloadAsync(pointer.resolveOperator(Operator.CONTENT), downloadFolder, newName);
 	}
 
 	public DownloadFuture downloadAsync(@NotNull BasePointer pointer,
-										@NotNull Path downloadFolder, @NotNull String fileName) throws IOException {
+										@NotNull Path downloadFolder) throws IOException {
+		return _downloadAsync(pointer.toASCIIApi(), downloadFolder, null);
+	}
 
-		Path parentBackup = downloadFolder.toAbsolutePath();
-		downloadFolder = parentBackup.resolve(fileName);
+	private DownloadFuture _downloadAsync(@NotNull String url, @NotNull Path downloadFolder,
+										  @Nullable String newName) throws IOException {
+		downloadFolder = downloadFolder.toAbsolutePath().normalize();
 
 		// it's illegal if and only if `downloadFolder` exists but not directory.
-		if (Files.exists(parentBackup) && !Files.isDirectory(parentBackup))
-			throw new IllegalArgumentException(parentBackup + " already exists and isn't folder.");
+		if (Files.exists(downloadFolder) && !Files.isDirectory(downloadFolder))
+			throw new IllegalArgumentException(downloadFolder + " already exists and isn't folder.");
 
-		Files.createDirectories(parentBackup);
+		Files.createDirectories(downloadFolder);
 
-		String fullUrl = RequestTool.BASE_URL + pointer.resolveOperator(Operator.CONTENT);
+		String fullUrl = RequestTool.BASE_URL + url;
 		try {
-			return new AsyncDownloadClient(
-					RequestTool.getGroup(),
-					new URI(fullUrl),
-					downloadFolder,
-					getFullToken(),
-					requestTool).execute();
+			if (newName != null) {
+				return new AsyncDownloadClient(requestTool, new URI(fullUrl), downloadFolder, newName).execute();
+			}
+			else {
+				return new AsyncDownloadClient(
+						requestTool,
+						new URI(fullUrl + "?select=name,@content.downloadUrl"),
+						downloadFolder)
+						.execute();
+			}
 		}
 		catch (URISyntaxException e) {
-			throw new IllegalArgumentException("Wrong pointer (" + pointer + "), full URL : \"" + fullUrl + "\".", e);
+			throw new IllegalArgumentException("Wrong url (" + url + "), full URL : \"" + fullUrl + "\".", e);
 		}
 	}
 

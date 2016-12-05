@@ -40,7 +40,7 @@ public final class AuthServer {
 			server.setExecutor(null);
 		} catch (IOException e) {
 			e.printStackTrace();
-			// TODO: custom exception
+			// FIXME: custom exception
 		}
 	}
 
@@ -73,10 +73,10 @@ public final class AuthServer {
 					authCode = query[1];
 					break;
 				case "error":
-					// TODO: custom exception
+					// FIXME: custom exception
 					throw new IOException("Wrong Login Info");
 				default:
-					// TODO: custom exception
+					// FIXME: custom exception
 					throw new IOException("Unrecognized OneDrive Server Error");
 			}
 

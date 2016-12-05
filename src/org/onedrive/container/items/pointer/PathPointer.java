@@ -1,15 +1,13 @@
 package org.onedrive.container.items.pointer;
 
+import io.netty.handler.codec.http.QueryStringDecoder;
 import lombok.Getter;
-import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.utils.RequestTool;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,33 +34,35 @@ public class PathPointer extends BasePointer {
 	@NotNull private final String rawPath;
 
 
-	@SneakyThrows(UnsupportedEncodingException.class)
+	/*
+	string escaping issue. (example : %fe%f2.txt)
+	strings that matches with..
+	`drivePathMatcher` : will be treated as unescaped string
+	`pathMatcher` : will be treated as unescaped string
+	else : will be treated as "already escaped string"
+
+	because strings that matches with regex can be assumed that it's invoked by constructor of BaseItem.
+	and otherwise user invoked.
+	 */
 	public PathPointer(@NotNull String anyPath) {
-		String rawPath = anyPath;
-
-		// ensure that `anyPath` is always decoded path
-		anyPath = URLDecoder.decode(rawPath, "UTF-8");
-
-		// if `anyPath` is already escaped string, make encoded path
-		if (anyPath.equalsIgnoreCase(rawPath)) {
-			try {
-				rawPath = new URI(null, null, anyPath, null).toASCIIString();
-			}
-			catch (URISyntaxException e) {
-				throw new IllegalArgumentException("Illegal character in `anyPath` at index " + e.getIndex(), e);
-			}
-		}
-
-
+		String rawPath;
 		Matcher matcher;
 
 		if ((matcher = drivePathMatcher.matcher(anyPath)).matches()) {
+			// decode `anyPath`
+			rawPath = anyPath;
+			anyPath = QueryStringDecoder.decodeComponent(anyPath);
+
 			this.readablePath = matcher.group(2);
 			this.path = anyPath;
 			this.driveId = matcher.group(1);
 			this.rawPath = rawPath;
 		}
 		else if ((matcher = pathMatcher.matcher(anyPath)).matches()) {
+			// decode `anyPath`
+			rawPath = anyPath;
+			anyPath = QueryStringDecoder.decodeComponent(anyPath);
+
 			this.readablePath = matcher.group(1);
 			this.path = anyPath;
 			this.driveId = null;
@@ -72,6 +72,14 @@ public class PathPointer extends BasePointer {
 			throw new IllegalArgumentException("`path` doesn't start with '/'. given : " + anyPath);
 		}
 		else {
+			// encode `anyPath`
+			try {
+				rawPath = new URI(null, null, anyPath, null).toASCIIString();
+			}
+			catch (URISyntaxException e) {
+				throw new IllegalArgumentException("Illegal character in `anyPath` at index " + e.getIndex(), e);
+			}
+
 			this.readablePath = anyPath;
 			this.path = "/drive/root:" + anyPath;
 			this.driveId = null;
@@ -80,28 +88,28 @@ public class PathPointer extends BasePointer {
 	}
 
 
-	@SneakyThrows(UnsupportedEncodingException.class)
+	/*
+	string escaping issue. (example : %fe%f2.txt)
+	strings that matches with..
+	`drivePathMatcher` : will be treated as unescaped string
+	`pathMatcher` : will be treated as unescaped string
+	else : will be treated as "already escaped string"
+
+	because strings that matches with regex can be assumed that it's invoked by constructor of BaseItem.
+	and otherwise user invoked.
+	 */
 	public PathPointer(@NotNull String anyPath, @Nullable String driveId) {
-		String rawPath = anyPath;
-
-		// ensure that `anyPath` is always decoded path
-		anyPath = URLDecoder.decode(rawPath, "UTF-8");
-
-		// if `anyPath` is already escaped string, make encoded path
-		if (anyPath.equalsIgnoreCase(rawPath)) {
-			try {
-				rawPath = new URI(null, null, anyPath, null).toASCIIString();
-			}
-			catch (URISyntaxException e) {
-				throw new IllegalArgumentException("Illegal character in `anyPath` at index " + e.getIndex(), e);
-			}
-		}
+		String rawPath;
 
 
 		Matcher matcher;
 
 		// anyPath is OneDrive-path notation that contains drive-id
 		if ((matcher = drivePathMatcher.matcher(anyPath)).matches()) {
+			// decode `anyPath`
+			rawPath = anyPath;
+			anyPath = QueryStringDecoder.decodeComponent(anyPath);
+
 			this.readablePath = matcher.group(2);
 			this.driveId = driveId;
 
@@ -121,6 +129,10 @@ public class PathPointer extends BasePointer {
 		}
 		// anyPath is OneDrive-path notation that does not contain drive-id
 		else if ((matcher = pathMatcher.matcher(anyPath)).matches()) {
+			// decode `anyPath`
+			rawPath = anyPath;
+			anyPath = QueryStringDecoder.decodeComponent(anyPath);
+
 			this.readablePath = matcher.group(1);
 			this.driveId = driveId;
 
@@ -140,6 +152,14 @@ public class PathPointer extends BasePointer {
 		}
 		// if anyPath is pure absolute path
 		else {
+			// encode `anyPath`
+			try {
+				rawPath = new URI(null, null, anyPath, null).toASCIIString();
+			}
+			catch (URISyntaxException e) {
+				throw new IllegalArgumentException("Illegal character in `anyPath` at index " + e.getIndex(), e);
+			}
+
 			this.readablePath = anyPath;
 			this.driveId = driveId;
 
@@ -160,6 +180,17 @@ public class PathPointer extends BasePointer {
 		this.readablePath = readablePath;
 		this.path = path;
 		this.rawPath = rawPath;
+	}
+
+	// to check if a string only contains US-ASCII code point
+	private static boolean isAllASCII(String input) {
+		for (int i = 0, len = input.length(); i < len; i++) {
+			int c = input.charAt(i);
+			if (c > 0x7E) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	@NotNull
@@ -192,9 +223,7 @@ public class PathPointer extends BasePointer {
 		return rawPath + ":/" + op.getString();
 	}
 
-
 	@NotNull
-	@SneakyThrows(UnsupportedEncodingException.class)
 	public PathPointer resolve(@NotNull String name) {
 		// raise exception if `name` is absolute path
 		if (name.charAt(0) == '/') {
@@ -203,11 +232,8 @@ public class PathPointer extends BasePointer {
 
 		String rawName = name;
 
-		// ensure that `name` is always decoded string
-		name = URLDecoder.decode(name, "UTF-8");
-
 		// if `name` is already escaped string, make encoded path
-		if (name.equalsIgnoreCase(rawName)) {
+		if (!isAllASCII(name)) {
 			try {
 				rawName = new URI(null, null, name, null).toASCIIString();
 			}

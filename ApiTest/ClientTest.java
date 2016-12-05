@@ -9,6 +9,7 @@ import org.onedrive.Client;
 import org.onedrive.container.Drive;
 import org.onedrive.container.facet.AudioFacet;
 import org.onedrive.container.items.*;
+import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.network.async.AsyncClient;
@@ -26,12 +27,23 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
  * TODO: add javadoc
  */
 public class ClientTest extends TestCase {
+	private static String DIR_MANY_CHILD = "D4FD82CA6DF96A47!14841";
+	private static String MP3_UTF8_BIG = "D4FD82CA6DF96A47!24998";
+	private static String MP3_UTF8_SMALL = "D4FD82CA6DF96A47!25997";
+	private static String TXT_ASCII_SMALL = "D4FD82CA6DF96A47!26026";
+	private static String TXT_ASCII_WITH_SPACE = "D4FD82CA6DF96A47!26036";
+	private static String TXT_ASCII_ESCAPED = "D4FD82CA6DF96A47%2126037";
+	private static String DIR_SHARED_BY_SOMEONE = "485BEF1A80539148!115";
+	private static String PACKAGE_1 = "D4FD82CA6DF96A47!22159";
+	private static String PACKAGE_2 = "D4FD82CA6DF96A47!2104";
+
 	private static Client client;
 	private ObjectMapper mapper = new ObjectMapper();
 
@@ -80,14 +92,14 @@ public class ClientTest extends TestCase {
 		getClient();
 
 		// Test Files (shared by someone)
-		SyncResponse response = client.requestTool().newRequest("/drive/items/485BEF1A80539148!115").doGet();
+		SyncResponse response = client.requestTool().newRequest("/drive/items/" + DIR_SHARED_BY_SOMEONE).doGet();
 		System.out.println(response.getContentString());
 	}
 
 	public void testGetFileItem() throws ErrorResponseException {
 		getClient();
 
-		BaseItem file = client.getItem("D4FD82CA6DF96A47!22159");
+		BaseItem file = client.getItem(PACKAGE_1);
 		System.out.println(file.getName());
 		System.out.println(file.getId());
 	}
@@ -124,7 +136,7 @@ public class ClientTest extends TestCase {
 	public void testPackage() {
 		getClient();
 
-		SyncResponse response = client.requestTool().newRequest("/drive/items/D4FD82CA6DF96A47!2104").doGet();
+		SyncResponse response = client.requestTool().newRequest("/drive/items/" + PACKAGE_2).doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -134,7 +146,7 @@ public class ClientTest extends TestCase {
 		getClient();
 
 		SyncResponse response = client.requestTool()
-				.newRequest("/drives/485bef1a80539148/items/485BEF1A80539148!115?expand=children").doGet();
+				.newRequest("/drives/485bef1a80539148/items/" + DIR_SHARED_BY_SOMEONE + "?expand=children").doGet();
 		System.out.println(response.getCode());
 		System.out.println(response.getMessage());
 		System.out.println(response.getContentString());
@@ -144,7 +156,7 @@ public class ClientTest extends TestCase {
 		getClient();
 
 		// BOJ
-		FolderItem folder = client.getFolder("D4FD82CA6DF96A47!14841");
+		FolderItem folder = client.getFolder(DIR_MANY_CHILD);
 		System.out.println(folder.getName());
 		for (BaseItem item : folder) {
 			System.out.println(item.getName());
@@ -163,7 +175,9 @@ public class ClientTest extends TestCase {
 	public void testRootDir() throws ErrorResponseException {
 		getClient();
 
+		long before = System.currentTimeMillis();
 		FolderItem rootDir = client.getRootDir();
+		System.out.println(System.currentTimeMillis() - before);
 		System.out.println(rootDir.getId());
 		System.out.println(rootDir.getCTag());
 		System.out.println(rootDir.getETag());
@@ -364,7 +378,7 @@ public class ClientTest extends TestCase {
 	public void testUpdate() throws ErrorResponseException, IOException {
 		getClient();
 
-		FileItem file = client.getFile("D4FD82CA6DF96A47!26026");
+		FileItem file = client.getFile(TXT_ASCII_SMALL);
 
 		file.setDescription("testtestsetsetsetsetsetsetsetsetset");
 
@@ -384,10 +398,12 @@ public class ClientTest extends TestCase {
 	public void testUpdateAudioFacet() throws ErrorResponseException, JsonProcessingException {
 		getClient();
 
-		FileItem file = client.getFile("D4FD82CA6DF96A47!25997");
+		FileItem file = client.getFile(MP3_UTF8_SMALL);
 
 		file.setName("Roy Kim 로이킴 - 봄봄봄. -[ mymusicroad.net ].mp3");
 		file.setDescription("fasdffadfasdgqwe");
+
+		System.out.println(file.getPathPointer());
 
 		System.out.println();
 		System.out.println(client.mapper().writeValueAsString(file));
@@ -579,12 +595,34 @@ public class ClientTest extends TestCase {
 	public void testAsyncDown() throws ErrorResponseException, IOException, InterruptedException {
 		getClient();
 
-		FileItem mp3 = client.getFile("D4FD82CA6DF96A47!24998");
+		FileItem mp3 = client.getFile(MP3_UTF8_BIG);
+		System.out.println(mp3.getId());
+		System.out.println(mp3.getPathPointer());
+		System.out.println(mp3.getName());
 
 		DownloadFuture downloadFuture = mp3.downloadAsync(Paths.get(".")).syncUninterruptibly();
+		//DownloadFuture downloadFuture = client.downloadAsync(TXT_ASCII_ESCAPED, Paths.get("")).syncUninterruptibly();
 		System.out.println(downloadFuture.isDone());
 		System.out.println(downloadFuture.isSuccess());
 		System.out.println(downloadFuture.getNow().getName() + '\t' + downloadFuture.getNow().length());
+		System.out.println(downloadFuture.downloadPath());
+	}
+
+	public void testAsyncDown2() throws ErrorResponseException, IOException, ExecutionException, InterruptedException {
+		getClient();
+
+		FileItem item = client.getFile("D4FD82CA6DF96A47!26038");
+		System.out.println(item.getName());
+		System.out.println(item.getPathPointer());
+
+		DownloadFuture downloadFuture = item.downloadAsync(Paths.get(".")).syncUninterruptibly();
+		System.out.println(downloadFuture.get());
+	}
+
+	public void testDownloadWithoutName() throws IOException, ErrorResponseException {
+		getClient();
+
+		client.downloadAsync(new IdPointer(MP3_UTF8_SMALL), Paths.get(".")).syncUninterruptibly();
 	}
 
 	// simple upload (< 100MB)

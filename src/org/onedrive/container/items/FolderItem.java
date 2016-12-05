@@ -158,7 +158,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 										result.rawBuffer());
 							}
 							catch (IOException e) {
-								// TODO: custom exception
+								// FIXME: custom exception
 								throw new RuntimeException("DEV: Unrecognizable json response.", e);
 							}
 							latch.countDown();
@@ -327,7 +327,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			return new ChildrenIterator(allChildren().iterator());
 		}
 		catch (ErrorResponseException e) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException(e);
 		}
 	}

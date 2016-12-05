@@ -32,7 +32,7 @@ public class SyncRequest {
 			httpConnection = (HttpsURLConnection) url1.openConnection();
 		}
 		catch (IOException e) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException(NETWORK_ERR_MSG, e);
 		}
 	}
@@ -42,7 +42,7 @@ public class SyncRequest {
 			httpConnection = (HttpsURLConnection) url.openConnection();
 		}
 		catch (IOException e) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException(NETWORK_ERR_MSG, e);
 		}
 	}
@@ -106,7 +106,7 @@ public class SyncRequest {
 			return makeResponse();
 		}
 		catch (IOException e) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException(NETWORK_ERR_MSG, e);
 		}
 	}
@@ -183,7 +183,7 @@ public class SyncRequest {
 			*/
 		}
 		catch (IOException e) {
-			// TODO: custom exception
+			// FIXME: custom exception
 			throw new RuntimeException(NETWORK_ERR_MSG, e);
 		}
 		finally {

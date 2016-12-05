@@ -8,6 +8,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 import java.io.File;
 import java.net.URI;
+import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Path;
 
 /**
@@ -16,34 +17,48 @@ import java.nio.file.Path;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class DefaultDownloadPromise extends DefaultPromise<File> implements DownloadPromise {
-	protected final Path path;
-	protected URI uri;
+	protected Path downloadPath;
+	protected URI remoteUri;
 	protected HttpResponse response;
+	protected AsynchronousFileChannel fileChannel;
 
-	public DefaultDownloadPromise(EventExecutor executor, Path path) {
+	public DefaultDownloadPromise(EventExecutor executor) {
 		super(executor);
-		this.path = path;
 	}
 
-	@Override public Path path() {
-		return path;
+	@Override public Path downloadPath() {
+		return downloadPath;
 	}
 
-	@Override public URI uri() {
-		return uri;
+	@Override public URI remoteURI() {
+		return remoteUri;
 	}
 
 	@Override public HttpResponse response() {
 		return response;
 	}
 
-	@Override public DownloadPromise setResponse(HttpResponse response) {
+	@Override public AsynchronousFileChannel channel() {
+		return fileChannel;
+	}
+
+	@Override public DefaultDownloadPromise setResponse(HttpResponse response) {
 		this.response = response;
 		return this;
 	}
 
-	@Override public DownloadPromise setURI(URI uri) {
-		this.uri = uri;
+	@Override public DefaultDownloadPromise setURI(URI remoteUri) {
+		this.remoteUri = remoteUri;
+		return this;
+	}
+
+	@Override public DefaultDownloadPromise setChannel(AsynchronousFileChannel fileChannel) {
+		this.fileChannel = fileChannel;
+		return this;
+	}
+
+	@Override public DefaultDownloadPromise setPath(Path downloadPath) {
+		this.downloadPath = downloadPath;
 		return this;
 	}
 

@@ -168,20 +168,17 @@ abstract public class BaseItem {
 	private void update(byte[] content) throws ErrorResponseException {
 		final BaseItem[] newItem = new BaseItem[1];
 		final CountDownLatch latch = new CountDownLatch(1);
-		ResponseFuture responseFuture =
-				client.requestTool().patchMetadataAsync(Client.ITEM_ID_PREFIX + id, content,
-						new ResponseFutureListener() {
-							@Override public void operationComplete(ResponseFuture future) throws Exception {
-								newItem[0] = client.requestTool().parseAndHandle(
-										future.response(),
-										future.get(),
-										HttpURLConnection.HTTP_OK,
-										BaseItem.class);
-								latch.countDown();
-							}
-						});
-
-		responseFuture.syncUninterruptibly();
+		client.requestTool().patchMetadataAsync(Client.ITEM_ID_PREFIX + id, content,
+				new ResponseFutureListener() {
+					@Override public void operationComplete(ResponseFuture future) throws Exception {
+						newItem[0] = client.requestTool().parseAndHandle(
+								future.response(),
+								future.get(),
+								HttpURLConnection.HTTP_OK,
+								BaseItem.class);
+						latch.countDown();
+					}
+				});
 		try {
 			latch.await();
 		}
