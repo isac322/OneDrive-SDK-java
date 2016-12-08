@@ -307,7 +307,7 @@ item.refresh();
 
 ### 10. Upload file (asynchronously)
 
-- like [asynchronously downloading](#7-download-file-asynchronously), it uses Future & Promise mechanism.
+- like [asynchronous downloading](#7-download-file-asynchronously), it uses Future & Promise mechanism.
 - more detail of `UploadFuture` will explain later at wiki...
 
 ```java
