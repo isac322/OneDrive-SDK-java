@@ -17,7 +17,7 @@ public class DefaultResponsePromise extends DefaultPromise<DirectByteInputStream
 	protected HttpResponse response;
 	protected Channel channel;
 
-	DefaultResponsePromise(EventExecutor executor) {
+	public DefaultResponsePromise(EventExecutor executor) {
 		super(executor);
 	}
 

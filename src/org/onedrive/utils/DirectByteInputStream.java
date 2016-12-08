@@ -20,7 +20,7 @@ public class DirectByteInputStream extends InputStream {
 	protected boolean closed;
 
 	public DirectByteInputStream() {
-		this(1024);
+		this(512);
 	}
 
 	public DirectByteInputStream(int capacity) {

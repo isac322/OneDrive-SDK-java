@@ -22,33 +22,31 @@ import org.onedrive.container.items.BaseItem;
 import org.onedrive.container.items.FileItem;
 import org.onedrive.container.items.FolderItem;
 import org.onedrive.container.items.pointer.BasePointer;
+import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.Operator;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.async.AsyncDownloadClient;
-import org.onedrive.network.async.DownloadFuture;
-import org.onedrive.network.async.ResponseFuture;
-import org.onedrive.network.async.ResponseFutureListener;
+import org.onedrive.network.RequestTool;
+import org.onedrive.network.async.*;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
 import org.onedrive.utils.AuthServer;
-import org.onedrive.utils.RequestTool;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
+
+import static java.net.HttpURLConnection.*;
+import static org.onedrive.container.items.pointer.Operator.UPLOAD_CREATE_SESSION;
+import static org.onedrive.network.RequestTool.BASE_URL;
 
 /**
  * {@// TODO: Enhance javadoc }
@@ -422,7 +420,7 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.newRequest("/drive").doGet();
-		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, Drive.class);
+		return requestTool.parseAndHandle(response, HTTP_OK, Drive.class);
 	}
 
 	@NotNull
@@ -451,7 +449,7 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.newRequest("/drive/root:/?expand=children").doGet();
-		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, FolderItem.class);
+		return requestTool.parseAndHandle(response, HTTP_OK, FolderItem.class);
 	}
 
 
@@ -479,7 +477,7 @@ public class Client {
 		else
 			response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
 
-		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, FolderItem.class);
+		return requestTool.parseAndHandle(response, HTTP_OK, FolderItem.class);
 	}
 
 	// TODO: handling error if `pointer`'s item isn't folder item.
@@ -500,7 +498,7 @@ public class Client {
 		else
 			response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
 
-		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, FolderItem.class);
+		return requestTool.parseAndHandle(response, HTTP_OK, FolderItem.class);
 	}
 
 
@@ -558,7 +556,7 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
-		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, BaseItem.class);
+		return requestTool.parseAndHandle(response, HTTP_OK, BaseItem.class);
 	}
 
 	@NotNull
@@ -566,7 +564,7 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
-		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_OK, BaseItem.class);
+		return requestTool.parseAndHandle(response, HTTP_OK, BaseItem.class);
 	}
 
 	@NotNull
@@ -598,7 +596,7 @@ public class Client {
 							items[finalI] = requestTool.parseAndHandle(
 									future.response(),
 									future.get(),
-									HttpURLConnection.HTTP_OK,
+									HTTP_OK,
 									BaseItem.class);
 							latches[finalI].countDown();
 						}
@@ -718,7 +716,7 @@ public class Client {
 		SyncResponse response = requestTool.postMetadata(api, content);
 
 		// if not 202 Accepted raise ErrorResponseException
-		requestTool.errorHandling(response, HttpURLConnection.HTTP_ACCEPTED);
+		requestTool.errorHandling(response, HTTP_ACCEPTED);
 
 		return response.getHeader().get("Location").get(0);
 	}
@@ -764,20 +762,18 @@ public class Client {
 
 		final CountDownLatch latch = new CountDownLatch(1);
 		final BaseItem[] newItem = new BaseItem[1];
-		ResponseFuture responseFuture =
-				requestTool.patchMetadataAsync(api, content,
-						new ResponseFutureListener() {
-							@Override public void operationComplete(ResponseFuture future) throws Exception {
-								newItem[0] = requestTool.parseAndHandle(
-										future.response(),
-										future.get(),
-										HttpURLConnection.HTTP_OK,
-										BaseItem.class);
-								latch.countDown();
-							}
-						});
+		ResponseFuture responseFuture = requestTool.patchMetadataAsync(api, content, new ResponseFutureListener() {
+			@Override public void operationComplete(ResponseFuture future) throws Exception {
+				newItem[0] = requestTool.parseAndHandle(
+						future.response(),
+						future.get(),
+						HTTP_OK,
+						BaseItem.class);
+				latch.countDown();
+			}
+		});
 
-		responseFuture.syncUninterruptibly();
+		// responseFuture.syncUninterruptibly();
 		try {
 			latch.await();
 		}
@@ -839,8 +835,7 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.postMetadata(api, content);
-
-		return requestTool.parseAndHandle(response, HttpURLConnection.HTTP_CREATED, FolderItem.class);
+		return requestTool.parseAndHandle(response, HTTP_CREATED, FolderItem.class);
 	}
 
 
@@ -855,59 +850,22 @@ public class Client {
 	 */
 
 
-	public void download(@NotNull String fileId, @NotNull Path parent) throws ErrorResponseException, IOException {
-		ObjectNode jsonNodes = requestTool.doGetJson(ITEM_ID_PREFIX + fileId + "?select=name,file,folder");
-
-		if (jsonNodes.has("folder"))
-			throw new IllegalArgumentException("given " + fileId + " is ID of folder. only ID of file is accepted");
-
-		_download(Client.ITEM_ID_PREFIX + fileId + "/content", parent, jsonNodes.get("name").asText());
+	public void download(@NotNull String fileId, @NotNull Path downloadFolder) throws IOException {
+		_downloadAsync(Client.ITEM_ID_PREFIX + fileId, downloadFolder, null).syncUninterruptibly();
 	}
 
-	public void download(@NotNull String fileId, @NotNull Path parent, @NotNull String fileName)
-			throws IOException, ErrorResponseException {
-		_download(Client.ITEM_ID_PREFIX + fileId + "/content", parent, fileName);
+	public void download(@NotNull String fileId, @NotNull Path downloadFolder,
+						 @NotNull String newName) throws IOException {
+		_downloadAsync(Client.ITEM_ID_PREFIX + fileId + "/content", downloadFolder, newName).syncUninterruptibly();
 	}
 
-	public void download(@NotNull BasePointer file, @NotNull Path parent) throws ErrorResponseException, IOException {
-		System.out.println(file.toASCIIApi() + "?select=name,file,folder");
-		ObjectNode jsonNodes = requestTool.doGetJson(file.toASCIIApi() + "?select=name,file,folder");
-
-		if (jsonNodes.has("folder"))
-			throw new IllegalArgumentException(
-					"given " + file.toString() + " is pointer of folder. only pointer of file is accepted");
-
-		_download(file.resolveOperator(Operator.CONTENT), parent, jsonNodes.get("name").asText());
+	public void download(@NotNull BasePointer file, @NotNull Path downloadFolder) throws IOException {
+		_downloadAsync(file.toASCIIApi(), downloadFolder, null).syncUninterruptibly();
 	}
 
-	public void download(@NotNull BasePointer file, @NotNull Path parent, @NotNull String fileName)
-			throws ErrorResponseException, IOException {
-		_download(file.resolveOperator(Operator.CONTENT), parent, fileName);
-	}
-
-	private void _download(@NotNull String api, @NotNull Path parent, @NotNull String fileName)
-			throws IOException, ErrorResponseException {
-		Path parentBackup = parent.toAbsolutePath();
-		parent = parentBackup.resolve(fileName);
-
-		// it's illegal if and only if `parent` exists but not directory.
-		if (Files.exists(parentBackup) && !Files.isDirectory(parentBackup))
-			throw new IllegalArgumentException(parentBackup + " already exists and isn't folder.");
-
-		Files.createDirectories(parentBackup);
-
-		SyncResponse response = requestTool.newRequest(api).doGet();
-
-		requestTool.errorHandling(response, HttpURLConnection.HTTP_OK);
-
-		AsynchronousFileChannel fileChannel = AsynchronousFileChannel.open(
-				parent,
-				StandardOpenOption.CREATE,
-				StandardOpenOption.WRITE);
-
-		ByteBuffer contentBuf = ByteBuffer.wrap(response.getContent(), 0, response.getLength());
-
-		fileChannel.write(contentBuf, 0);
+	public void download(@NotNull BasePointer file, @NotNull Path downloadFolder,
+						 @NotNull String newName) throws IOException {
+		_downloadAsync(file.resolveOperator(Operator.CONTENT), downloadFolder, newName).syncUninterruptibly();
 	}
 
 
@@ -921,14 +879,14 @@ public class Client {
 		return _downloadAsync(Client.ITEM_ID_PREFIX + fileId + "/content", downloadFolder, newName);
 	}
 
-	public DownloadFuture downloadAsync(@NotNull BasePointer pointer, @NotNull Path downloadFolder,
-										@Nullable String newName) throws IOException {
-		return _downloadAsync(pointer.resolveOperator(Operator.CONTENT), downloadFolder, newName);
-	}
-
 	public DownloadFuture downloadAsync(@NotNull BasePointer pointer,
 										@NotNull Path downloadFolder) throws IOException {
 		return _downloadAsync(pointer.toASCIIApi(), downloadFolder, null);
+	}
+
+	public DownloadFuture downloadAsync(@NotNull BasePointer pointer, @NotNull Path downloadFolder,
+										@Nullable String newName) throws IOException {
+		return _downloadAsync(pointer.resolveOperator(Operator.CONTENT), downloadFolder, newName);
 	}
 
 	private DownloadFuture _downloadAsync(@NotNull String url, @NotNull Path downloadFolder,
@@ -941,7 +899,7 @@ public class Client {
 
 		Files.createDirectories(downloadFolder);
 
-		String fullUrl = RequestTool.BASE_URL + url;
+		String fullUrl = BASE_URL + url;
 		try {
 			if (newName != null) {
 				return new AsyncDownloadClient(requestTool, new URI(fullUrl), downloadFolder, newName).execute();
@@ -961,6 +919,34 @@ public class Client {
 
 
 
+
+	/*
+	*************************************************************
+	*
+	* Uploading files
+	*
+	*************************************************************
+	 */
+
+
+	public UploadFuture uploadFile(@NotNull String parentId, @NotNull Path filePath) throws IOException {
+		String rawPath = filePath.toUri().getRawPath();
+		String fileName = rawPath.substring(rawPath.lastIndexOf('/') + 1);
+		return requestTool.upload(ITEM_ID_PREFIX + parentId + ":/" + fileName + ":/upload.createSession", filePath);
+	}
+
+	public UploadFuture uploadFile(@NotNull IdPointer pointer, @NotNull Path filePath) throws IOException {
+		String rawPath = filePath.toUri().getRawPath();
+		String fileName = rawPath.substring(rawPath.lastIndexOf('/') + 1);
+		return requestTool.upload(pointer.toASCIIApi() + ":/" + fileName + ":/upload.createSession", filePath);
+	}
+
+	public UploadFuture uploadFile(@NotNull PathPointer pointer, @NotNull Path filePath) throws IOException {
+		String fileName = filePath.getFileName().toString();
+		return requestTool.upload(pointer.resolve(fileName).resolveOperator(UPLOAD_CREATE_SESSION), filePath);
+	}
+
+
 	/*
 	*************************************************************
 	*
@@ -974,14 +960,14 @@ public class Client {
 		SyncResponse response = requestTool.newRequest(Client.ITEM_ID_PREFIX + id).doDelete();
 
 		// if response isn't 204 No Content
-		requestTool.errorHandling(response, HttpURLConnection.HTTP_NO_CONTENT);
+		requestTool.errorHandling(response, HTTP_NO_CONTENT);
 	}
 
 	public void deleteItem(@NotNull BasePointer id) throws ErrorResponseException {
 		SyncResponse response = requestTool.newRequest(id.toASCIIApi()).doDelete();
 
 		// if response isn't 204 No Content
-		requestTool.errorHandling(response, HttpURLConnection.HTTP_NO_CONTENT);
+		requestTool.errorHandling(response, HTTP_NO_CONTENT);
 	}
 
 

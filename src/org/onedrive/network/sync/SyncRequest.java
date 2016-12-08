@@ -2,6 +2,7 @@ package org.onedrive.network.sync;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.AsciiString;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 
@@ -54,8 +55,14 @@ public class SyncRequest {
 	 * @param key   Key to add in request's header.
 	 * @param value Value to add in request's header. It could be {@code null}.
 	 */
-	public void setHeader(@NotNull String key, String value) {
+	public SyncRequest setHeader(@NotNull String key, String value) {
 		httpConnection.setRequestProperty(key, value);
+		return this;
+	}
+
+	public SyncRequest setHeader(@NotNull AsciiString key, String value) {
+		httpConnection.setRequestProperty(key.toString(), value);
+		return this;
 	}
 
 	@NotNull
@@ -145,7 +152,7 @@ public class SyncRequest {
 			Map<String, List<String>> header = httpConnection.getHeaderFields();
 			URL url = httpConnection.getURL();
 
-			ByteBuf byteStream = Unpooled.buffer(1024);
+			ByteBuf byteStream = Unpooled.buffer(512);
 			InputStream body;
 
 			if (code < 400)

@@ -4,7 +4,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.utils.RequestTool;
+import org.onedrive.network.RequestTool;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -99,17 +99,13 @@ public class PathPointer extends BasePointer {
 	and otherwise user invoked.
 	 */
 	public PathPointer(@NotNull String anyPath, @Nullable String driveId) {
-		String rawPath;
-
-
+		String rawPath = anyPath;
+		// decode `anyPath`
+		anyPath = QueryStringDecoder.decodeComponent(anyPath);
 		Matcher matcher;
 
 		// anyPath is OneDrive-path notation that contains drive-id
 		if ((matcher = drivePathMatcher.matcher(anyPath)).matches()) {
-			// decode `anyPath`
-			rawPath = anyPath;
-			anyPath = QueryStringDecoder.decodeComponent(anyPath);
-
 			this.readablePath = matcher.group(2);
 			this.driveId = driveId;
 
@@ -129,9 +125,6 @@ public class PathPointer extends BasePointer {
 		}
 		// anyPath is OneDrive-path notation that does not contain drive-id
 		else if ((matcher = pathMatcher.matcher(anyPath)).matches()) {
-			// decode `anyPath`
-			rawPath = anyPath;
-			anyPath = QueryStringDecoder.decodeComponent(anyPath);
 
 			this.readablePath = matcher.group(1);
 			this.driveId = driveId;
@@ -152,9 +145,12 @@ public class PathPointer extends BasePointer {
 		}
 		// if anyPath is pure absolute path
 		else {
+			String t;
 			// encode `anyPath`
 			try {
-				rawPath = new URI(null, null, anyPath, null).toASCIIString();
+				t = new URI(null, null, rawPath, null).toASCIIString();
+				anyPath = rawPath;
+				rawPath = t;
 			}
 			catch (URISyntaxException e) {
 				throw new IllegalArgumentException("Illegal character in `anyPath` at index " + e.getIndex(), e);
@@ -230,16 +226,14 @@ public class PathPointer extends BasePointer {
 			throw new IllegalArgumentException("`name` doesn't starts with '/'. given : " + name);
 		}
 
-		String rawName = name;
+		String rawName;
 
-		// if `name` is already escaped string, make encoded path
-		if (!isAllASCII(name)) {
-			try {
-				rawName = new URI(null, null, name, null).toASCIIString();
-			}
-			catch (URISyntaxException e) {
-				throw new IllegalArgumentException("Illegal character in `name` at index " + e.getIndex(), e);
-			}
+		// escape `name` string
+		try {
+			rawName = new URI(null, null, name, null).toASCIIString();
+		}
+		catch (URISyntaxException e) {
+			throw new IllegalArgumentException("Illegal character in `name` at index " + e.getIndex(), e);
 		}
 
 		// if `path` end with '/'

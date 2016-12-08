@@ -7,9 +7,14 @@ import io.netty.util.concurrent.Future;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.utils.RequestTool;
+import org.onedrive.network.RequestTool;
 
 import java.net.URI;
+
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT_ENCODING;
+import static io.netty.handler.codec.http.HttpHeaderNames.HOST;
+import static io.netty.handler.codec.http.HttpHeaderValues.GZIP_DEFLATE;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * {@// TODO: Enhance javadoc }
@@ -34,17 +39,18 @@ public abstract class AbstractClient {
 
 		if (content != null) {
 			this.request = new DefaultFullHttpRequest(
-					HttpVersion.HTTP_1_1,
+					HTTP_1_1,
 					method,
 					uri.toASCIIString(),
 					Unpooled.wrappedBuffer(content));
 		}
 		else {
-			this.request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, uri.toASCIIString());
+			this.request = new DefaultFullHttpRequest(HTTP_1_1, method, uri.toASCIIString());
 		}
 
-		this.request.headers().set(HttpHeaderNames.HOST, uri.getHost());
-		this.request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP_DEFLATE);
+		this.request.headers()
+				.set(HOST, uri.getHost())
+				.set(ACCEPT_ENCODING, GZIP_DEFLATE);
 	}
 
 	@NotNull public AbstractClient setHeader(AsciiString header, CharSequence value) {

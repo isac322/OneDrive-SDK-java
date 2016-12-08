@@ -12,7 +12,6 @@ import org.onedrive.container.items.*;
 import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
-import org.onedrive.network.async.AsyncClient;
 import org.onedrive.network.async.DownloadFuture;
 import org.onedrive.network.async.ResponseFuture;
 import org.onedrive.network.async.ResponseFutureListener;
@@ -20,7 +19,6 @@ import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
@@ -29,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
+import static java.net.HttpURLConnection.HTTP_OK;
 
 /**
  * TODO: add javadoc
@@ -514,13 +514,13 @@ public class ClientTest extends TestCase {
 
 		final FolderItem[] items = new FolderItem[1];
 		ResponseFuture responseFuture =
-				client.requestTool().doAsync(HttpMethod.GET, "/drive/items/D4FD82CA6DF96A47!14841?expand=children",
-						new ResponseFutureListener() {
+				client.requestTool().doAsync(HttpMethod.GET, "/drive/items/D4FD82CA6DF96A47!14841?expand=children")
+						.addListener(new ResponseFutureListener() {
 							@Override public void operationComplete(ResponseFuture future) throws Exception {
 								items[0] = client.requestTool().parseAndHandle(
 										future.response(),
 										future.get(),
-										HttpURLConnection.HTTP_OK, FolderItem.class);
+										HTTP_OK, FolderItem.class);
 							}
 						});
 
@@ -602,10 +602,22 @@ public class ClientTest extends TestCase {
 
 		DownloadFuture downloadFuture = mp3.downloadAsync(Paths.get(".")).syncUninterruptibly();
 		//DownloadFuture downloadFuture = client.downloadAsync(TXT_ASCII_ESCAPED, Paths.get("")).syncUninterruptibly();
+		System.out.println(downloadFuture.response());
 		System.out.println(downloadFuture.isDone());
 		System.out.println(downloadFuture.isSuccess());
 		System.out.println(downloadFuture.getNow().getName() + '\t' + downloadFuture.getNow().length());
 		System.out.println(downloadFuture.downloadPath());
+	}
+
+	public void testAsyncDown3() throws ErrorResponseException, IOException, InterruptedException {
+		getClient();
+
+		FileItem mp3 = client.getFile(MP3_UTF8_BIG);
+		System.out.println(mp3.getId());
+		System.out.println(mp3.getPathPointer());
+		System.out.println(mp3.getName());
+
+		mp3.download(Paths.get("."));
 	}
 
 	public void testAsyncDown2() throws ErrorResponseException, IOException, ExecutionException, InterruptedException {
@@ -643,20 +655,18 @@ public class ClientTest extends TestCase {
 	public void testUpload() throws InterruptedException {
 		getClient();
 
-		AsyncClient asyncClient = client.requestTool().newAsyncRequest(HttpMethod.GET, "/drive/root");
-
-		ResponseFuture future = asyncClient.execute();
-		future.addListener(new ResponseFutureListener() {
-			@Override public void operationComplete(ResponseFuture future) throws Exception {
-				try {
-					TimeUnit.SECONDS.sleep(1);
-				}
-				catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				System.out.println("DONE IN");
-			}
-		});
+		ResponseFuture future = client.requestTool().doAsync(HttpMethod.GET, "/drive/root")
+				.addListener(new ResponseFutureListener() {
+					@Override public void operationComplete(ResponseFuture future) throws Exception {
+						try {
+							TimeUnit.SECONDS.sleep(1);
+						}
+						catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						System.out.println("DONE IN");
+					}
+				});
 
 		while (!future.isDone()) {
 			System.out.println("...");
@@ -664,5 +674,12 @@ public class ClientTest extends TestCase {
 		}
 		System.out.println("DONE OUT");
 		TimeUnit.SECONDS.sleep(3);
+	}
+
+	public void testSend() throws ErrorResponseException, IOException, InterruptedException {
+		getClient();
+
+		client.uploadFile("D4FD82CA6DF96A47!110", Paths.get(System.getProperty("user.home"))
+				.resolve("[수정] vol.5.mp3")).syncUninterruptibly();
 	}
 }

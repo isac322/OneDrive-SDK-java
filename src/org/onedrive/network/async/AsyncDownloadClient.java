@@ -15,8 +15,8 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
 import org.onedrive.exceptions.InternalException;
+import org.onedrive.network.RequestTool;
 import org.onedrive.utils.DirectByteInputStream;
-import org.onedrive.utils.RequestTool;
 
 import javax.net.ssl.SSLException;
 import java.net.HttpURLConnection;
@@ -68,9 +68,10 @@ public class AsyncDownloadClient extends AbstractClient {
 
 	@Override
 	public DownloadFuture execute() {
-		new AsyncClient(group, method, uri, listener)
+		new AsyncClient(group, method, uri)
 				.setHeader(HttpHeaderNames.AUTHORIZATION, accessToken)
-				.execute();
+				.execute()
+				.addListener(listener);
 
 		return downloadPromise;
 	}
@@ -123,7 +124,7 @@ public class AsyncDownloadClient extends AbstractClient {
 				Bootstrap bootstrap = new Bootstrap()
 						.group(group)
 						.channel(NioSocketChannel.class)
-						.handler(new AsyncClientInitializer(sslCtx, downloadHandler));
+						.handler(new AsyncDefaultInitializer(sslCtx, downloadHandler));
 
 				// wait until be connected, and get channel
 				Channel channel = bootstrap.connect(host, port).syncUninterruptibly().channel();
@@ -194,7 +195,7 @@ public class AsyncDownloadClient extends AbstractClient {
 				Bootstrap bootstrap = new Bootstrap()
 						.group(group)
 						.channel(NioSocketChannel.class)
-						.handler(new AsyncClientInitializer(sslCtx, downloadHandler));
+						.handler(new AsyncDefaultInitializer(sslCtx, downloadHandler));
 
 				// wait until be connected, and get channel
 				Channel channel = bootstrap.connect(host, port).syncUninterruptibly().channel();

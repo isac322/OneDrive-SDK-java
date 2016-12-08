@@ -10,11 +10,11 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import org.jetbrains.annotations.NotNull;
 
-public class AsyncClientInitializer extends ChannelInitializer<SocketChannel> {
+public class AsyncUploadInitializer extends ChannelInitializer<SocketChannel> {
 	private final SslContext sslCtx;
 	private final ChannelHandler handler;
 
-	AsyncClientInitializer(@NotNull SslContext sslCtx, @NotNull ChannelHandler handler) {
+	public AsyncUploadInitializer(@NotNull SslContext sslCtx, @NotNull ChannelHandler handler) {
 		this.sslCtx = sslCtx;
 		this.handler = handler;
 	}
@@ -30,9 +30,6 @@ public class AsyncClientInitializer extends ChannelInitializer<SocketChannel> {
 
 		// Remove the following line if you don't want automatic content decompression.
 		p.addLast("inflater", new HttpContentDecompressor());
-
-		// Uncomment the following line if you don't want to handle HttpContents.
-		// p.addLast(new HttpObjectAggregator(1048576));
 
 		// to be used since huge file transfer
 		p.addLast("chunkedWriter", new ChunkedWriteHandler());

@@ -7,7 +7,6 @@ import io.netty.util.concurrent.Promise;
 
 import java.io.File;
 import java.net.URI;
-import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Path;
 
 /**
@@ -19,8 +18,6 @@ public interface DownloadPromise extends DownloadFuture, Promise<File> {
 	DownloadPromise setResponse(HttpResponse response);
 
 	DownloadPromise setURI(URI remoteUri);
-
-	DownloadPromise setChannel(AsynchronousFileChannel fileChannel);
 
 	DownloadPromise setPath(Path downloadPath);
 

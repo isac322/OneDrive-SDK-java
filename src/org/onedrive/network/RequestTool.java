@@ -1,14 +1,19 @@
-package org.onedrive.utils;
+package org.onedrive.network;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.*;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,16 +21,27 @@ import org.onedrive.Client;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.ErrorResponse;
 import org.onedrive.network.async.*;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
+import org.onedrive.utils.DirectByteInputStream;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
-import java.net.*;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Path;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.UNWRAP_ROOT_VALUE;
+import static io.netty.handler.codec.http.HttpHeaderNames.*;
+import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
+import static io.netty.handler.codec.http.HttpHeaderValues.GZIP_DEFLATE;
+import static io.netty.handler.codec.http.HttpMethod.PATCH;
+import static io.netty.handler.codec.http.HttpMethod.POST;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static java.net.HttpURLConnection.HTTP_OK;
 
 /**
  * {@// TODO: Enhance javadoc }
@@ -41,7 +57,7 @@ public class RequestTool {
 	 */
 	public static final String BASE_URL = SCHEME + "://" + HOST;
 	@Getter protected static final EventLoopGroup group = new NioEventLoopGroup();
-	private final ObjectMapper mapper;
+	@Getter private final ObjectMapper mapper;
 	@Getter private final Client client;
 
 
@@ -71,14 +87,16 @@ public class RequestTool {
 	 */
 	@NotNull
 	public SyncRequest newRequest(@NotNull String api) {
+		URL url;
 		try {
-			URL requestUrl = new URL(BASE_URL + api);
-			return newRequest(requestUrl);
+			url = new URL(BASE_URL + api);
 		}
 		catch (MalformedURLException e) {
 			throw new IllegalArgumentException(
 					"Wrong URL form. Should check code's String: \"" + BASE_URL + api + "\"", e);
 		}
+		return new SyncRequest(url)
+				.setHeader(AUTHORIZATION, client.getFullToken());
 	}
 
 
@@ -100,37 +118,8 @@ public class RequestTool {
 	 */
 	@NotNull
 	public SyncRequest newRequest(@NotNull URL url) {
-		SyncRequest request = new SyncRequest(url);
-		request.setHeader("Authorization", client.getFullToken());
-		return request;
-	}
-
-
-	@NotNull
-	public AsyncClient newAsyncRequest(@NotNull HttpMethod method, @NotNull String api) {
-		try {
-			AsyncClient asyncClient = new AsyncClient(group, method, new URI(BASE_URL + api));
-			asyncClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-			return asyncClient;
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException(
-					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
-		}
-	}
-
-	@NotNull
-	public AsyncClient newAsyncRequest(@NotNull HttpMethod method, @NotNull String api,
-									   ResponseFutureListener handler) {
-		try {
-			AsyncClient asyncClient = new AsyncClient(group, method, new URI(BASE_URL + api), handler);
-			asyncClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-			return asyncClient;
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException(
-					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
-		}
+		return new SyncRequest(url)
+				.setHeader(AUTHORIZATION, client.getFullToken());
 	}
 
 
@@ -145,43 +134,47 @@ public class RequestTool {
 
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api) {
-		AsyncClient asyncClient;
+		URI uri;
 		try {
-			asyncClient = new AsyncClient(group, method, new URI(BASE_URL + api));
+			uri = new URI(BASE_URL + api);
 		}
 		catch (URISyntaxException e) {
 			throw new IllegalArgumentException(
 					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
 		}
-		asyncClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		return asyncClient.execute();
+		return new AsyncClient(group, method, uri)
+				.setHeader(AUTHORIZATION, client.getFullToken())
+				.execute();
 	}
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull URI uri) {
-		AsyncClient asyncClient = new AsyncClient(group, method, uri);
-		asyncClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		return asyncClient.execute();
+		return new AsyncClient(group, method, uri)
+				.setHeader(AUTHORIZATION, client.getFullToken())
+				.execute();
 	}
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api,
 								  ResponseFutureListener onComplete) {
-		AsyncClient asyncClient;
+		URI uri;
 		try {
-			asyncClient = new AsyncClient(group, method, new URI(BASE_URL + api), onComplete);
+			uri = new URI(BASE_URL + api);
 		}
 		catch (URISyntaxException e) {
 			throw new IllegalArgumentException(
 					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
 		}
-		asyncClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		return asyncClient.execute();
+		return new AsyncClient(group, method, uri)
+				.setHeader(AUTHORIZATION, client.getFullToken())
+				.execute()
+				.addListener(onComplete);
 	}
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull URI uri,
 								  ResponseFutureListener onComplete) {
-		AsyncClient asyncClient = new AsyncClient(group, method, uri, onComplete);
-		asyncClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		return asyncClient.execute();
+		return new AsyncClient(group, method, uri)
+				.setHeader(AUTHORIZATION, client.getFullToken())
+				.execute()
+				.addListener(onComplete);
 	}
 
 
@@ -223,7 +216,7 @@ public class RequestTool {
 		SyncResponse response = newRequest(api).doGet();
 
 		try {
-			if (response.getCode() == HttpURLConnection.HTTP_OK) {
+			if (response.getCode() == HTTP_OK) {
 				return (ObjectNode) mapper.readTree(response.getContent());
 			}
 			else {
@@ -231,7 +224,7 @@ public class RequestTool {
 						.readerFor(ErrorResponse.class)
 						.with(UNWRAP_ROOT_VALUE)
 						.readValue(response.getContent());
-				throw new ErrorResponseException(HttpURLConnection.HTTP_OK, response.getCode(),
+				throw new ErrorResponseException(HTTP_OK, response.getCode(),
 						error.getCode(), error.getMessage());
 			}
 		}
@@ -259,20 +252,97 @@ public class RequestTool {
 											 @Nullable ResponseFutureListener handler) {
 		AsyncClient asyncClient;
 		try {
-			asyncClient = new AsyncClient(group, HttpMethod.PATCH, new URI(BASE_URL + api), content);
+			asyncClient = new AsyncClient(group, PATCH, new URI(BASE_URL + api), content);
 		}
 		catch (URISyntaxException e) {
 			throw new IllegalArgumentException("Wrong character in `api` at " + e.getIndex(), e);
 		}
 
-		asyncClient.setHeader(HttpHeaderNames.AUTHORIZATION, client.getFullToken());
-		asyncClient.setHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-		asyncClient.setHeader(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(content.length));
+		asyncClient.setHeader(AUTHORIZATION, client.getFullToken());
+		asyncClient.setHeader(CONTENT_TYPE, APPLICATION_JSON);
+		asyncClient.setHeader(CONTENT_LENGTH, String.valueOf(content.length));
 		asyncClient.setHeader("Prefer", "respond-async");
 
 		return asyncClient.execute().addListener(handler);
 	}
 
+
+	public UploadFuture upload(@NotNull String api, @NotNull Path filePath) throws IOException {
+		URI uri;
+		try {
+			uri = new URI(BASE_URL + api);
+		}
+		catch (URISyntaxException e) {
+			throw new IllegalArgumentException(
+					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
+		}
+
+		if (!RequestTool.SCHEME.equalsIgnoreCase(uri.getScheme())) {
+			throw new IllegalArgumentException("Wrong network scheme : \"" + uri.getScheme() + "\".");
+		}
+
+		final DefaultHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, uri.toASCIIString());
+
+		request.headers()
+				.set(HttpHeaderNames.HOST, uri.getHost())
+				.set(ACCEPT_ENCODING, GZIP_DEFLATE)
+				.set(CONTENT_LENGTH, 0)
+				.set(AUTHORIZATION, client.getFullToken());
+
+		String host = uri.getHost();
+		int port = 443;
+
+		// Configure SSL context.
+		SslContext sslCtx;
+		try {
+			sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
+		}
+		catch (SSLException e) {
+			throw new InternalException("Internal SSL error while constructing. contact author.", e);
+		}
+
+		ResponsePromise responsePromise = new DefaultResponsePromise(group.next());
+
+		AsyncClientHandler clientHandler = new AsyncClientHandler(responsePromise);
+
+		// Configure the client.
+		Bootstrap bootstrap = new Bootstrap()
+				.group(group)
+				.channel(NioSocketChannel.class)
+				.handler(new AsyncDefaultInitializer(sslCtx, clientHandler));
+
+
+		System.out.println(request);
+		bootstrap.connect(host, port).addListener(new ChannelFutureListener() {
+			@Override public void operationComplete(ChannelFuture future) throws Exception {
+				// Make the connection attempt.
+				Channel ch = future.channel();
+
+				// Send the HTTP request.
+				ch.writeAndFlush(request);
+			}
+		});
+
+		final DefaultUploadPromise uploadPromise = new DefaultUploadPromise(group.next(), filePath);
+
+		responsePromise.addListener(new ResponseFutureListener() {
+			@Override public void operationComplete(ResponseFuture future) throws Exception {
+				if (future.isSuccess()) {
+					HttpResponse response = future.response();
+					if (response.status().code() == HTTP_OK) {
+						UploadSession session = parseAndHandle(response, future.get(), HTTP_OK, UploadSession.class);
+						uploadPromise.setUploadURI(new URI(session.getUploadUrl()));
+
+						AsyncUploadClient uploadClient = new AsyncUploadClient(group, uploadPromise);
+						uploadClient.execute();
+					}
+					else errorHandling(response, future.get(), HTTP_OK);
+				}
+			}
+		});
+
+		return uploadPromise;
+	}
 
 
 

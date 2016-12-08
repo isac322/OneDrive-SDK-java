@@ -167,7 +167,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 
 			addChildren(client, array, all, folder, file);
 
-			responseFuture.syncUninterruptibly();
+			// responseFuture.syncUninterruptibly();
 			try {
 				latch.await();
 			}

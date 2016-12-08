@@ -6,8 +6,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 import java.io.File;
 import java.net.URI;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 
 /**
@@ -21,8 +19,6 @@ public interface DownloadFuture extends Future<File> {
 	URI remoteURI();
 
 	HttpResponse response();
-
-	AsynchronousFileChannel channel();
 
 
 	@Override DownloadFuture addListener(GenericFutureListener<? extends Future<? super File>> listener);

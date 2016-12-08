@@ -14,7 +14,7 @@ public class AsyncClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 	private final ResponsePromise responsePromise;
 
 
-	AsyncClientHandler(ResponsePromise responsePromise) {
+	public AsyncClientHandler(ResponsePromise responsePromise) {
 		this.responsePromise = responsePromise;
 	}
 

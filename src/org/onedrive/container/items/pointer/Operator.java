@@ -14,9 +14,10 @@ public enum Operator {
 	CONTENT("content"),
 	VIEW_SEARCH("view.search"),
 	VIEW_DELTA("view.delta"),
-	THUMBNAILS("thumbnails");
+	THUMBNAILS("thumbnails"),
+	UPLOAD_CREATE_SESSION("upload.createSession");
 
-	@Getter public String string;
+	@Getter private String string;
 
 	Operator(String string) {
 		this.string = string;

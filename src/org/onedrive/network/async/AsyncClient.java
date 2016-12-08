@@ -25,28 +25,17 @@ import java.net.URI;
  */
 public class AsyncClient extends AbstractClient {
 	@NotNull private final EventLoopGroup group;
-	private ResponseFutureListener onComplete;
 
 
 	public AsyncClient(@NotNull EventLoopGroup group, @NotNull HttpMethod method, @NotNull URI uri) {
-		this(group, method, uri, null, null);
-	}
-
-	public AsyncClient(@NotNull EventLoopGroup group, @NotNull HttpMethod method,
-					   @NotNull URI uri, ResponseFutureListener onComplete) {
-		this(group, method, uri, null, onComplete);
+		super(method, uri, null);
+		this.group = group;
 	}
 
 	public AsyncClient(@NotNull EventLoopGroup group, @NotNull HttpMethod method, @NotNull URI uri,
 					   @Nullable byte[] content) {
-		this(group, method, uri, content, null);
-	}
-
-	public AsyncClient(@NotNull EventLoopGroup group, @NotNull HttpMethod method, @NotNull URI uri,
-					   @Nullable byte[] content, ResponseFutureListener onComplete) {
 		super(method, uri, content);
 		this.group = group;
-		this.onComplete = onComplete;
 	}
 
 
@@ -76,7 +65,6 @@ public class AsyncClient extends AbstractClient {
 		}
 
 		ResponsePromise promise = new DefaultResponsePromise(group.next());
-		if (onComplete != null) promise.addListener(onComplete);
 
 		AsyncClientHandler clientHandler = new AsyncClientHandler(promise);
 
@@ -84,7 +72,7 @@ public class AsyncClient extends AbstractClient {
 		Bootstrap bootstrap = new Bootstrap()
 				.group(group)
 				.channel(NioSocketChannel.class)
-				.handler(new AsyncClientInitializer(sslCtx, clientHandler));
+				.handler(new AsyncDefaultInitializer(sslCtx, clientHandler));
 
 
 		bootstrap.connect(host, port).addListener(new ChannelFutureListener() {

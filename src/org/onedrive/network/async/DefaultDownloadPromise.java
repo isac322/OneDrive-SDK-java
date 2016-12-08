@@ -8,7 +8,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 import java.io.File;
 import java.net.URI;
-import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Path;
 
 /**
@@ -20,7 +19,6 @@ public class DefaultDownloadPromise extends DefaultPromise<File> implements Down
 	protected Path downloadPath;
 	protected URI remoteUri;
 	protected HttpResponse response;
-	protected AsynchronousFileChannel fileChannel;
 
 	public DefaultDownloadPromise(EventExecutor executor) {
 		super(executor);
@@ -38,10 +36,6 @@ public class DefaultDownloadPromise extends DefaultPromise<File> implements Down
 		return response;
 	}
 
-	@Override public AsynchronousFileChannel channel() {
-		return fileChannel;
-	}
-
 	@Override public DefaultDownloadPromise setResponse(HttpResponse response) {
 		this.response = response;
 		return this;
@@ -49,11 +43,6 @@ public class DefaultDownloadPromise extends DefaultPromise<File> implements Down
 
 	@Override public DefaultDownloadPromise setURI(URI remoteUri) {
 		this.remoteUri = remoteUri;
-		return this;
-	}
-
-	@Override public DefaultDownloadPromise setChannel(AsynchronousFileChannel fileChannel) {
-		this.fileChannel = fileChannel;
 		return this;
 	}
 

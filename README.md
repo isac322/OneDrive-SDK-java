@@ -1,4 +1,4 @@
-[한국어](https://github.com/isac322/OneDrive-API-java/blob/master/README.kor.md) | **English**
+[한국어 (korean)](https://github.com/isac322/OneDrive-API-java/blob/master/README.kor.md) | **English**
 
 
 # [OneDrive](https://onedrive.live.com/) API for Java
@@ -18,13 +18,13 @@ purse fast, easy to use, intuitive API.
 - inquiring shared folder
 - basic [RemoteItem](https://dev.onedrive.com/misc/working-with-links.htm) handling
 - inquiring [Drives](https://dev.onedrive.com/resources/drive.htm)
+- creating file and upload it (async)
 
 
 
 ### TODO
 
 - searching file or folder (by name or content)
-- creating file and upload it (async)
 - sharing folder or file
 - Maven
 - documentation
@@ -303,4 +303,24 @@ item.setDescription("blah blah");
 
 // refresh item's all variable to latest value
 item.refresh();
+```
+
+### 10. Upload file (asynchronously)
+
+- like [asynchronously downloading](#7-download-file-asynchronously), it uses Future & Promise mechanism.
+- more detail of `UploadFuture` will explain later at wiki...
+
+```java
+import java.nio.file.Path;
+import org.onedrive.network.async.UploadFuture;
+
+// assume that Client object is already constructed
+
+UploadFuture future;
+
+// start to upload file
+future = client.uploadFile("{remote-folder-id}", Paths.get("local-file-path"));
+// wait until uploading is done
+future.syncUninterruptibly();
+
 ```
