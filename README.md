@@ -26,7 +26,6 @@ purse fast, easy to use, intuitive API.
 
 - searching file or folder (by name or content)
 - sharing folder or file
-- Maven
 - documentation
 - support custom redirect url when login
 - REST-api response error handling
@@ -39,7 +38,7 @@ purse fast, easy to use, intuitive API.
 
 ### Dependency
 
-*These are already included in directory 'lib'.*
+*These are already included in gradle configuration file 'build.gradle'.*
 
 - [Jackson](https://github.com/FasterXML/jackson)
 - [Lombok](https://projectlombok.org/)

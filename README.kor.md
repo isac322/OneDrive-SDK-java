@@ -27,7 +27,6 @@
 
 - 파일 or 폴더 검색 (by name or content)
 - 공유 기능
-- Maven
 - 문서화
 - support custom redirect url when login
 - REST-api response error handling
@@ -39,7 +38,7 @@
 
 ### Dependency
 
-*lib 폴더에 이미 포함됨*
+*gradle 설정 파일 (build.gradle)에 이미 포함됨*
 
 - [Jackson](https://github.com/FasterXML/jackson)
 - [Lombok](https://projectlombok.org/)
