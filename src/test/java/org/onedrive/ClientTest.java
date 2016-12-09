@@ -33,10 +33,10 @@ public class ClientTest {
 	public static void getClient() {
 		assertNull(client);
 
-		final String clientId = "f21d2eff-49e2-4a10-a515-4a077f23c694";
+		final String clientId = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
 		final String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
 		final String redirectURL = "http://localhost:8080/";
-		final String clientSecret = "1t5UhiBewLrVUoKqWZWYiiS";
+		final String clientSecret = "XXXXXXXXXXXXXXXXXXXXXXX";
 
 		client = new Client(clientId, scope, redirectURL, clientSecret);
 
