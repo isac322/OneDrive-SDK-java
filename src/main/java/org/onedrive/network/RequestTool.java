@@ -8,12 +8,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.onedrive.Client;
@@ -25,7 +25,6 @@ import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
 import org.onedrive.utils.DirectByteInputStream;
 
-import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -56,16 +55,36 @@ public class RequestTool {
 	 * OneDrive API base URL.
 	 */
 	public static final String BASE_URL = SCHEME + "://" + HOST;
-	@Getter protected static final EventLoopGroup group = new NioEventLoopGroup();
+	private static final EventLoopGroup group;
+	private static final Class<? extends SocketChannel> socketChannelClass;
+
+	static {
+		EventLoopGroup tmpGroup;
+		Class<? extends SocketChannel> tmpClass;
+		try {
+			tmpGroup = new EpollEventLoopGroup();
+			tmpClass = EpollSocketChannel.class;
+		}
+		catch (Exception e) {
+			tmpGroup = new NioEventLoopGroup();
+			tmpClass = NioSocketChannel.class;
+		}
+
+		group = tmpGroup;
+		socketChannelClass = tmpClass;
+	}
+
 	@Getter private final ObjectMapper mapper;
 	@Getter private final Client client;
-
 
 	public RequestTool(@NotNull Client client, @NotNull ObjectMapper mapper) {
 		this.client = client;
 		this.mapper = mapper;
 	}
 
+	public static EventLoopGroup group() {return group;}
+
+	public static Class<? extends SocketChannel> socketChannelClass() {return socketChannelClass;}
 
 	/**
 	 * <h1>Refrain to use this method. you can find API that wants to process in {@link Client}.</h1>
@@ -310,15 +329,6 @@ public class RequestTool {
 		String host = uri.getHost();
 		int port = 443;
 
-		// Configure SSL context.
-		SslContext sslCtx;
-		try {
-			sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
-		}
-		catch (SSLException e) {
-			throw new InternalException("Internal SSL error while constructing. contact author.", e);
-		}
-
 		ResponsePromise responsePromise = new DefaultResponsePromise(group.next());
 
 		AsyncClientHandler clientHandler = new AsyncClientHandler(responsePromise);
@@ -326,18 +336,22 @@ public class RequestTool {
 		// Configure the client.
 		Bootstrap bootstrap = new Bootstrap()
 				.group(group)
-				.channel(NioSocketChannel.class)
-				.handler(new AsyncDefaultInitializer(sslCtx, clientHandler));
+				.channel(socketChannelClass)
+				.handler(new AsyncDefaultInitializer(clientHandler));
 
 
-		System.out.println(request);
 		bootstrap.connect(host, port).addListener(new ChannelFutureListener() {
 			@Override public void operationComplete(ChannelFuture future) throws Exception {
-				// Make the connection attempt.
-				Channel ch = future.channel();
+				if (future.isSuccess()) {
+					// Make the connection attempt.
+					Channel ch = future.channel();
 
-				// Send the HTTP request.
-				ch.writeAndFlush(request);
+					// Send the HTTP request.
+					ch.writeAndFlush(request);
+				}
+				else {
+					future.channel().close();
+				}
 			}
 		});
 

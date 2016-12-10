@@ -7,14 +7,30 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import org.jetbrains.annotations.NotNull;
 
+import javax.net.ssl.SSLException;
+
 public class AsyncDefaultInitializer extends ChannelInitializer<SocketChannel> {
-	private final SslContext sslCtx;
+	protected static final SslContext sslContext;
+
+	static {
+		SslContext sslContext1;
+		try {
+			sslContext1 = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
+		}
+		catch (SSLException e) {
+			e.printStackTrace();
+			sslContext1 = null;
+		}
+		sslContext = sslContext1;
+	}
+
 	private final ChannelHandler handler;
 
-	public AsyncDefaultInitializer(@NotNull SslContext sslCtx, @NotNull ChannelHandler handler) {
-		this.sslCtx = sslCtx;
+	public AsyncDefaultInitializer(@NotNull ChannelHandler handler) {
 		this.handler = handler;
 	}
 
@@ -23,7 +39,7 @@ public class AsyncDefaultInitializer extends ChannelInitializer<SocketChannel> {
 		ChannelPipeline p = ch.pipeline();
 
 		// Enable HTTPS.
-		p.addLast("ssl", sslCtx.newHandler(ch.alloc()));
+		p.addLast("ssl", sslContext.newHandler(ch.alloc()));
 
 		p.addLast("codec", new HttpClientCodec());
 

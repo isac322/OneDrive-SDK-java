@@ -38,7 +38,7 @@ public class AsyncDownloadClient extends AbstractClient {
 
 	public AsyncDownloadClient(@NotNull RequestTool requestTool, @NotNull URI itemURI, @NotNull Path downloadFolder) {
 		super(HttpMethod.GET, itemURI, null);
-		this.group = RequestTool.getGroup();
+		this.group = RequestTool.group();
 		this.accessToken = requestTool.getClient().getFullToken();
 
 		downloadPromise = new DefaultDownloadPromise(group.next());
@@ -48,7 +48,7 @@ public class AsyncDownloadClient extends AbstractClient {
 	public AsyncDownloadClient(@NotNull RequestTool requestTool, @NotNull URI uri,
 							   @NotNull Path downloadFolder, @NotNull String newName) {
 		super(HttpMethod.GET, uri, null);
-		this.group = RequestTool.getGroup();
+		this.group = RequestTool.group();
 		this.accessToken = requestTool.getClient().getFullToken();
 		downloadFolder = downloadFolder.resolve(newName);
 
@@ -89,7 +89,7 @@ public class AsyncDownloadClient extends AbstractClient {
 			this.downloadPath = downloadPath;
 			this.request = request;
 			this.requestTool = requestTool;
-			this.group = RequestTool.getGroup();
+			this.group = RequestTool.group();
 		}
 
 		@Override public void operationComplete(ResponseFuture future) throws Exception {
@@ -109,22 +109,13 @@ public class AsyncDownloadClient extends AbstractClient {
 				// set downloadPromise's URI
 				promise.setURI(uri);
 
-				// Configure SSL context.
-				SslContext sslCtx;
-				try {
-					sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
-				}
-				catch (SSLException e) {
-					throw new InternalException("Internal SSL error while constructing. contact author.", e);
-				}
-
 				AsyncDownloadHandler downloadHandler = new AsyncDownloadHandler(promise, downloadPath);
 
 				// Configure the client.
 				Bootstrap bootstrap = new Bootstrap()
 						.group(group)
-						.channel(NioSocketChannel.class)
-						.handler(new AsyncDefaultInitializer(sslCtx, downloadHandler));
+						.channel(RequestTool.socketChannelClass())
+						.handler(new AsyncDefaultInitializer(downloadHandler));
 
 				// wait until be connected, and get channel
 				Channel channel = bootstrap.connect(host, port).syncUninterruptibly().channel();
@@ -150,9 +141,9 @@ public class AsyncDownloadClient extends AbstractClient {
 	static class WithoutNameListener implements ResponseFutureListener {
 		private final EventLoopGroup group;
 		private final DownloadPromise promise;
-		private Path downloadPath;
 		private final DefaultFullHttpRequest request;
 		private final RequestTool requestTool;
+		private Path downloadPath;
 
 		WithoutNameListener(DownloadPromise promise, Path downloadPath,
 							DefaultFullHttpRequest request, RequestTool requestTool) {
@@ -160,7 +151,7 @@ public class AsyncDownloadClient extends AbstractClient {
 			this.downloadPath = downloadPath;
 			this.request = request;
 			this.requestTool = requestTool;
-			this.group = RequestTool.getGroup();
+			this.group = RequestTool.group();
 		}
 
 		@Override public void operationComplete(ResponseFuture future) throws Exception {
@@ -180,22 +171,13 @@ public class AsyncDownloadClient extends AbstractClient {
 				// set downloadPromise's URI
 				promise.setURI(uri);
 
-				// Configure SSL context.
-				SslContext sslCtx;
-				try {
-					sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
-				}
-				catch (SSLException e) {
-					throw new InternalException("Internal SSL error while constructing. contact author.", e);
-				}
-
 				AsyncDownloadHandler downloadHandler = new AsyncDownloadHandler(promise, downloadPath);
 
 				// Configure the client.
 				Bootstrap bootstrap = new Bootstrap()
 						.group(group)
-						.channel(NioSocketChannel.class)
-						.handler(new AsyncDefaultInitializer(sslCtx, downloadHandler));
+						.channel(RequestTool.socketChannelClass())
+						.handler(new AsyncDefaultInitializer(downloadHandler));
 
 				// wait until be connected, and get channel
 				Channel channel = bootstrap.connect(host, port).syncUninterruptibly().channel();

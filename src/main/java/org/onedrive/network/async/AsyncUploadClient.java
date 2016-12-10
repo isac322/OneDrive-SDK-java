@@ -3,13 +3,8 @@ package org.onedrive.network.async;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
 import org.jetbrains.annotations.NotNull;
-import org.onedrive.exceptions.InternalException;
-
-import javax.net.ssl.SSLException;
+import org.onedrive.network.RequestTool;
 
 import static io.netty.handler.codec.http.HttpMethod.PUT;
 
@@ -35,21 +30,14 @@ public class AsyncUploadClient extends AbstractClient {
 		int port = 443;
 
 		// Configure SSL context.
-		SslContext sslCtx;
-		try {
-			sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
-		}
-		catch (SSLException e) {
-			throw new InternalException("Internal SSL error while constructing. contact author.", e);
-		}
 
 		AsyncUploadHandler clientHandler = new AsyncUploadHandler(uploadPromise, request);
 
 		// Configure the client.
 		Bootstrap bootstrap = new Bootstrap()
 				.group(group)
-				.channel(NioSocketChannel.class)
-				.handler(new AsyncDefaultInitializer(sslCtx, clientHandler));
+				.channel(RequestTool.socketChannelClass())
+				.handler(new AsyncDefaultInitializer(clientHandler));
 
 
 		bootstrap.connect(host, port);

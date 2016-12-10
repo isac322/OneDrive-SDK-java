@@ -7,15 +7,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
 import io.netty.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.exceptions.InternalException;
+import org.onedrive.network.RequestTool;
 
-import javax.net.ssl.SSLException;
 import java.net.URI;
 
 /**
@@ -55,15 +51,6 @@ public class AsyncClient extends AbstractClient {
 		String host = uri.getHost();
 		int port = 443;
 
-		// Configure SSL context.
-		SslContext sslCtx;
-		try {
-			sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
-		}
-		catch (SSLException e) {
-			throw new InternalException("Internal SSL error while constructing. contact author.", e);
-		}
-
 		ResponsePromise promise = new DefaultResponsePromise(group.next());
 
 		AsyncClientHandler clientHandler = new AsyncClientHandler(promise);
@@ -71,8 +58,8 @@ public class AsyncClient extends AbstractClient {
 		// Configure the client.
 		Bootstrap bootstrap = new Bootstrap()
 				.group(group)
-				.channel(NioSocketChannel.class)
-				.handler(new AsyncDefaultInitializer(sslCtx, clientHandler));
+				.channel(RequestTool.socketChannelClass())
+				.handler(new AsyncDefaultInitializer(clientHandler));
 
 
 		bootstrap.connect(host, port).addListener(new ChannelFutureListener() {
