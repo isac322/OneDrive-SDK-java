@@ -1,9 +1,9 @@
 package org.onedrive.network.async;
 
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
@@ -14,8 +14,8 @@ import java.net.URI;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.HOST;
+import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.onedrive.network.RequestTool.GZIP_DEFLATE;
 
 /**
  * {@// TODO: Enhance javadoc }
@@ -51,7 +51,7 @@ public abstract class AbstractClient {
 
 		this.request.headers()
 				.set(HOST, uri.getHost())
-				.set(ACCEPT_ENCODING, GZIP_DEFLATE);
+				.set(ACCEPT_ENCODING, GZIP);
 	}
 
 	@NotNull public AbstractClient setHeader(AsciiString header, CharSequence value) {

@@ -2,7 +2,7 @@ package org.onedrive.network.sync;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.AsciiString;
+import io.netty.util.AsciiString;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 

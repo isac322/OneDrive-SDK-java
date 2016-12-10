@@ -10,9 +10,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
@@ -35,7 +35,6 @@ import java.nio.file.Path;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.UNWRAP_ROOT_VALUE;
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
-import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpMethod.PATCH;
 import static io.netty.handler.codec.http.HttpMethod.POST;
@@ -49,7 +48,6 @@ import static java.net.HttpURLConnection.HTTP_OK;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class RequestTool {
-	public static final AsciiString[] GZIP_DEFLATE = new AsciiString[]{GZIP, DEFLATE};
 	public static final String APPLICATION_JSON = "application/json";
 
 	public static final String SCHEME = "https";
@@ -305,7 +303,7 @@ public class RequestTool {
 
 		request.headers()
 				.set(HttpHeaderNames.HOST, uri.getHost())
-				.set(ACCEPT_ENCODING, GZIP_DEFLATE)
+				.set(ACCEPT_ENCODING, GZIP)
 				.set(CONTENT_LENGTH, "0")
 				.set(AUTHORIZATION, client.getFullToken());
 
@@ -315,7 +313,7 @@ public class RequestTool {
 		// Configure SSL context.
 		SslContext sslCtx;
 		try {
-			sslCtx = SslContext.newClientContext(SslProvider.JDK);
+			sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
 		}
 		catch (SSLException e) {
 			throw new InternalException("Internal SSL error while constructing. contact author.", e);

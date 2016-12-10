@@ -5,13 +5,14 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
+import io.netty.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.network.RequestTool;
@@ -98,7 +99,7 @@ public class AsyncDownloadClient extends AbstractClient {
 			// if response is valid
 			if (future.isSuccess() && response.status().code() == HttpURLConnection.HTTP_MOVED_TEMP) {
 				// handling unescaped string in Location, prepare URI.
-				URL u = new URL(response.headers().get(HttpHeaderNames.LOCATION).toString());
+				URL u = new URL(response.headers().get(HttpHeaderNames.LOCATION));
 				URI uri = new URI(u.getProtocol(), u.getUserInfo(), u.getHost(), u.getPort(),
 						u.getPath(), u.getQuery(), u.getRef());
 
@@ -111,7 +112,7 @@ public class AsyncDownloadClient extends AbstractClient {
 				// Configure SSL context.
 				SslContext sslCtx;
 				try {
-					sslCtx = SslContext.newClientContext(SslProvider.JDK);
+					sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
 				}
 				catch (SSLException e) {
 					throw new InternalException("Internal SSL error while constructing. contact author.", e);
@@ -182,7 +183,7 @@ public class AsyncDownloadClient extends AbstractClient {
 				// Configure SSL context.
 				SslContext sslCtx;
 				try {
-					sslCtx = SslContext.newClientContext(SslProvider.JDK);
+					sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
 				}
 				catch (SSLException e) {
 					throw new InternalException("Internal SSL error while constructing. contact author.", e);

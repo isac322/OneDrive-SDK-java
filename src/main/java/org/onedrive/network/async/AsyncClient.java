@@ -6,10 +6,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
+import io.netty.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.exceptions.InternalException;
@@ -57,7 +58,7 @@ public class AsyncClient extends AbstractClient {
 		// Configure SSL context.
 		SslContext sslCtx;
 		try {
-			sslCtx = SslContext.newClientContext(SslProvider.JDK);
+			sslCtx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
 		}
 		catch (SSLException e) {
 			throw new InternalException("Internal SSL error while constructing. contact author.", e);

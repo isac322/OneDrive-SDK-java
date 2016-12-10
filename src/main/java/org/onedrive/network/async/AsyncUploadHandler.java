@@ -35,7 +35,8 @@ public class AsyncUploadHandler extends SimpleChannelInboundHandler<HttpObject> 
 		this.promise = promise;
 		this.byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(UPLOAD_FRAGMENT_SIZE_MAX);
 		// TODO: `AsyncUploadClient` would be useless (make request independently in refactoring)
-		this.request = request.copy(byteBuf);
+		request.content().release();
+		this.request = request.replace(byteBuf);
 		this.request.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
 
 		currentFragSize = 0;
@@ -90,7 +91,7 @@ public class AsyncUploadHandler extends SimpleChannelInboundHandler<HttpObject> 
 	}
 
 	@Override
-	protected void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+	protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
 		if (msg instanceof HttpResponse) {
 			HttpResponse response = (HttpResponse) msg;
 			status = response.status().code();

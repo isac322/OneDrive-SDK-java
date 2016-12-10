@@ -4,6 +4,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.onedrive.container.Drive;
+import org.onedrive.container.items.BaseItem;
 import org.onedrive.container.items.FolderItem;
 
 import static org.junit.Assert.*;
@@ -131,12 +132,27 @@ public class ClientTest {
 
 	@Test
 	public void getFolder() throws Exception {
+		FolderItem folder = client.getFolder(DIR_MANY_CHILD);
 
+		assertEquals(folder.getName(), DIR_MANY_CHILD_NAME);
+		assertEquals(folder.getId(), DIR_MANY_CHILD);
+		assertEquals(folder.childrenCount(), folder.allChildren().size());
+		assertFalse(folder.isRoot());
+		assertTrue(folder.isChildrenFetched());
+
+		for (BaseItem item : folder) {
+			System.out.println(item.getName() + '\t' + item.getSize());
+		}
 	}
 
 	@Test
 	public void getFolder1() throws Exception {
+		FolderItem folder = client.getFolder(DIR_MANY_CHILD, false);
 
+		assertEquals(folder.getName(), DIR_MANY_CHILD_NAME);
+		assertEquals(folder.getId(), DIR_MANY_CHILD);
+		assertFalse(folder.isRoot());
+		assertFalse(folder.isChildrenFetched());
 	}
 
 	@Test

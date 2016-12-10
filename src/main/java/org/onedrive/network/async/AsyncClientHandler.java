@@ -31,7 +31,7 @@ public class AsyncClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 	}
 
 	@Override
-	protected void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+	protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
 		if (msg instanceof HttpResponse) {
 			responsePromise.setResponse((HttpResponse) msg);
 		}
