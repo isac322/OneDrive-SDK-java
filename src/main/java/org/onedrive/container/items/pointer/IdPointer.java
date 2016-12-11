@@ -3,7 +3,7 @@ package org.onedrive.container.items.pointer;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.network.RequestTool;
+import org.onedrive.RequestTool;
 
 import java.net.URI;
 import java.net.URISyntaxException;

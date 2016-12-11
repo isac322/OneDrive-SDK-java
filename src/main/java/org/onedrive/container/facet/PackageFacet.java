@@ -1,9 +1,10 @@
 package org.onedrive.container.facet;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * <a href="https://dev.onedrive.com/facets/package_facet.htm">https://dev.onedrive.com/facets/package_facet.htm</a>
@@ -13,10 +14,5 @@ import org.jetbrains.annotations.Nullable;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class PackageFacet {
-	@Getter @Nullable protected final String type;
-
-	@JsonCreator
-	protected PackageFacet(@Nullable @JsonProperty("type") String type) {
-		this.type = type;
-	}
+	@Getter @Setter(PRIVATE) @Nullable protected String type;
 }

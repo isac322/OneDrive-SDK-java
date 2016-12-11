@@ -1,9 +1,11 @@
 package org.onedrive.container.facet;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.Setter;
+import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.IdentitySet;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * <a href="https://dev.onedrive.com/facets/shared_facet.htm">https://dev.onedrive.com/facets/shared_facet.htm</a>
@@ -12,13 +14,6 @@ import org.onedrive.container.IdentitySet;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class SharedFacet {
-	@Getter protected final IdentitySet owner;
-	@Getter protected final String scope;
-
-	@JsonCreator
-	protected SharedFacet(@JsonProperty("owner") IdentitySet owner,
-						  @JsonProperty("scope") String scope) {
-		this.owner = owner;
-		this.scope = scope;
-	}
+	@Getter @Setter(PRIVATE) @Nullable protected IdentitySet owner;
+	@Getter @Setter(PRIVATE) @Nullable protected String scope;
 }

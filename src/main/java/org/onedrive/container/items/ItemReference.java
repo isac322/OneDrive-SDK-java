@@ -1,12 +1,16 @@
 package org.onedrive.container.items;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.util.StdConverter;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.container.items.pointer.PathPointer;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * <a href="https://dev.onedrive.com/resources/itemReference.htm">https://dev.onedrive.com/resources/itemReference
@@ -17,30 +21,17 @@ import org.onedrive.container.items.pointer.PathPointer;
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
+@JsonDeserialize(converter = ItemReference.PointerInjector.class)
 public class ItemReference {
-	@Getter @NotNull protected final String driveId;
-	@Getter @Nullable protected final String id;
-	@Getter(onMethod = @__(@JsonIgnore)) @Nullable protected final PathPointer pathPointer;
-	@Getter @Nullable @JsonProperty("path") protected final String rawPath;
+	@Setter(PRIVATE) @Getter @NotNull protected String driveId;
+	@Setter(PRIVATE) @Getter @Nullable protected String id;
+	@Getter @JsonIgnore @Nullable protected PathPointer pathPointer;
+	@Setter(PRIVATE) @Getter @Nullable @JsonProperty("path") protected String rawPath;
 
-	/**
-	 * @throws IllegalArgumentException It's because of constructor {@link PathPointer#PathPointer(String, String)}.
-	 */
-	@JsonCreator
-	protected ItemReference(@JsonProperty("driveId") @NotNull String driveId,
-							@JsonProperty("id") @Nullable String id,
-							@JsonProperty("path") @Nullable String asciiPath) {
-		this.driveId = driveId;
-		this.id = id;
-		this.rawPath = asciiPath;
+	// used by jackson deserialize
+	@SuppressWarnings("unused") ItemReference() {}
 
-		if (asciiPath != null)
-			this.pathPointer = new PathPointer(asciiPath, driveId);
-		else
-			this.pathPointer = null;
-	}
-
-	protected ItemReference(@NotNull String driveId, @Nullable String id, @Nullable PathPointer pathPointer) {
+	ItemReference(@NotNull String driveId, @Nullable String id, @Nullable PathPointer pathPointer) {
 		this.driveId = driveId;
 		this.id = id;
 		this.pathPointer = pathPointer;
@@ -49,5 +40,15 @@ public class ItemReference {
 			this.rawPath = pathPointer.toASCIIApi();
 		else
 			this.rawPath = null;
+	}
+
+	static class PointerInjector extends StdConverter<ItemReference, ItemReference> {
+		@Override public ItemReference convert(ItemReference value) {
+			if (value.rawPath != null)
+				value.pathPointer = new PathPointer(value.rawPath, value.driveId);
+			else
+				value.pathPointer = null;
+			return value;
+		}
 	}
 }

@@ -1,10 +1,11 @@
 package org.onedrive.container.facet;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * <a href="https://dev.onedrive.com/facets/file_facet.htm">https://dev.onedrive.com/facets/file_facet.htm</a>
@@ -13,46 +14,18 @@ import org.jetbrains.annotations.Nullable;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class FileFacet {
-	@Getter @Nullable protected final String mimeType;
-	@Nullable @JsonProperty protected final Hashes hashes;
+	@Getter @Setter(PRIVATE) @Nullable private String mimeType;
+	@Setter(PRIVATE) @Nullable private Hashes hashes;
 
-	@JsonCreator
-	protected FileFacet(@Nullable @JsonProperty("mimeType") String mimeType,
-						@Nullable @JsonProperty("hashes") Hashes hashes) {
-		this.mimeType = mimeType;
-		this.hashes = hashes;
-	}
+	@JsonIgnore public @Nullable String getSha1Hash() {return hashes == null ? null : hashes.sha1Hash;}
 
-	@Nullable
-	@JsonIgnore
-	public String getSha1Hash() {
-		return hashes == null ? null : hashes.sha1Hash;
-	}
+	@JsonIgnore public @Nullable String getCrc32Hash() {return hashes == null ? null : hashes.crc32Hash;}
 
-	@Nullable
-	@JsonIgnore
-	public String getCrc32Hash() {
-		return hashes == null ? null : hashes.crc32Hash;
-	}
-
-	@Nullable
-	@JsonIgnore
-	public String getQuickXorHash() {
-		return hashes == null ? null : hashes.quickXorHash;
-	}
+	@JsonIgnore public @Nullable String getQuickXorHash() {return hashes == null ? null : hashes.quickXorHash;}
 
 
+	@SuppressWarnings("WeakerAccess")
 	private static class Hashes {
-		@Nullable @JsonProperty private final String sha1Hash;
-		@Nullable @JsonProperty private final String crc32Hash;
-		@Nullable @JsonProperty private final String quickXorHash;
-
-		public Hashes(@JsonProperty("sha1Hash") @Nullable String sha1Hash,
-					  @JsonProperty("crc32Hash") @Nullable String crc32Hash,
-					  @JsonProperty("quickXorHash") @Nullable String quickXorHash) {
-			this.sha1Hash = sha1Hash;
-			this.crc32Hash = crc32Hash;
-			this.quickXorHash = quickXorHash;
-		}
+		public String sha1Hash, crc32Hash, quickXorHash;
 	}
 }

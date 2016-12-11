@@ -1,9 +1,10 @@
 package org.onedrive.container.facet;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * <a href="https://dev.onedrive.com/facets/location_facet.htm">https://dev.onedrive.com/facets/location_facet.htm</a>
@@ -12,16 +13,7 @@ import org.jetbrains.annotations.Nullable;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class LocationFacet {
-	@Getter @Nullable protected final Double altitude;
-	@Getter @Nullable protected final Double latitude;
-	@Getter @Nullable protected final Double longitude;
-
-	@JsonCreator
-	protected LocationFacet(@Nullable @JsonProperty("altitude") Double altitude,
-							@Nullable @JsonProperty("latitude") Double latitude,
-							@Nullable @JsonProperty("longitude") Double longitude) {
-		this.altitude = altitude;
-		this.latitude = latitude;
-		this.longitude = longitude;
-	}
+	@Getter @Setter(PRIVATE) @Nullable protected Double altitude;
+	@Getter @Setter(PRIVATE) @Nullable protected Double latitude;
+	@Getter @Setter(PRIVATE) @Nullable protected Double longitude;
 }

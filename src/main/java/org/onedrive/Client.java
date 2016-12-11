@@ -1,16 +1,12 @@
 package org.onedrive;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -21,6 +17,7 @@ import org.onedrive.container.Drive;
 import org.onedrive.container.items.BaseItem;
 import org.onedrive.container.items.FileItem;
 import org.onedrive.container.items.FolderItem;
+import org.onedrive.container.items.ResponsePage;
 import org.onedrive.container.items.pointer.BasePointer;
 import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.Operator;
@@ -28,7 +25,6 @@ import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
-import org.onedrive.network.RequestTool;
 import org.onedrive.network.async.*;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
@@ -39,14 +35,15 @@ import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
 import static java.net.HttpURLConnection.*;
+import static org.onedrive.RequestTool.BASE_URL;
 import static org.onedrive.container.items.pointer.Operator.UPLOAD_CREATE_SESSION;
-import static org.onedrive.network.RequestTool.BASE_URL;
 
 /**
  * {@// TODO: Enhance javadoc }
@@ -57,15 +54,6 @@ public class Client {
 	public static final String ITEM_ID_PREFIX = "/drive/items/";
 	@NotNull private static final IllegalStateException LOGIN_FIRST = new IllegalStateException("Do login first!!");
 
-	/*
-	for resolve tricky issue of Jackson.
-	See:
-	https://github.com/FasterXML/jackson-databind/issues/1119
-	and
-	https://github.com/FasterXML/jackson-databind/issues/962
-	*/
-	private static final SimpleModule jacksonIsTricky =
-			new SimpleModule().setMixInAnnotation(ObjectMapper.class, Client.IgnoreMe.class);
 	/**
 	 * Only one {@code mapper} per a {@code Client} object.<br>
 	 * It makes possible to multi client usage
@@ -73,13 +61,8 @@ public class Client {
 	private final ObjectMapper mapper;
 	@NotNull private final RequestTool requestTool;
 
-	private long lastRefresh;
-	@Getter private long expirationTime;
+	private AuthenticationInfo authInfo;
 	@Nullable private String authCode;
-	@Nullable private String tokenType;
-	@Nullable private String accessToken;
-	@Nullable private String userId;
-	@Nullable private String refreshToken;
 	@Nullable private String fullToken;
 	@Getter @NotNull private String[] scopes;
 	@Getter @NotNull private String clientId;
@@ -137,15 +120,6 @@ public class Client {
 
 		InjectableValues.Std clientInjector = new InjectableValues.Std().addValue("OneDriveClient", this);
 		mapper.setInjectableValues(clientInjector);
-
-		/*
-		for resolve tricky issue of Jackson.
-		See:
-		https://github.com/FasterXML/jackson-databind/issues/1119
-		and
-		https://github.com/FasterXML/jackson-databind/issues/962
-		 */
-		mapper.registerModule(jacksonIsTricky);
 
 		mapper.registerModule(new AfterburnerModule());
 
@@ -295,7 +269,7 @@ public class Client {
 		return getToken(
 				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&refresh_token=%s&grant_type" +
 								"=refresh_token",
-						clientId, redirectURL, clientSecret, refreshToken));
+						clientId, redirectURL, clientSecret, authInfo.refreshToken()));
 	}
 
 	/**
@@ -314,57 +288,16 @@ public class Client {
 	private String getToken(String httpBody) {
 		SyncResponse response = new SyncRequest("https://login.live.com/oauth20_token.srf").doPost(httpBody);
 
-		JsonNode json;
 		try {
-			json = mapper.readTree(response.getContent());
+			authInfo = requestTool.parseAuthAndHandle(response, HTTP_OK);
 		}
-		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.getCode(), response.getContent());
-		}
-		catch (IOException e) {
-			throw new InternalException("Probably error while read from source in json parsing", e);
+		catch (ErrorResponseException e) {
+			throw new InternalException("failed to acquire login token. check login info", e);
 		}
 
-		JsonNode access = json.get("access_token");
-		JsonNode refresh = json.get("refresh_token");
-		JsonNode id = json.get("user_id");
-		JsonNode type = json.get("token_type");
-		JsonNode expires = json.get("expires_in");
+		this.fullToken = authInfo.tokenType() + ' ' + authInfo.accessToken();
 
-		if (access == null || !access.isTextual() || refresh == null || !refresh.isTextual() || id == null
-				|| !id.isTextual() || type == null || !type.isTextual() || expires == null
-				|| !expires.isIntegralNumber()) {
-			throw new InvalidJsonException(
-					String.format("Null value detected: %s %s %s %s %s",
-							access == null ? "access_token" : "",
-							refresh == null ? "refresh_token" : "",
-							id == null ? "user_id" : "",
-							type == null ? "token_type" : "",
-							expires == null ? "expires_in" : ""),
-					response.getCode(),
-					response.getContent()
-			);
-		}
-
-		saveToken(
-				access.asText(),
-				refresh.asText(),
-				id.asText(),
-				type.asText(),
-				expires.asLong()
-		);
-
-		return access.asText();
-	}
-
-	private void saveToken(String accessToken, String refreshToken, String userId, String type, long expirationTime) {
-		this.tokenType = type;
-		this.userId = userId;
-		this.accessToken = accessToken;
-		this.refreshToken = refreshToken;
-		this.expirationTime = expirationTime * 1000;
-		this.lastRefresh = System.currentTimeMillis();
-		this.fullToken = type + ' ' + accessToken;
+		return authInfo.accessToken();
 	}
 
 	/**
@@ -403,11 +336,8 @@ public class Client {
 		}
 
 		authCode = null;
-		accessToken = null;
-		userId = null;
-		refreshToken = null;
-		expirationTime = 0;
 		fullToken = null;
+		authInfo = null;
 	}
 
 
@@ -427,16 +357,16 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.newRequest("/drive").doGet();
-		return requestTool.parseAndHandle(response, HTTP_OK, Drive.class);
+		return requestTool.parseDriveAndHandle(response, HTTP_OK);
 	}
 
 	@NotNull
 	public Drive[] getAllDrive() throws ErrorResponseException {
 		checkExpired();
 
-		ObjectNode jsonResponse = requestTool.doGetJson("/drives");
+		SyncResponse response = requestTool.newRequest("/drives").doGet();
 
-		return mapper.convertValue(jsonResponse.get("value"), Drive[].class);
+		return requestTool.parseDrivePageAndHandle(response, HTTP_OK).getValue();
 	}
 
 
@@ -456,7 +386,7 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.newRequest("/drive/root:/?expand=children").doGet();
-		return requestTool.parseAndHandle(response, HTTP_OK, FolderItem.class);
+		return requestTool.parseFolderItemAndHandle(response, HTTP_OK);
 	}
 
 
@@ -485,7 +415,7 @@ public class Client {
 		else
 			response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
 
-		return requestTool.parseAndHandle(response, HTTP_OK, FolderItem.class);
+		return requestTool.parseFolderItemAndHandle(response, HTTP_OK);
 	}
 
 	// TODO: handling error if `pointer`'s item isn't folder item.
@@ -506,7 +436,7 @@ public class Client {
 		else
 			response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
 
-		return requestTool.parseAndHandle(response, HTTP_OK, FolderItem.class);
+		return requestTool.parseFolderItemAndHandle(response, HTTP_OK);
 	}
 
 
@@ -530,22 +460,18 @@ public class Client {
 	 */
 	@NotNull
 	public FileItem getFile(@NotNull String id) throws ErrorResponseException {
-		try {
-			return (FileItem) getItem(id);
-		}
-		catch (ClassCastException e) {
-			throw new IllegalArgumentException("Given `id` isn't file type id!. id : " + id, e);
-		}
+		checkExpired();
+
+		SyncResponse response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
+		return requestTool.parseFileItemAndHandle(response, HTTP_OK);
 	}
 
 	@NotNull
 	public FileItem getFile(@NotNull BasePointer pointer) throws ErrorResponseException {
-		try {
-			return (FileItem) getItem(pointer);
-		}
-		catch (ClassCastException e) {
-			throw new IllegalArgumentException("Given `pointer` isn't file type pointer!. pointer : " + pointer, e);
-		}
+		checkExpired();
+
+		SyncResponse response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
+		return requestTool.parseFileItemAndHandle(response, HTTP_OK);
 	}
 
 
@@ -565,7 +491,7 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
-		return requestTool.parseAndHandle(response, HTTP_OK, BaseItem.class);
+		return requestTool.parseBaseItemAndHandle(response, HTTP_OK);
 	}
 
 	@NotNull
@@ -573,7 +499,7 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
-		return requestTool.parseAndHandle(response, HTTP_OK, BaseItem.class);
+		return requestTool.parseBaseItemAndHandle(response, HTTP_OK);
 	}
 
 	@NotNull
@@ -853,7 +779,7 @@ public class Client {
 		checkExpired();
 
 		SyncResponse response = requestTool.postMetadata(api, content);
-		return requestTool.parseAndHandle(response, HTTP_CREATED, FolderItem.class);
+		return requestTool.parseFolderItemAndHandle(response, HTTP_CREATED);
 	}
 
 
@@ -981,11 +907,30 @@ public class Client {
 		requestTool.errorHandling(response, HTTP_NO_CONTENT);
 	}
 
-	public void deleteItem(@NotNull BasePointer id) throws ErrorResponseException {
-		SyncResponse response = requestTool.newRequest(id.toASCIIApi()).doDelete();
+	public void deleteItem(@NotNull BasePointer pointer) throws ErrorResponseException {
+		SyncResponse response = requestTool.newRequest(pointer.toASCIIApi()).doDelete();
 
 		// if response isn't 204 No Content
 		requestTool.errorHandling(response, HTTP_NO_CONTENT);
+	}
+
+
+
+
+	/*
+	*************************************************************
+	*
+	* Searching files
+	*
+	*************************************************************
+	 */
+
+	@NotNull
+	public ResponsePage<BaseItem> searchItem(String query) throws ErrorResponseException, IOException {
+		String rawQuery = URLEncoder.encode(query, "UTF-8");
+		SyncResponse response = requestTool.newRequest("/drive/root/view.search?q=" + rawQuery).doGet();
+
+		return requestTool.parseBaseItemPageAndHandle(response, HTTP_OK);
 	}
 
 
@@ -1002,35 +947,32 @@ public class Client {
 
 
 	public boolean isExpired() {
-		return System.currentTimeMillis() - lastRefresh >= expirationTime;
+		if (!isLogin()) throw LOGIN_FIRST;
+		return System.currentTimeMillis() >= authInfo.expiresIn();
 	}
 
 	public boolean isLogin() {
-		return authCode != null && accessToken != null && userId != null && refreshToken != null;
+		return authCode != null && authInfo != null;
 	}
 
 	public @NotNull String getTokenType() {
 		checkExpired();
-		//noinspection ConstantConditions
-		return tokenType;
+		return authInfo.tokenType();
 	}
 
 	public @NotNull String getAccessToken() {
 		checkExpired();
-		//noinspection ConstantConditions
-		return accessToken;
+		return authInfo.accessToken();
 	}
 
 	public @NotNull String getUserId() {
 		checkExpired();
-		//noinspection ConstantConditions
-		return userId;
+		return authInfo.userId();
 	}
 
 	public @NotNull String getRefreshToken() {
 		checkExpired();
-		//noinspection ConstantConditions
-		return refreshToken;
+		return authInfo.refreshToken();
 	}
 
 	public @NotNull String getAuthCode() {
@@ -1039,25 +981,18 @@ public class Client {
 		return authCode;
 	}
 
+	public long getExpirationTime() {
+		checkExpired();
+		return authInfo.expiresIn();
+	}
+
 	public @NotNull String getFullToken() {
 		checkExpired();
 		//noinspection ConstantConditions
 		return fullToken;
 	}
 
-	@NotNull
-	@JsonIgnore
-	public RequestTool requestTool() {
-		return requestTool;
-	}
+	@JsonIgnore public @NotNull RequestTool requestTool() {return requestTool;}
 
-	@NotNull
-	@JsonIgnore
-	public ObjectMapper mapper() {
-		return mapper;
-	}
-
-	@JsonIgnoreType
-	private static class IgnoreMe {
-	}
+	@JsonIgnore public @NotNull ObjectMapper mapper() {return mapper;}
 }

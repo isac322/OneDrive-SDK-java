@@ -1,7 +1,8 @@
-package org.onedrive.network;
+package org.onedrive;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -16,10 +17,16 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
-import org.onedrive.Client;
+import org.onedrive.container.Drive;
+import org.onedrive.container.items.BaseItem;
+import org.onedrive.container.items.FileItem;
+import org.onedrive.container.items.FolderItem;
+import org.onedrive.container.items.ResponsePage;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InternalException;
 import org.onedrive.exceptions.InvalidJsonException;
+import org.onedrive.network.ErrorResponse;
+import org.onedrive.network.UploadSession;
 import org.onedrive.network.async.*;
 import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
@@ -75,11 +82,29 @@ public class RequestTool {
 	}
 
 	@Getter private final ObjectMapper mapper;
+	private final ObjectReader errorReader;
+	private final ObjectReader baseItemReader;
+	private final ObjectReader basePageItemReader;
+	private final ObjectReader fileItemReader;
+	private final ObjectReader folderItemReader;
+	private final ObjectReader driveReader;
+	private final ObjectReader drivePageReader;
+	private final ObjectReader authReader;
 	@Getter private final Client client;
 
 	public RequestTool(@NotNull Client client, @NotNull ObjectMapper mapper) {
 		this.client = client;
 		this.mapper = mapper;
+		this.errorReader = mapper.readerFor(ErrorResponse.class).with(UNWRAP_ROOT_VALUE);
+		this.baseItemReader = mapper.readerFor(BaseItem.class);
+		this.basePageItemReader = mapper.readerFor(
+				mapper.getTypeFactory().constructParametricType(ResponsePage.class, BaseItem.class));
+		this.fileItemReader = mapper.readerFor(FileItem.class);
+		this.folderItemReader = mapper.readerFor(FolderItem.class);
+		this.driveReader = mapper.readerFor(Drive.class);
+		this.drivePageReader = mapper.readerFor(
+				mapper.getTypeFactory().constructParametricType(ResponsePage.class, Drive.class));
+		this.authReader = mapper.readerFor(AuthenticationInfo.class);
 	}
 
 	public static EventLoopGroup group() {return group;}
@@ -244,10 +269,7 @@ public class RequestTool {
 				return (ObjectNode) mapper.readTree(response.getContent());
 			}
 			else {
-				ErrorResponse error = mapper
-						.readerFor(ErrorResponse.class)
-						.with(UNWRAP_ROOT_VALUE)
-						.readValue(response.getContent());
+				ErrorResponse error = errorReader.readValue(response.getContent());
 				throw new ErrorResponseException(HTTP_OK, response.getCode(),
 						error.getCode(), error.getMessage());
 			}
@@ -389,10 +411,7 @@ public class RequestTool {
 	public void errorHandling(@NotNull SyncResponse response, int expectedCode) throws ErrorResponseException {
 		if (response.getCode() != expectedCode) {
 			try {
-				ErrorResponse error = mapper
-						.readerFor(ErrorResponse.class)
-						.with(UNWRAP_ROOT_VALUE)
-						.readValue(response.getContent());
+				ErrorResponse error = errorReader.readValue(response.getContent());
 				throw new ErrorResponseException(expectedCode, response.getCode(),
 						error.getCode(), error.getMessage());
 			}
@@ -410,10 +429,7 @@ public class RequestTool {
 							  int expectedCode) throws ErrorResponseException {
 		if (response.status().code() != expectedCode) {
 			try {
-				ErrorResponse error = mapper
-						.readerFor(ErrorResponse.class)
-						.with(UNWRAP_ROOT_VALUE)
-						.readValue(inputStream);
+				ErrorResponse error = errorReader.readValue(inputStream);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
 						error.getCode(), error.getMessage());
 			}
@@ -427,20 +443,50 @@ public class RequestTool {
 		}
 	}
 
+	public BaseItem parseBaseItemAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		return parseAndHandle(response, expectedCode, baseItemReader);
+	}
 
-	public <T> T parseAndHandle(@NotNull SyncResponse response, int expectedCode, Class<T> classType)
+	public ResponsePage<BaseItem> parseBaseItemPageAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		return parseAndHandle(response, expectedCode, basePageItemReader);
+	}
+
+	public FileItem parseFileItemAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		return parseAndHandle(response, expectedCode, fileItemReader);
+	}
+
+	public FolderItem parseFolderItemAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		return parseAndHandle(response, expectedCode, folderItemReader);
+	}
+
+	public Drive parseDriveAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		return parseAndHandle(response, expectedCode, driveReader);
+	}
+
+	public ResponsePage<Drive> parseDrivePageAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		return parseAndHandle(response, expectedCode, drivePageReader);
+	}
+
+	public AuthenticationInfo parseAuthAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		return parseAndHandle(response, expectedCode, authReader);
+	}
+
+	private <T> T parseAndHandle(@NotNull SyncResponse response, int expectedCode, ObjectReader reader)
 			throws ErrorResponseException {
 		try {
 			if (response.getCode() == expectedCode) {
-				return mapper.readValue(response.getContent(), classType);
+				return reader.readValue(response.getContent());
 			}
 			else {
-				ErrorResponse error = mapper
-						.readerFor(ErrorResponse.class)
-						.with(UNWRAP_ROOT_VALUE)
-						.readValue(response.getContent());
-				throw new ErrorResponseException(expectedCode, response.getCode(),
-						error.getCode(), error.getMessage());
+				ErrorResponse err = errorReader.readValue(response.getContent());
+				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
 			}
 		}
 		catch (JsonProcessingException e) {
@@ -459,10 +505,7 @@ public class RequestTool {
 				return mapper.readValue(inputStream, classType);
 			}
 			else {
-				ErrorResponse error = mapper
-						.readerFor(ErrorResponse.class)
-						.with(UNWRAP_ROOT_VALUE)
-						.readValue(inputStream);
+				ErrorResponse error = errorReader.readValue(inputStream);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
 						error.getCode(), error.getMessage());
 			}

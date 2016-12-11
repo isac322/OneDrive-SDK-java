@@ -1,9 +1,10 @@
 package org.onedrive.container.facet;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * <a href="https://dev.onedrive.com/facets/searchresult_facet.htm">https://dev.onedrive
@@ -13,10 +14,5 @@ import org.jetbrains.annotations.NotNull;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class SearchResultFacet {
-	@Getter @NotNull protected final String onClickTelemetryUrl;
-
-	@JsonCreator
-	protected SearchResultFacet(@NotNull @JsonProperty("onClickTelemetryUrl") String onClickTelemetryUrl) {
-		this.onClickTelemetryUrl = onClickTelemetryUrl;
-	}
+	@Getter @Setter(PRIVATE) @NotNull protected String onClickTelemetryUrl;
 }

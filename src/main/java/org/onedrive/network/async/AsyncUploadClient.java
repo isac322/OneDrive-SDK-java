@@ -2,9 +2,8 @@ package org.onedrive.network.async;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import org.jetbrains.annotations.NotNull;
-import org.onedrive.network.RequestTool;
+import org.onedrive.RequestTool;
 
 import static io.netty.handler.codec.http.HttpMethod.PUT;
 

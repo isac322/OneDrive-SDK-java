@@ -1,9 +1,10 @@
 package org.onedrive.container.facet;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * <a href="https://dev.onedrive.com/facets/photo_facet.htm">https://dev.onedrive.com/facets/photo_facet.htm</a>
@@ -15,31 +16,12 @@ public class PhotoFacet {
 	/**
 	 * Always ensure local date time.
 	 */
-	@Getter @Nullable protected final String takenDateTime;
-	@Getter @Nullable protected final String cameraMake;
-	@Getter @Nullable protected final String cameraModel;
-	@Getter @Nullable protected final Double fNumber;
-	@Getter @Nullable protected final Double exposureDenominator;
-	@Getter @Nullable protected final Double exposureNumerator;
-	@Getter @Nullable protected final Double focalLength;
-	@Getter @Nullable protected final Long iso;
-
-	@JsonCreator
-	protected PhotoFacet(@Nullable @JsonProperty("takenDateTime") String takenDateTime,
-						 @Nullable @JsonProperty("cameraMake") String cameraMake,
-						 @Nullable @JsonProperty("cameraModel") String cameraModel,
-						 @Nullable @JsonProperty("fNumber") Double fNumber,
-						 @Nullable @JsonProperty("exposureDenominator") Double exposureDenominator,
-						 @Nullable @JsonProperty("exposureNumerator") Double exposureNumerator,
-						 @Nullable @JsonProperty("focalLength") Double focalLength,
-						 @Nullable @JsonProperty("iso") Long iso) {
-		this.takenDateTime = takenDateTime;
-		this.cameraMake = cameraMake;
-		this.cameraModel = cameraModel;
-		this.fNumber = fNumber;
-		this.exposureDenominator = exposureDenominator;
-		this.exposureNumerator = exposureNumerator;
-		this.focalLength = focalLength;
-		this.iso = iso;
-	}
+	@Getter @Setter(PRIVATE) @Nullable protected String takenDateTime;
+	@Getter @Setter(PRIVATE) @Nullable protected String cameraMake;
+	@Getter @Setter(PRIVATE) @Nullable protected String cameraModel;
+	@Getter @Setter(PRIVATE) @Nullable protected Double fNumber;
+	@Getter @Setter(PRIVATE) @Nullable protected Double exposureDenominator;
+	@Getter @Setter(PRIVATE) @Nullable protected Double exposureNumerator;
+	@Getter @Setter(PRIVATE) @Nullable protected Double focalLength;
+	@Getter @Setter(PRIVATE) @Nullable protected Long iso;
 }

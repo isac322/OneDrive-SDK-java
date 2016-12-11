@@ -5,12 +5,11 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.network.RequestTool;
+import org.onedrive.RequestTool;
 
 import java.net.URI;
 

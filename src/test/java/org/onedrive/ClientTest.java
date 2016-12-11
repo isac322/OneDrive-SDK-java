@@ -1,11 +1,13 @@
 package org.onedrive;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.onedrive.container.Drive;
 import org.onedrive.container.items.BaseItem;
 import org.onedrive.container.items.FolderItem;
+import org.onedrive.container.items.ResponsePage;
 
 import static org.junit.Assert.*;
 
@@ -105,7 +107,7 @@ public class ClientTest {
 		assertEquals(client.getTokenType(), tokenType);
 		assertEquals(client.getUserId(), userId);
 		assertArrayEquals(client.getScopes(), scopes);
-		assertEquals(client.getExpirationTime(), expirationTime);
+		assertNotEquals(client.getExpirationTime(), expirationTime);
 	}
 
 	@Test
@@ -153,6 +155,7 @@ public class ClientTest {
 		assertEquals(folder.getId(), DIR_MANY_CHILD);
 		assertFalse(folder.isRoot());
 		assertFalse(folder.isChildrenFetched());
+		folder.allChildren();
 	}
 
 	@Test
@@ -326,13 +329,12 @@ public class ClientTest {
 	}
 
 	@Test
-	public void isExpired() throws Exception {
+	public void searchItem() throws Exception {
+		@NotNull ResponsePage<BaseItem> items = client.searchItem("1학기");
 
-	}
-
-	@Test
-	public void isLogin() throws Exception {
-
+		for (BaseItem item : items.getValue()) {
+			System.out.println(item.getClass().getName() + '\t' + item.getName());
+		}
 	}
 
 	@Test

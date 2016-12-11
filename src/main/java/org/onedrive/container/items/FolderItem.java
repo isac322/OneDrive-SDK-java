@@ -1,7 +1,5 @@
 package org.onedrive.container.items;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -9,13 +7,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.util.StdConverter;
 import io.netty.handler.codec.http.HttpMethod;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.Client;
-import org.onedrive.container.IdentitySet;
-import org.onedrive.container.facet.*;
+import org.onedrive.container.facet.FolderFacet;
+import org.onedrive.container.facet.SpecialFolderFacet;
 import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.container.items.pointer.PathPointer;
 import org.onedrive.exceptions.ErrorResponseException;
@@ -33,82 +33,23 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
+import static lombok.AccessLevel.PRIVATE;
+
 /**
  * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
-@JsonDeserialize(as = FolderItem.class)
+@JsonDeserialize(as = FolderItem.class, converter = FolderItem.PointerInjector.class)
 public class FolderItem extends BaseItem implements Iterable<BaseItem> {
-	@NotNull protected FolderFacet folder;
-	@Nullable @JsonProperty protected SpecialFolderFacet specialFolder;
-	@Nullable @JsonIgnore protected List<FolderItem> folderChildren;
-	@Nullable @JsonIgnore protected List<FileItem> fileChildren;
-	@Nullable @JsonIgnore protected List<BaseItem> allChildren;
-	@Nullable @JsonProperty protected ObjectNode root;
-
-	/**
-	 * @throws IllegalArgumentException It's because of construction of {@link IdPointer} or {@link PathPointer}. or
-	 *                                  if parameter {@code parentReference} is null even if this isn't root directory.
-	 * @see IdPointer#IdPointer(String, String)
-	 * @see IdPointer#IdPointer(String)
-	 * @see PathPointer#PathPointer(String, String)
-	 */
-	@JsonCreator
-	protected FolderItem(@JacksonInject("OneDriveClient") Client client,
-						 @JsonProperty("id") @NotNull String id,
-						 @JsonProperty("createdBy") IdentitySet createdBy,
-						 @JsonProperty("createdDateTime") String createdDateTime,
-						 @JsonProperty("cTag") String cTag,
-						 @JsonProperty("deleted") ObjectNode deleted,
-						 @JsonProperty("description") String description,
-						 @JsonProperty("eTag") String eTag,
-						 @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
-						 @JsonProperty("folder") @NotNull FolderFacet folder,
-						 @JsonProperty("lastModifiedBy") IdentitySet lastModifiedBy,
-						 @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime,
-						 @JsonProperty("name") @NotNull String name,
-						 @JsonProperty("parentReference") @Nullable ItemReference parentReference,
-						 @JsonProperty("root") @Nullable ObjectNode root,
-						 @JsonProperty("searchResult") @Nullable SearchResultFacet searchResult,
-						 @JsonProperty("shared") @Nullable SharedFacet shared,
-						 @JsonProperty("sharePointIds") @Nullable SharePointIdsFacet sharePointIds,
-						 @JsonProperty("size") Long size,
-						 @JsonProperty("specialFolder") @Nullable SpecialFolderFacet specialFolder,
-						 @JsonProperty("webDavUrl") String webDavUrl,
-						 @JsonProperty("webUrl") String webUrl,
-						 @JsonProperty("children@odata.nextLink") @Nullable String nextLink,
-						 @JsonProperty("children") @Nullable ArrayNode children) {
-		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
-				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
-				size, webDavUrl, webUrl);
-
-		this.folder = folder;
-		this.specialFolder = specialFolder;
-		this.root = root;
-
-		if (children != null) {
-			this.folderChildren = new CopyOnWriteArrayList<>();
-			this.fileChildren = new CopyOnWriteArrayList<>();
-			this.allChildren = new CopyOnWriteArrayList<>();
-
-			parseChildren(client, children, nextLink, allChildren, folderChildren, fileChildren);
-		}
-		else {
-			folderChildren = null;
-			fileChildren = null;
-			allChildren = null;
-		}
-
-		if (isRoot()) {
-			assert pathPointer == null : "`pathPointer` isn't null in FolderItem";
-			assert parentReference == null : "`parentReference` isn't null in FolderItem";
-			pathPointer = new PathPointer("/", getDriveId());
-		}
-		else {
-			assert parentReference != null : "FolderItem that not root dir can't have null `parentReference` argument";
-		}
-	}
+	@Setter(PRIVATE) @JsonProperty protected FolderFacet folder;
+	@Setter(PRIVATE) @JsonProperty protected SpecialFolderFacet specialFolder;
+	@Setter(PRIVATE) @JsonProperty protected ObjectNode root;
+	@JsonIgnore protected List<FolderItem> folderChildren;
+	@JsonIgnore protected List<FileItem> fileChildren;
+	@JsonIgnore protected List<BaseItem> allChildren;
+	@JsonProperty("children@odata.nextLink") @Nullable String nextLink;
+	@JsonProperty("children") @Nullable ArrayNode children;
 
 	protected static void addChildren(@NotNull Client client, @NotNull JsonNode array, @NotNull List<BaseItem> all,
 									  @NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
@@ -332,6 +273,35 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		catch (ErrorResponseException e) {
 			// FIXME: custom exception
 			throw new RuntimeException(e);
+		}
+	}
+
+	static class PointerInjector<T extends FolderItem> extends StdConverter<T, T> {
+		@Override public T convert(T value) {
+			if (value.children != null) {
+				value.folderChildren = new CopyOnWriteArrayList<>();
+				value.fileChildren = new CopyOnWriteArrayList<>();
+				value.allChildren = new CopyOnWriteArrayList<>();
+
+				parseChildren(value.client, value.children, value.nextLink, value.allChildren, value.folderChildren,
+						value.fileChildren);
+			}
+
+			if (value.root != null) {
+				assert value.parentReference == null : "`parentReference` isn't null in FolderItem";
+				value.pathPointer = new PathPointer("/", value.getDriveId());
+			}
+			else {
+				assert value.parentReference != null :
+						"FolderItem that not root dir can't have null `parentReference` argument";
+				assert value.parentReference.pathPointer != null :
+						"`parentReference.pathPointer` is null on FolderItem";
+				assert value.parentReference.rawPath != null : "`parentReference.rawPath` is null on FolderItem";
+				value.pathPointer = value.parentReference.pathPointer.resolve(value.name);
+			}
+			value.idPointer = new IdPointer(value.id, value.getDriveId());
+
+			return value;
 		}
 	}
 

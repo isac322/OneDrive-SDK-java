@@ -1,13 +1,17 @@
 package org.onedrive.container.items;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.util.StdConverter;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.onedrive.Client;
@@ -29,6 +33,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.concurrent.CountDownLatch;
 
+import static lombok.AccessLevel.PROTECTED;
+
 /**
  * https://dev.onedrive.com/resources/item.htm
  * {@// TODO: Enhance javadoc }
@@ -40,80 +46,36 @@ abstract public class BaseItem {
 	@NotNull private static final IllegalArgumentException ILLEGAL_REFERENCE =
 			new IllegalArgumentException("Can not address destination folder. `folder`'s id and path are both null");
 
-	@JsonIgnore @NotNull protected final Client client;
+	@JacksonInject("OneDriveClient") @JsonIgnore @NotNull protected Client client;
 
-	@Getter @NotNull protected String id;
-	@Getter protected IdentitySet createdBy;
-	@Getter protected String createdDateTime;
+	@Getter @Setter(PROTECTED) @NotNull protected String id;
+	@Getter @Setter(PROTECTED) protected IdentitySet createdBy;
+	@Getter @Setter(PROTECTED) protected String createdDateTime;
 	/**
 	 * The {@code cTag} value is modified when content or metadata of any descendant of the folder is changed.
 	 */
-	@Getter protected String cTag;
-	@Getter protected ObjectNode deleted;
-	@Getter protected String description;
+	@Getter @Setter(PROTECTED) @JsonProperty("cTag") @NotNull protected String cTag;
+	@Getter @Setter(PROTECTED) protected ObjectNode deleted;
+	@Getter @Setter(PROTECTED) protected String description;
 	/**
 	 * The {@code eTag} value is only modified when the folder's properties are changed, except for properties that are
 	 * derived from descendants (like {@code childCount} or {@code lastModifiedDateTime}).
 	 */
-	@Getter protected String eTag;
-	@Getter protected FileSystemInfoFacet fileSystemInfo;
-	@Getter protected IdentitySet lastModifiedBy;
-	@Getter protected String lastModifiedDateTime;
-	@Getter @NotNull protected String name;
-	@Getter @Nullable protected ItemReference parentReference;
-	@Getter @Nullable protected SearchResultFacet searchResult;
-	@Getter @Nullable protected SharedFacet shared;
-	@Getter @Nullable protected SharePointIdsFacet sharePointIds;
-	@Getter protected long size;
-	@Getter protected String webDavUrl;
-	@Getter protected String webUrl;
+	@Getter @Setter(PROTECTED) @JsonProperty("eTag") protected String eTag;
+	@Getter @Setter(PROTECTED) protected FileSystemInfoFacet fileSystemInfo;
+	@Getter @Setter(PROTECTED) protected IdentitySet lastModifiedBy;
+	@Getter @Setter(PROTECTED) protected String lastModifiedDateTime;
+	@Getter @Setter(PROTECTED) @NotNull protected String name;
+	@Getter @Setter(PROTECTED) @Nullable protected ItemReference parentReference;
+	@Getter @Setter(PROTECTED) @Nullable protected SearchResultFacet searchResult;
+	@Getter @Setter(PROTECTED) @Nullable protected SharedFacet shared;
+	@Getter @Setter(PROTECTED) @Nullable protected SharePointIdsFacet sharePointIds;
+	@Getter @Setter(PROTECTED) protected long size;
+	@Getter @Setter(PROTECTED) protected String webDavUrl;
+	@Getter @Setter(PROTECTED) protected String webUrl;
 
-	@Getter(onMethod = @__(@JsonIgnore)) @NotNull protected PathPointer pathPointer;
-	@Getter(onMethod = @__(@JsonIgnore)) @NotNull protected IdPointer idPointer;
-
-	/**
-	 * @throws IllegalArgumentException It's solely because of construction of {@link IdPointer}.
-	 * @see IdPointer#IdPointer(String, String)
-	 * @see IdPointer#IdPointer(String)
-	 */
-	protected BaseItem(@NotNull Client client, @NotNull String id, IdentitySet createdBy, String createdDateTime,
-					   String cTag, ObjectNode deleted, String description, String eTag,
-					   FileSystemInfoFacet fileSystemInfo, IdentitySet lastModifiedBy, String lastModifiedDateTime,
-					   @NotNull String name, @Nullable ItemReference parentReference,
-					   @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
-					   @Nullable SharePointIdsFacet sharePointIds, long size, String webDavUrl, String webUrl) {
-		this.client = client;
-
-		this.id = id;
-		this.createdBy = createdBy;
-		this.createdDateTime = createdDateTime;
-		this.cTag = cTag;
-		this.deleted = deleted;
-		this.description = description;
-		this.eTag = eTag;
-		this.fileSystemInfo = fileSystemInfo;
-		this.lastModifiedBy = lastModifiedBy;
-		this.lastModifiedDateTime = lastModifiedDateTime;
-		this.name = name;
-		this.parentReference = parentReference;
-		this.searchResult = searchResult;
-		this.shared = shared;
-		this.sharePointIds = sharePointIds;
-		this.size = size;
-		this.webDavUrl = webDavUrl;
-		this.webUrl = webUrl;
-
-		// are they always have `parentReference` except root directory?
-		if (parentReference != null) {
-			if (parentReference.pathPointer != null && parentReference.rawPath != null) {
-				this.pathPointer = parentReference.pathPointer.resolve(name);
-			}
-			this.idPointer = new IdPointer(id, parentReference.driveId);
-		}
-		else {
-			this.idPointer = new IdPointer(id);
-		}
-	}
+	@Getter @JsonIgnore @NotNull protected PathPointer pathPointer;
+	@Getter @JsonIgnore @NotNull protected IdPointer idPointer;
 
 	@Override
 	public String toString() {
@@ -336,12 +298,12 @@ abstract public class BaseItem {
 
 
 	@JsonIgnore
-	public void setDescription(String description) throws ErrorResponseException {
+	public void updateDescription(String description) throws ErrorResponseException {
 		update(("{\"description\":\"" + description + "\"}").getBytes());
 	}
 
 	@JsonIgnore
-	public void setName(@NotNull String name) throws ErrorResponseException {
+	public void updateName(@NotNull String name) throws ErrorResponseException {
 		update(("{\"name\":\"" + name + "\"}").getBytes());
 	}
 
@@ -361,7 +323,7 @@ abstract public class BaseItem {
 		@Override
 		public BaseItem deserialize(JsonParser parser, DeserializationContext context) throws IOException {
 			ObjectMapper codec = (ObjectMapper) parser.getCodec();
-			ObjectNode node = codec.readTree(parser);
+			ObjectNode node = parser.readValueAsTree();
 
 			BaseItem ret;
 			boolean isMultipleType = false;
@@ -410,6 +372,21 @@ abstract public class BaseItem {
 
 			else
 				return ret;
+		}
+	}
+
+
+	static protected class PointerInjector<T extends BaseItem> extends StdConverter<T, T> {
+		@Override public T convert(T value) {
+			// are they always have `parentReference` except root directory?
+			assert value.parentReference != null : "`parentReference` is null on FileItem";
+			assert value.parentReference.pathPointer != null : "`parentReference.pathPointer` is null on FileItem";
+			assert value.parentReference.rawPath != null : "`parentReference.rawPath` is null on FileItem";
+
+			value.pathPointer = value.parentReference.pathPointer.resolve(value.name);
+			value.idPointer = new IdPointer(value.id, value.parentReference.driveId);
+
+			return value;
 		}
 	}
 }

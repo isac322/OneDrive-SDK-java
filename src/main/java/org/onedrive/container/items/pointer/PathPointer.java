@@ -4,7 +4,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.network.RequestTool;
+import org.onedrive.RequestTool;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -176,17 +176,6 @@ public class PathPointer extends BasePointer {
 		this.readablePath = readablePath;
 		this.path = path;
 		this.rawPath = rawPath;
-	}
-
-	// to check if a string only contains US-ASCII code point
-	private static boolean isAllASCII(String input) {
-		for (int i = 0, len = input.length(); i < len; i++) {
-			int c = input.charAt(i);
-			if (c > 0x7E) {
-				return false;
-			}
-		}
-		return true;
 	}
 
 	@NotNull

@@ -1,8 +1,10 @@
 package org.onedrive.container.facet;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.Setter;
+import org.jetbrains.annotations.Nullable;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * <a href="https://dev.onedrive.com/facets/jumpinfo_facet.htm">https://dev.onedrive.com/facets/jumpinfo_facet.htm</a>
@@ -12,10 +14,5 @@ import lombok.Getter;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class SpecialFolderFacet {
-	@Getter protected final String name;
-
-	@JsonCreator
-	protected SpecialFolderFacet(@JsonProperty("name") String name) {
-		this.name = name;
-	}
+	@Getter @Setter(PRIVATE) @Nullable protected String name;
 }

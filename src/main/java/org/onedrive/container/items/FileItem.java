@@ -1,18 +1,13 @@
 package org.onedrive.container.items;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.onedrive.Client;
-import org.onedrive.container.IdentitySet;
 import org.onedrive.container.facet.*;
-import org.onedrive.container.items.pointer.IdPointer;
 import org.onedrive.exceptions.ErrorResponseException;
 import org.onedrive.exceptions.InvalidJsonException;
 import org.onedrive.network.async.DownloadFuture;
@@ -21,62 +16,21 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static lombok.AccessLevel.PRIVATE;
+
 /**
  * {@// TODO: Enhance javadoc }
  *
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
-@JsonDeserialize(as = FileItem.class)
+@JsonDeserialize(as = FileItem.class, converter = FileItem.PointerInjector.class)
 public class FileItem extends BaseItem {
-	@Getter @Nullable protected AudioFacet audio;
-	@NotNull @JsonProperty protected FileFacet file;
-	@Getter @Nullable protected ImageFacet image;
-	@Getter @Nullable protected LocationFacet location;
-	@Getter @Nullable protected PhotoFacet photo;
-	@Getter @Nullable protected VideoFacet video;
-
-	/**
-	 * @throws IllegalArgumentException It's solely because of construction of {@link IdPointer}.
-	 * @see IdPointer#IdPointer(String, String)
-	 * @see IdPointer#IdPointer(String)
-	 */
-	@JsonCreator
-	protected FileItem(@JacksonInject("OneDriveClient") Client client,
-					   @JsonProperty("id") @NotNull String id,
-					   @JsonProperty("audio") @Nullable AudioFacet audio,
-					   @JsonProperty("createdBy") IdentitySet createdBy,
-					   @JsonProperty("createdDateTime") String createdDateTime,
-					   @JsonProperty("cTag") String cTag,
-					   @JsonProperty("deleted") ObjectNode deleted,
-					   @JsonProperty("description") String description,
-					   @JsonProperty("eTag") String eTag,
-					   @JsonProperty("file") @NotNull FileFacet file,
-					   @JsonProperty("fileSystemInfo") FileSystemInfoFacet fileSystemInfo,
-					   @JsonProperty("image") @Nullable ImageFacet image,
-					   @JsonProperty("lastModifiedBy") IdentitySet lastModifiedBy,
-					   @JsonProperty("lastModifiedDateTime") String lastModifiedDateTime,
-					   @JsonProperty("location") @Nullable LocationFacet location,
-					   @JsonProperty("name") @NotNull String name,
-					   @JsonProperty("parentReference") @NotNull ItemReference parentReference,
-					   @JsonProperty("photo") @Nullable PhotoFacet photo,
-					   @JsonProperty("searchResult") @Nullable SearchResultFacet searchResult,
-					   @JsonProperty("shared") @Nullable SharedFacet shared,
-					   @JsonProperty("sharePointIds") @Nullable SharePointIdsFacet sharePointIds,
-					   @JsonProperty("size") long size,
-					   @JsonProperty("video") @Nullable VideoFacet video,
-					   @JsonProperty("webDavUrl") String webDavUrl,
-					   @JsonProperty("webUrl") String webUrl) {
-		super(client, id, createdBy, createdDateTime, cTag, deleted, description, eTag, fileSystemInfo,
-				lastModifiedBy, lastModifiedDateTime, name, parentReference, searchResult, shared, sharePointIds,
-				size, webDavUrl, webUrl);
-
-		this.audio = audio;
-		this.file = file;
-		this.image = image;
-		this.location = location;
-		this.photo = photo;
-		this.video = video;
-	}
+	@Getter @Setter(PRIVATE) @Nullable protected AudioFacet audio;
+	@NotNull @Setter(PRIVATE) @JsonProperty protected FileFacet file;
+	@Getter @Setter(PRIVATE) @Nullable protected ImageFacet image;
+	@Getter @Setter(PRIVATE) @Nullable protected LocationFacet location;
+	@Getter @Setter(PRIVATE) @Nullable protected PhotoFacet photo;
+	@Getter @Setter(PRIVATE) @Nullable protected VideoFacet video;
 
 	/**
 	 * Works just like {@link FileItem#download(Path, String)}} except new name of item will automatically set with
@@ -177,27 +131,16 @@ public class FileItem extends BaseItem {
 	 */
 
 
-	@Nullable
-	@JsonIgnore
-	public String getMimeType() {
-		return this.file.getMimeType();
-	}
+	@JsonIgnore public @Nullable String getMimeType() {return this.file.getMimeType();}
 
-	@Nullable
-	@JsonIgnore
-	public String getCRC32() {
-		return this.file.getCrc32Hash();
-	}
 
-	@Nullable
-	@JsonIgnore
-	public String getSHA1() {
-		return this.file.getSha1Hash();
-	}
+	@JsonIgnore public @Nullable String getCRC32() {return this.file.getCrc32Hash();}
 
-	@Nullable
-	@JsonIgnore
-	public String getQuickXorHash() {
-		return this.file.getQuickXorHash();
-	}
+
+	@JsonIgnore public @Nullable String getSHA1() {return this.file.getSha1Hash();}
+
+	@JsonIgnore public @Nullable String getQuickXorHash() {return this.file.getQuickXorHash();}
+
+
+	static class PointerInjector extends BaseItem.PointerInjector<FileItem> {}
 }

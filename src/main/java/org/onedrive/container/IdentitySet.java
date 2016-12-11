@@ -1,9 +1,10 @@
 package org.onedrive.container;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
+
+import static lombok.AccessLevel.PRIVATE;
 
 /**
  * https://dev.onedrive.com/resources/identitySet.htm
@@ -12,21 +13,10 @@ import org.jetbrains.annotations.Nullable;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class IdentitySet {
-	@Getter @Nullable protected final Identity user;
-	@Getter @Nullable protected final Identity application;
-	@Getter @Nullable protected final Identity device;
-	@Getter @Nullable protected final Identity organization;
-
-	@JsonCreator
-	protected IdentitySet(@Nullable @JsonProperty("user") Identity user,
-						  @Nullable @JsonProperty("application") Identity application,
-						  @Nullable @JsonProperty("device") Identity device,
-						  @Nullable @JsonProperty("organization") Identity organization) {
-		this.user = user;
-		this.application = application;
-		this.device = device;
-		this.organization = organization;
-	}
+	@Getter @Setter(PRIVATE) @Nullable protected Identity user;
+	@Getter @Setter(PRIVATE) @Nullable protected Identity application;
+	@Getter @Setter(PRIVATE) @Nullable protected Identity device;
+	@Getter @Setter(PRIVATE) @Nullable protected Identity organization;
 
 	@Override
 	public String toString() {
