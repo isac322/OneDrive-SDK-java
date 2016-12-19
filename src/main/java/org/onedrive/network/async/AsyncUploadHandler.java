@@ -54,6 +54,7 @@ public class AsyncUploadHandler extends SimpleChannelInboundHandler<HttpObject> 
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		super.exceptionCaught(ctx, cause);
 		promise.setFailure(cause);
+		ctx.close();
 	}
 
 	@Override
@@ -107,6 +108,7 @@ public class AsyncUploadHandler extends SimpleChannelInboundHandler<HttpObject> 
 					case HTTP_CREATED:
 						ctx.close();
 						fileChannel.close();
+						// TODO: fill argument
 						promise.trySuccess(null);
 						break;
 					default:

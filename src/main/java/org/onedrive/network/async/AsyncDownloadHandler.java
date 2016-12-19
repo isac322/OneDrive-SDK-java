@@ -33,6 +33,7 @@ public class AsyncDownloadHandler extends SimpleChannelInboundHandler<HttpObject
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		super.exceptionCaught(ctx, cause);
 		promise.setFailure(cause);
+		ctx.close();
 	}
 
 	@Override

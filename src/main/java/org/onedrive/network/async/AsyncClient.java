@@ -52,22 +52,16 @@ public class AsyncClient extends AbstractClient {
 
 		ResponsePromise promise = new DefaultResponsePromise(group.next());
 
-		AsyncClientHandler clientHandler = new AsyncClientHandler(promise);
-
 		// Configure the client.
 		Bootstrap bootstrap = new Bootstrap()
 				.group(group)
 				.channel(RequestTool.socketChannelClass())
-				.handler(new AsyncDefaultInitializer(clientHandler));
+				.handler(new AsyncDefaultInitializer(new AsyncClientHandler(promise)));
 
 
 		bootstrap.connect(host, port).addListener(new ChannelFutureListener() {
 			@Override public void operationComplete(ChannelFuture future) throws Exception {
-				// Make the connection attempt.
-				Channel ch = future.channel();
-
-				// Send the HTTP request.
-				ch.writeAndFlush(request);
+				future.channel().writeAndFlush(request);
 			}
 		});
 

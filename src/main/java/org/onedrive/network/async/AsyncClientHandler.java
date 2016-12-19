@@ -28,6 +28,7 @@ public class AsyncClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		super.exceptionCaught(ctx, cause);
 		responsePromise.setFailure(cause);
+		ctx.close();
 	}
 
 	@Override

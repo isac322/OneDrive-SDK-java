@@ -17,18 +17,18 @@ import static org.junit.Assert.*;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class ClientTest {
-	private static String DIR_MANY_CHILD = "D4FD82CA6DF96A47!14841";
-	private static String DIR_MANY_CHILD_NAME = "BOJ";
-	private static String MP3_UTF8_BIG = "D4FD82CA6DF96A47!24998";
-	private static String MP3_UTF8_BIG_NAME = "[수정] vol.5.mp3";
-	private static String MP3_UTF8_SMALL = "D4FD82CA6DF96A47!25997";
-	private static String MP3_UTF8_SMALL_NAME = "Roy Kim 로이킴 - 봄봄봄. -[ mymusicroad.net ].mp3";
-	private static String TXT_ASCII_SMALL = "D4FD82CA6DF96A47!26026";
-	private static String TXT_ASCII_WITH_SPACE = "D4FD82CA6DF96A47!26036";
-	private static String TXT_ASCII_ESCAPED = "D4FD82CA6DF96A47%2126037";
-	private static String DIR_SHARED_BY_SOMEONE = "485BEF1A80539148!115";
-	private static String PACKAGE_1 = "D4FD82CA6DF96A47!22159";
-	private static String PACKAGE_2 = "D4FD82CA6DF96A47!2104";
+	public static String DIR_MANY_CHILD = "D4FD82CA6DF96A47!14841";
+	public static String DIR_MANY_CHILD_NAME = "BOJ";
+	public static String MP3_UTF8_BIG = "D4FD82CA6DF96A47!24998";
+	public static String MP3_UTF8_BIG_NAME = "[수정] vol.5.mp3";
+	public static String MP3_UTF8_SMALL = "D4FD82CA6DF96A47!25997";
+	public static String MP3_UTF8_SMALL_NAME = "Roy Kim 로이킴 - 봄봄봄. -[ mymusicroad.net ].mp3";
+	public static String TXT_ASCII_SMALL = "D4FD82CA6DF96A47!26026";
+	public static String TXT_ASCII_WITH_SPACE = "D4FD82CA6DF96A47!26036";
+	public static String TXT_ASCII_ESCAPED = "D4FD82CA6DF96A47%2126037";
+	public static String DIR_SHARED_BY_SOMEONE = "485BEF1A80539148!115";
+	public static String PACKAGE_1 = "D4FD82CA6DF96A47!22159";
+	public static String PACKAGE_2 = "D4FD82CA6DF96A47!2104";
 
 	private static Client client;
 
@@ -180,7 +180,13 @@ public class ClientTest {
 
 	@Test
 	public void getItem() throws Exception {
-
+		long before = System.currentTimeMillis();
+		for (int i = 0; i < 100; i++) {
+			long l = System.currentTimeMillis();
+			BaseItem item = client.getItem(MP3_UTF8_BIG);
+			System.out.println(System.currentTimeMillis() - l);
+		}
+		System.out.println(System.currentTimeMillis() - before);
 	}
 
 	@Test

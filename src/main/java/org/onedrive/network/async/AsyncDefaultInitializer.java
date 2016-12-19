@@ -1,13 +1,12 @@
 package org.onedrive.network.async;
 
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
+import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslProvider;
 import org.jetbrains.annotations.NotNull;
 
@@ -37,9 +36,15 @@ public class AsyncDefaultInitializer extends ChannelInitializer<SocketChannel> {
 	@Override
 	public void initChannel(SocketChannel ch) {
 		ChannelPipeline p = ch.pipeline();
+		final SslHandler sslHandler = sslContext.newHandler(ch.alloc());
+		ch.closeFuture().addListener(new ChannelFutureListener() {
+			@Override public void operationComplete(ChannelFuture future) throws Exception {
+				sslHandler.close();
+			}
+		});
 
 		// Enable HTTPS.
-		p.addLast("ssl", sslContext.newHandler(ch.alloc()));
+		p.addLast("ssl", sslHandler);
 
 		p.addLast("codec", new HttpClientCodec());
 

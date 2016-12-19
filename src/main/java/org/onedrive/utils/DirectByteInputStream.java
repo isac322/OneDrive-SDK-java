@@ -12,8 +12,7 @@ import java.io.InputStream;
  * @author <a href="mailto:yoobyeonghun@gmail.com" target="_top">isac322</a>
  */
 public class DirectByteInputStream extends InputStream {
-	@NotNull private static final IndexOutOfBoundsException INDEX_EXCEPTION =
-			new IndexOutOfBoundsException();
+	@NotNull public static final IndexOutOfBoundsException INDEX_EXCEPTION = new IndexOutOfBoundsException();
 	protected byte[] buffer;
 	@Getter protected int in = -1, out = 0;
 	protected int capacity;
@@ -90,14 +89,14 @@ public class DirectByteInputStream extends InputStream {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public int read() {
+	public synchronized int read() {
 		while (in < out) {
 			if (closed) return -1;
 			try {
 				wait(300);
 			}
 			catch (InterruptedException e) {
-				throw new InternalException("wait() is wrong.", e);
+				throw new InternalException("wait() is wrong in " + this.getClass().getName() + ".", e);
 			}
 		}
 		return buffer[out++];

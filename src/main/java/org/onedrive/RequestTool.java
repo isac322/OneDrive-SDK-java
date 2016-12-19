@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
@@ -15,6 +14,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.HttpMethod;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.onedrive.container.Drive;
@@ -32,7 +32,9 @@ import org.onedrive.network.sync.SyncRequest;
 import org.onedrive.network.sync.SyncResponse;
 import org.onedrive.utils.DirectByteInputStream;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -42,8 +44,7 @@ import java.nio.file.Path;
 import static com.fasterxml.jackson.databind.DeserializationFeature.UNWRAP_ROOT_VALUE;
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
-import static io.netty.handler.codec.http.HttpMethod.PATCH;
-import static io.netty.handler.codec.http.HttpMethod.POST;
+import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static java.net.HttpURLConnection.HTTP_OK;
 
@@ -69,11 +70,11 @@ public class RequestTool {
 		EventLoopGroup tmpGroup;
 		Class<? extends SocketChannel> tmpClass;
 		try {
-			tmpGroup = new EpollEventLoopGroup();
+			tmpGroup = new EpollEventLoopGroup(4);
 			tmpClass = EpollSocketChannel.class;
 		}
 		catch (Exception e) {
-			tmpGroup = new NioEventLoopGroup();
+			tmpGroup = new NioEventLoopGroup(4);
 			tmpClass = NioSocketChannel.class;
 		}
 
@@ -224,6 +225,70 @@ public class RequestTool {
 				.addListener(onComplete);
 	}
 
+	public BaseItemFuture getItemAsync(@NotNull String asciiApi) {
+		final DefaultFullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, BASE_URL + asciiApi);
+		request.headers()
+				.set(HttpHeaderNames.HOST, "api.onedrive.com")
+				.set(ACCEPT_ENCODING, GZIP)
+				.set(AUTHORIZATION, client.getFullToken());
+
+		DefaultBaseItemPromise promise = new DefaultBaseItemPromise(group.next());
+
+
+		// Configure the client.
+		Bootstrap bootstrap = new Bootstrap()
+				.group(group)
+				.channel(socketChannelClass())
+				.handler(new AsyncDefaultInitializer(new BaseItemHandler(promise, mapper)));
+
+
+		bootstrap.connect("api.onedrive.com", 443).addListener(new ChannelFutureListener() {
+			@Override public void operationComplete(ChannelFuture future) throws Exception {
+				if (future.isSuccess()) {
+					future.channel().writeAndFlush(request);
+				}
+			}
+		});
+
+		return promise;
+	}
+
+	public BaseItem getItem(@NotNull String asciiApi) throws ErrorResponseException {
+		HttpsURLConnection httpConnection;
+
+		try {
+			httpConnection = (HttpsURLConnection) new URL(BASE_URL + asciiApi).openConnection();
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException(e);
+		}
+
+		httpConnection.setRequestProperty(AUTHORIZATION.toString(), client.getFullToken());
+
+		try {
+			int code = httpConnection.getResponseCode();
+			InputStream body;
+
+			if (code == HTTP_OK) {
+				body = httpConnection.getInputStream();
+				return baseItemReader.readValue(body);
+			}
+			else {
+				body = httpConnection.getErrorStream();
+				ErrorResponse error = mapper.readValue(body, ErrorResponse.class);
+				throw new ErrorResponseException(HTTP_OK, code, error.getCode(), error.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+		finally {
+			httpConnection.disconnect();
+		}
+	}
+
 
 
 
@@ -353,23 +418,17 @@ public class RequestTool {
 
 		ResponsePromise responsePromise = new DefaultResponsePromise(group.next());
 
-		AsyncClientHandler clientHandler = new AsyncClientHandler(responsePromise);
-
 		// Configure the client.
 		Bootstrap bootstrap = new Bootstrap()
 				.group(group)
 				.channel(socketChannelClass)
-				.handler(new AsyncDefaultInitializer(clientHandler));
+				.handler(new AsyncDefaultInitializer(new AsyncClientHandler(responsePromise)));
 
 
 		bootstrap.connect(host, port).addListener(new ChannelFutureListener() {
 			@Override public void operationComplete(ChannelFuture future) throws Exception {
 				if (future.isSuccess()) {
-					// Make the connection attempt.
-					Channel ch = future.channel();
-
-					// Send the HTTP request.
-					ch.writeAndFlush(request);
+					future.channel().writeAndFlush(request);
 				}
 				else {
 					future.channel().close();

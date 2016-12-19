@@ -487,19 +487,27 @@ public class Client {
 
 
 	@NotNull
+	public BaseItemFuture getItemAsync(@NotNull String id) {
+		checkExpired();
+		return requestTool.getItemAsync(ITEM_ID_PREFIX + id);
+	}
+
+	@NotNull
+	public BaseItemFuture getItemAsync(@NotNull BasePointer pointer) {
+		checkExpired();
+		return requestTool.getItemAsync(pointer.toASCIIApi());
+	}
+
+	@NotNull
 	public BaseItem getItem(@NotNull String id) throws ErrorResponseException {
 		checkExpired();
-
-		SyncResponse response = requestTool.newRequest(ITEM_ID_PREFIX + id).doGet();
-		return requestTool.parseBaseItemAndHandle(response, HTTP_OK);
+		return requestTool.getItem(ITEM_ID_PREFIX + id);
 	}
 
 	@NotNull
 	public BaseItem getItem(@NotNull BasePointer pointer) throws ErrorResponseException {
 		checkExpired();
-
-		SyncResponse response = requestTool.newRequest(pointer.toASCIIApi()).doGet();
-		return requestTool.parseBaseItemAndHandle(response, HTTP_OK);
+		return requestTool.getItem(pointer.toASCIIApi());
 	}
 
 	@NotNull
