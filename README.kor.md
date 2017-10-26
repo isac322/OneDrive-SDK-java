@@ -30,6 +30,7 @@
 - 문서화
 - support custom redirect url when login
 - REST-api response error handling
+- JRE6 version
 
 ### Environment
 
@@ -58,7 +59,7 @@
 - 생성에 사용되는 변수들은 [OneDrive app 인증 설명](https://dev.onedrive.com/app-registration.htm)을 따라하면 얻을 수 있다. 
 
 ```java
-import org.onedrive.Client;
+import com.bhyoo.Client;
 
 String clientId = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
 String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
@@ -80,9 +81,9 @@ client.login();
 - `FolderItem`과 `FileItem`은 모두 `BaseItem`의 자식 클래스임.
 
 ```java
-import org.onedrive.container.items.FolderItem;
-import org.onedrive.container.items.BaseItem;
-import org.onedrive.container.items.pointer.PathPointer;
+import com.bhyoo.container.items.FolderItem;
+import com.bhyoo.container.items.BaseItem;
+import com.bhyoo.container.items.pointer.PathPointer;
 
 // Client는 생성 되어있다고 가정
 
@@ -119,7 +120,7 @@ BaseItem item1 = client.getItem(new PathPointer("/{item-path}"));
 - 위의 메소드들은 호출시 자식정보를 load하고 caching한 후 반환하기 떄문에 **첫 호출은 오래걸릴 수도 있음.**
 
 ```java
-import org.onedrive.container.items.*;
+import com.bhyoo.container.items.*;
 // Client는 생성 되어있다고 가정
 
 FolderItem root = client.getRootDir();
@@ -136,8 +137,8 @@ List<FileItem> fileChildren = root.getFileChildren();
 - 생성된 폴더의 객체를 반환한다.
 
 ```java
-import org.onedrive.container.items.FolderItem;
-import org.onedrive.container.items.pointer.PathPointer;
+import com.bhyoo.container.items.FolderItem;
+import com.bhyoo.container.items.pointer.PathPointer;
 
 // Client는 생성 되어있다고 가정
 
@@ -160,8 +161,8 @@ FolderItem newFolder2 = client.createFolder(new PathPointer("/"), "test2");
 - 복사하고싶은 아이템의 객체, 혹은 `Client` 객체를 통해서 가능.
 
 ```java
-import org.onedrive.container.items.*;
-import org.onedrive.container.items.pointer.*;
+import com.bhyoo.container.items.*;
+import com.bhyoo.container.items.pointer.*;
 
 // Client는 생성 되어있다고 가정
 
@@ -197,7 +198,7 @@ client.copyItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 ### 6. 파일 다운로드 (synchronous)
 
 ```java
-import org.onedrive.container.items.FileItem;
+import com.bhyoo.container.items.FileItem;
 import java.nio.file.Paths;
 
 // Client는 생성 되어있다고 가정
@@ -230,8 +231,8 @@ client.download(new PathPointer("/{item-path}"), Paths.get(path));
 
 ```java
 import java.nio.file.Paths;
-import org.onedrive.container.items.FileItem;
-import org.onedrive.network.async.DownloadFuture;
+import com.bhyoo.container.items.FileItem;
+import com.bhyoo.network.async.DownloadFuture;
 
 // assume that Client object is already constructed
 
@@ -256,8 +257,8 @@ future.sync();
 - 이동하고싶은 아이템의 객체, 혹은 `Client` 객체를 통해서 가능.
 
 ```java
-import org.onedrive.container.items.BaseItem;
-import org.onedrive.container.items.pointer.*;
+import com.bhyoo.container.items.BaseItem;
+import com.bhyoo.container.items.pointer.*;
 
 // Client는 생성 되어있다고 가정
 
@@ -287,7 +288,7 @@ client.moveItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 - 즉 `refresh`함수가 호출될 경우, 현재 프로그램이 변경하지 않은 변수라도 업데이트 될 수 있음.
 
 ```java
-import org.onedrive.container.items.BaseItem;
+import com.bhyoo.container.items.BaseItem;
 
 // Client는 생성 되어있다고 가정
 BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
@@ -311,7 +312,7 @@ item.refresh();
 
 ```java
 import java.nio.file.Path;
-import org.onedrive.network.async.UploadFuture;
+import com.bhyoo.network.async.UploadFuture;
 
 // Client는 생성 되어있다고 가정
 
