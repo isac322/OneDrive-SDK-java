@@ -10,58 +10,58 @@ targetCompatibility = 1.7
 
 
 repositories {
-    mavenCentral()
+	mavenCentral()
 }
 
 
 buildscript {
-    repositories {
-        mavenCentral()
-    }
+	repositories {
+		mavenCentral()
+	}
 
-    dependencies {
-        classpath 'com.google.gradle:osdetector-gradle-plugin:1.+'
-    }
+	dependencies {
+		classpath 'com.google.gradle:osdetector-gradle-plugin:1.+'
+	}
 }
 
 
 dependencies {
-    compile 'com.fasterxml.jackson.core:jackson-annotations:+'
-    compile 'com.fasterxml.jackson.core:jackson-core:+'
-    compile 'com.fasterxml.jackson.core:jackson-databind:+'
+	compile 'com.fasterxml.jackson.core:jackson-annotations:+'
+	compile 'com.fasterxml.jackson.core:jackson-core:+'
+	compile 'com.fasterxml.jackson.core:jackson-databind:+'
 
-    compile 'com.fasterxml.jackson.module:jackson-module-afterburner:+'
+	compile 'com.fasterxml.jackson.module:jackson-module-afterburner:+'
 
-    compile 'io.netty:netty-buffer:4.+'
-    compile 'io.netty:netty-codec:4.+'
-    compile 'io.netty:netty-codec-http:4.+'
-    compile 'io.netty:netty-common:4.+'
-    compile 'io.netty:netty-handler:4.+'
-    compile 'io.netty:netty-resolver:4.+'
-    compile 'io.netty:netty-transport:4.+'
-    compile "io.netty:netty-transport-native-epoll:4.+:${osdetector.classifier}"
+	compile 'io.netty:netty-buffer:4.+'
+	compile 'io.netty:netty-codec:4.+'
+	compile 'io.netty:netty-codec-http:4.+'
+	compile 'io.netty:netty-common:4.+'
+	compile 'io.netty:netty-handler:4.+'
+	compile 'io.netty:netty-resolver:4.+'
+	compile 'io.netty:netty-transport:4.+'
+	compile "io.netty:netty-transport-native-epoll:4.+:${osdetector.classifier}"
 
-    compile 'org.projectlombok:lombok:1.+'
+	compile 'org.projectlombok:lombok:1.+'
 
-    compile 'org.jetbrains:annotations:15.0+'
+	compile 'org.jetbrains:annotations:15.0+'
 
-    testCompile group: 'junit', name: 'junit', version: '4.+'
+	testCompile group: 'junit', name: 'junit', version: '4.+'
 }
 
 
 task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
+	classifier = 'sources'
+	from sourceSets.main.allSource
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from 'build/docs/javadoc'
+	classifier = 'javadoc'
+	from 'build/docs/javadoc'
 }
 
 artifacts {
-    archives jar
+	archives jar
 
-    archives sourcesJar
-    archives javadocJar
+	archives sourcesJar
+	archives javadocJar
 }

@@ -29,6 +29,7 @@ purse fast, easy to use, intuitive API.
 - documentation
 - support custom redirect url when login
 - REST-api response error handling
+- JRE6 version
 
 
 ### Environment
@@ -58,7 +59,7 @@ purse fast, easy to use, intuitive API.
 - All parameters that pass to `Client`'s constructor can obtain if you fallow [OneDrive app instruction of authentication](https://dev.onedrive.com/app-registration.htm). 
 
 ```java
-import org.onedrive.Client;
+import com.bhyoo.Client;
 
 String clientId = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
 String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
@@ -80,9 +81,9 @@ client.login();
 - `FolderItem` and `FileItem` are child class of `BaseItem`.
 
 ```java
-import org.onedrive.container.items.FolderItem;
-import org.onedrive.container.items.BaseItem;
-import org.onedrive.container.items.pointer.PathPointer;
+import com.bhyoo.container.items.FolderItem;
+import com.bhyoo.container.items.BaseItem;
+import com.bhyoo.container.items.pointer.PathPointer;
 
 // assume that Client object is already constructed
 
@@ -119,7 +120,7 @@ BaseItem item1 = client.getItem(new PathPointer("/{item-path}"));
 - if you call above methods, it will load children data and cache it. so **First call of those methods can take long time.**
 
 ```java
-import org.onedrive.container.items.*;
+import com.bhyoo.container.items.*;
 
 // assume that Client object is already constructed
 FolderItem root = client.getRootDir();
@@ -136,8 +137,8 @@ List<FileItem> fileChildren = root.getFileChildren();
 - It will return created folder's `FolderItem` object.
 
 ```java
-import org.onedrive.container.items.FolderItem;
-import org.onedrive.container.items.pointer.PathPointer;
+import com.bhyoo.container.items.FolderItem;
+import com.bhyoo.container.items.pointer.PathPointer;
 
 // assume that Client object is already constructed
 
@@ -160,8 +161,8 @@ FolderItem newFolder2 = client.createFolder(new PathPointer("/"), "test2");
 - It can copy via either source item's object or `Client` object.
 
 ```java
-import org.onedrive.container.items.*;
-import org.onedrive.container.items.pointer.*;
+import com.bhyoo.container.items.*;
+import com.bhyoo.container.items.pointer.*;
 
 // assume that Client object is already constructed
 
@@ -198,7 +199,7 @@ client.copyItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 
 ```java
 import java.nio.file.Paths;
-import org.onedrive.container.items.FileItem;
+import com.bhyoo.container.items.FileItem;
 
 // assume that Client object is already constructed
 FileItem file = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
@@ -229,8 +230,8 @@ client.download(new PathPointer("/{item-path}"), Paths.get(path));
 
 ```java
 import java.nio.file.Paths;
-import org.onedrive.container.items.FileItem;
-import org.onedrive.network.async.DownloadFuture;
+import com.bhyoo.container.items.FileItem;
+import com.bhyoo.network.async.DownloadFuture;
 
 // assume that Client object is already constructed
 
@@ -256,8 +257,8 @@ future.sync();
 - It can move via either source item's object or `Client` object.
 
 ```java
-import org.onedrive.container.items.BaseItem;
-import org.onedrive.container.items.pointer.*;
+import com.bhyoo.container.items.BaseItem;
+import com.bhyoo.container.items.pointer.*;
 
 // assume that Client object is already constructed
 
@@ -287,7 +288,7 @@ client.moveItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 - That is, if `refresh` is invoked, all variable can be changed, even if the current program did not modify the variables.
 
 ```java
-import org.onedrive.container.items.BaseItem;
+import com.bhyoo.container.items.BaseItem;
 
 // assume that Client object is already constructed
 BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
@@ -311,7 +312,7 @@ item.refresh();
 
 ```java
 import java.nio.file.Path;
-import org.onedrive.network.async.UploadFuture;
+import com.bhyoo.network.async.UploadFuture;
 
 // assume that Client object is already constructed
 
