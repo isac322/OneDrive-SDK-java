@@ -46,6 +46,28 @@ purse fast, easy to use, intuitive API.
 - [netty](http://netty.io/)
 
 
+### Build
+
+#### Windows
+
+```cmd
+gradlew.bat build
+```
+
+
+#### Linux, MacOS
+
+```bash
+./gradlew build
+```
+
+#### [gradle](https://gradle.org/)이 컴퓨터에 이미 설치 돼있다면
+
+```bash
+gradle build
+```
+
+
 -----------------
 
 ## Simple example

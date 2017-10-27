@@ -46,6 +46,28 @@
 - [netty](http://netty.io/)
 
 
+### Build
+
+#### Windows
+
+```cmd
+gradlew.bat build
+```
+
+
+#### Linux, MacOS
+
+```bash
+./gradlew build
+```
+
+#### if [gradle](https://gradle.org/) is installed in your computer
+
+```bash
+gradle build
+```
+
+
 -----------------
 
 ## 간단한 예제
