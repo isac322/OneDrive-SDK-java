@@ -61,7 +61,7 @@ gradlew.bat build
 ./gradlew build
 ```
 
-#### if [gradle](https://gradle.org/) is installed in your computer
+#### [gradle](https://gradle.org/)이 컴퓨터에 이미 설치 돼있다면
 
 ```bash
 gradle build
