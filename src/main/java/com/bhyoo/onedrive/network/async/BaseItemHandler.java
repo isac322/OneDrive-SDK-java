@@ -1,6 +1,9 @@
 package com.bhyoo.onedrive.network.async;
 
 import com.bhyoo.onedrive.container.items.BaseItem;
+import com.bhyoo.onedrive.exceptions.ErrorResponseException;
+import com.bhyoo.onedrive.network.ErrorResponse;
+import com.bhyoo.onedrive.utils.ByteBufStream;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -8,9 +11,6 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
-import com.bhyoo.onedrive.exceptions.ErrorResponseException;
-import com.bhyoo.onedrive.network.ErrorResponse;
-import com.bhyoo.onedrive.utils.BufInputStream;
 
 import java.io.IOException;
 
@@ -24,7 +24,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 	private final DefaultBaseItemPromise promise;
 	private final ObjectMapper mapper;
-	private final BufInputStream stream;
+	private final ByteBufStream stream;
 	private HttpResponse response;
 	private ErrorResponse errorResponse;
 	private BaseItem baseItem;
@@ -33,7 +33,7 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 	public BaseItemHandler(DefaultBaseItemPromise promise, ObjectMapper mapper) {
 		this.promise = promise;
 		this.mapper = mapper;
-		this.stream = new BufInputStream();
+		this.stream = new ByteBufStream();
 	}
 
 	@Override public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
@@ -79,8 +79,9 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 
 			if (content instanceof LastHttpContent) {
 				ctx.close();
-				stream.close();
+				stream.setNoMoreBuf();
 				workerThread.join();
+				stream.close();
 
 				if (baseItem != null) {
 					promise.setSuccess(baseItem);
@@ -91,7 +92,7 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 				}
 			}
 			else {
-				stream.setByteBuf(content.content());
+				stream.writeByteBuf(content.content());
 			}
 		}
 	}
