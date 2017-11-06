@@ -1,5 +1,6 @@
 package com.bhyoo.onedrive;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,23 +12,13 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class AuthenticationInfo {
-	@Getter(PRIVATE) @Setter(PRIVATE) private String token_type;
-	@Getter(PRIVATE) private long expires_in;
-	@Getter(PRIVATE) @Setter(PRIVATE) private String access_token;
-	@Getter(PRIVATE) @Setter(PRIVATE) private String refresh_token;
-	@Getter(PRIVATE) @Setter(PRIVATE) private String user_id;
+	@Getter @Setter(PRIVATE) @JsonProperty("token_type") private String tokenType;
+	@Getter @JsonProperty("expires_in") private long expiresIn;
+	@Getter @Setter(PRIVATE) @JsonProperty("access_token") private String accessToken;
+	@Getter @Setter(PRIVATE) @JsonProperty("refresh_token") private String refreshToken;
+	@Getter @Setter(PRIVATE) private String scope;
 
-	private void setExpires_in(long expires_in) {
-		this.expires_in = expires_in * 1000 + System.currentTimeMillis();
+	private void setExpiresIn(long expiresIn) {
+		this.expiresIn = expiresIn * 1000 + System.currentTimeMillis();
 	}
-
-	public String tokenType() {return token_type;}
-
-	public String accessToken() {return access_token;}
-
-	public String refreshToken() {return refresh_token;}
-
-	public String userId() {return user_id;}
-
-	public long expiresIn() {return expires_in;}
 }

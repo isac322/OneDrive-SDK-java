@@ -1,7 +1,6 @@
 package com.bhyoo.onedrive.network.async;
 
-import com.bhyoo.onedrive.utils.DirectByteInputStream;
-import io.netty.buffer.ByteBuf;
+import com.bhyoo.onedrive.utils.ByteBufStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpContent;
@@ -10,7 +9,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 
 public class AsyncClientHandler extends SimpleChannelInboundHandler<HttpObject> {
-	private final DirectByteInputStream resultStream = new DirectByteInputStream();
+	private final ByteBufStream resultStream = new ByteBufStream();
 	private final ResponsePromise responsePromise;
 
 
@@ -40,12 +39,7 @@ public class AsyncClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 		if (msg instanceof HttpContent) {
 			HttpContent content = (HttpContent) msg;
 
-			// read response content and copy to result future object's stream
-			ByteBuf byteBuf = content.content();
-			int remaining = byteBuf.readableBytes();
-			resultStream.ensureRemain(remaining);
-			byteBuf.readBytes(resultStream.rawBuffer(), resultStream.getIn() + 1, remaining);
-			resultStream.jumpTo(resultStream.getIn() + remaining);
+			resultStream.writeByteBuf(content.content());
 
 			// if this message is last of response
 			if (content instanceof LastHttpContent) {

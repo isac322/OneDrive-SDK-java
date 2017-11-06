@@ -2,9 +2,9 @@ package com.bhyoo.onedrive.network.sync;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.AsciiString;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
@@ -55,13 +55,8 @@ public class SyncRequest {
 	 * @param key   Key to add in request's header.
 	 * @param value Value to add in request's header. It could be {@code null}.
 	 */
-	public SyncRequest setHeader(@NotNull String key, String value) {
-		httpConnection.setRequestProperty(key, value);
-		return this;
-	}
-
-	public SyncRequest setHeader(@NotNull AsciiString key, String value) {
-		httpConnection.setRequestProperty(key.toString(), value);
+	public SyncRequest setHeader(@NotNull CharSequence key, @Nullable CharSequence value) {
+		httpConnection.setRequestProperty(key.toString(), value != null ? value.toString() : null);
 		return this;
 	}
 

@@ -13,7 +13,7 @@ import com.bhyoo.onedrive.network.UploadSession;
 import com.bhyoo.onedrive.network.async.*;
 import com.bhyoo.onedrive.network.sync.SyncRequest;
 import com.bhyoo.onedrive.network.sync.SyncResponse;
-import com.bhyoo.onedrive.utils.DirectByteInputStream;
+import com.bhyoo.onedrive.utils.ByteBufStream;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -42,6 +42,7 @@ import java.nio.file.Path;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.UNWRAP_ROOT_VALUE;
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
+import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -54,10 +55,9 @@ import static java.net.HttpURLConnection.HTTP_OK;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class RequestTool {
-	public static final String APPLICATION_JSON = "application/json";
-
 	public static final String SCHEME = "https";
-	public static final String HOST = "api.onedrive.com/v1.0";
+	public static final String REAL_HOST = "graph.microsoft.com";
+	public static final String HOST = REAL_HOST + "/v1.0";
 	/**
 	 * OneDrive API base URL.
 	 */
@@ -133,16 +133,13 @@ public class RequestTool {
 	 */
 	@NotNull
 	public SyncRequest newRequest(@NotNull String api) {
-		URL url;
 		try {
-			url = new URL(BASE_URL + api);
+			return newRequest(new URL(BASE_URL + api));
 		}
 		catch (MalformedURLException e) {
 			throw new IllegalArgumentException(
 					"Wrong URL form. Should check code's String: \"" + BASE_URL + api + "\"", e);
 		}
-		return new SyncRequest(url)
-				.setHeader(AUTHORIZATION, client.getFullToken());
 	}
 
 
@@ -154,7 +151,7 @@ public class RequestTool {
 	 * work properly.
 	 * <br>
 	 * Example:<br>
-	 * String BASE = "https://api.onedrive.com/v1.0";
+	 * String BASE = "https://graph.microsoft.com/v1.0";
 	 * {@code RequestTool.newRequest(new URL(BASE + "/drives"))},
 	 * {@code RequestTool.newRequest(new URL(BASE + "/drive/items/485BEF1A80539148!115"))},
 	 * {@code RequestTool.newRequest(new URL(BASE + "/drive/root:/Documents"))}
@@ -166,7 +163,9 @@ public class RequestTool {
 	@NotNull
 	public SyncRequest newRequest(@NotNull URL url) {
 		return new SyncRequest(url)
-				.setHeader(AUTHORIZATION, client.getFullToken());
+				.setHeader(AUTHORIZATION, client.getFullToken())
+				// TODO: GZIP .setHeader(ACCEPT_ENCODING, GZIP)
+				.setHeader(ACCEPT, APPLICATION_JSON);
 	}
 
 
@@ -181,17 +180,13 @@ public class RequestTool {
 
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api) {
-		URI uri;
 		try {
-			uri = new URI(BASE_URL + api);
+			return doAsync(method, new URI(BASE_URL + api));
 		}
 		catch (URISyntaxException e) {
 			throw new IllegalArgumentException(
 					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
 		}
-		return new AsyncClient(group, method, uri)
-				.setHeader(AUTHORIZATION, client.getFullToken())
-				.execute();
 	}
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull URI uri) {
@@ -202,18 +197,13 @@ public class RequestTool {
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api,
 								  @NotNull ResponseFutureListener onComplete) {
-		URI uri;
 		try {
-			uri = new URI(BASE_URL + api);
+			return doAsync(method, new URI(BASE_URL + api), onComplete);
 		}
 		catch (URISyntaxException e) {
 			throw new IllegalArgumentException(
 					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
 		}
-		return new AsyncClient(group, method, uri)
-				.setHeader(AUTHORIZATION, client.getFullToken())
-				.execute()
-				.addListener(onComplete);
 	}
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull URI uri,
@@ -227,7 +217,7 @@ public class RequestTool {
 	public BaseItemFuture getItemAsync(@NotNull String asciiApi) {
 		final DefaultFullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, BASE_URL + asciiApi);
 		request.headers()
-				.set(HttpHeaderNames.HOST, "api.onedrive.com")
+				.set(HttpHeaderNames.HOST, REAL_HOST)
 				.set(ACCEPT_ENCODING, GZIP)
 				.set(AUTHORIZATION, client.getFullToken());
 
@@ -241,7 +231,7 @@ public class RequestTool {
 				.handler(new AsyncDefaultInitializer(new BaseItemHandler(promise, mapper)));
 
 
-		bootstrap.connect("api.onedrive.com", 443).addListener(new ChannelFutureListener() {
+		bootstrap.connect(REAL_HOST, 443).addListener(new ChannelFutureListener() {
 			@Override public void operationComplete(ChannelFuture future) throws Exception {
 				if (future.isSuccess()) {
 					future.channel().writeAndFlush(request);
@@ -253,29 +243,31 @@ public class RequestTool {
 	}
 
 	public BaseItem getItem(@NotNull String asciiApi) throws ErrorResponseException {
-		HttpsURLConnection httpConnection;
+		HttpsURLConnection httpsConnection;
 
 		try {
-			httpConnection = (HttpsURLConnection) new URL(BASE_URL + asciiApi).openConnection();
+			httpsConnection = (HttpsURLConnection) new URL(BASE_URL + asciiApi).openConnection();
 		}
 		catch (IOException e) {
 			// FIXME: custom exception
 			throw new RuntimeException(e);
 		}
 
-		httpConnection.setRequestProperty(AUTHORIZATION.toString(), client.getFullToken());
+		httpsConnection.setRequestProperty(AUTHORIZATION.toString(), client.getFullToken());
+		httpsConnection.setRequestProperty(ACCEPT.toString(), APPLICATION_JSON.toString());
+		// TODO: GZIP httpsConnection.setRequestProperty(ACCEPT_ENCODING.toString(), GZIP.toString());
 
 		try {
-			int code = httpConnection.getResponseCode();
+			int code = httpsConnection.getResponseCode();
 			InputStream body;
 
 			if (code == HTTP_OK) {
-				body = httpConnection.getInputStream();
+				body = httpsConnection.getInputStream();
 				return baseItemReader.readValue(body);
 			}
 			else {
-				body = httpConnection.getErrorStream();
-				ErrorResponse error = mapper.readValue(body, ErrorResponse.class);
+				body = httpsConnection.getErrorStream();
+				ErrorResponse error = errorReader.readValue(body);
 				throw new ErrorResponseException(HTTP_OK, code, error.getCode(), error.getMessage());
 			}
 		}
@@ -284,7 +276,7 @@ public class RequestTool {
 			throw new RuntimeException("DEV: Unrecognizable json response.", e);
 		}
 		finally {
-			httpConnection.disconnect();
+			httpsConnection.disconnect();
 		}
 	}
 
@@ -348,10 +340,10 @@ public class RequestTool {
 	}
 
 	public SyncResponse postMetadata(@NotNull String api, byte[] content) {
-		SyncRequest request = newRequest(api);
-		request.setHeader("Content-Type", "application/json");
-		request.setHeader("Prefer", "respond-async");
-		return request.doPost(content);
+		return newRequest(api)
+				.setHeader(CONTENT_TYPE, APPLICATION_JSON)
+				.setHeader("Prefer", "respond-async")
+				.doPost(content);
 	}
 
 	public ResponseFuture patchMetadataAsync(@NotNull String api, byte[] content) {
@@ -483,16 +475,16 @@ public class RequestTool {
 		}
 	}
 
-	public void errorHandling(@NotNull HttpResponse response, @NotNull DirectByteInputStream inputStream,
+	public void errorHandling(@NotNull HttpResponse response, @NotNull ByteBufStream byteBufStream,
 							  int expectedCode) throws ErrorResponseException {
 		if (response.status().code() != expectedCode) {
 			try {
-				ErrorResponse error = errorReader.readValue(inputStream);
+				ErrorResponse error = errorReader.readValue(byteBufStream);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
 						error.getCode(), error.getMessage());
 			}
 			catch (JsonProcessingException e) {
-				throw new InvalidJsonException(e, response.status().code(), inputStream.rawBuffer());
+				throw new InvalidJsonException(e, response.status().code(), byteBufStream.getRawBuffer());
 			}
 			catch (IOException e) {
 				// FIXME: custom exception
@@ -556,20 +548,20 @@ public class RequestTool {
 		}
 	}
 
-	public <T> T parseAndHandle(@NotNull HttpResponse response, @NotNull DirectByteInputStream inputStream,
+	public <T> T parseAndHandle(@NotNull HttpResponse response, @NotNull ByteBufStream byteBufStream,
 								int expectedCode, Class<T> classType) throws ErrorResponseException {
 		try {
 			if (response.status().code() == expectedCode) {
-				return mapper.readValue(inputStream, classType);
+				return mapper.readValue(byteBufStream, classType);
 			}
 			else {
-				ErrorResponse error = errorReader.readValue(inputStream);
+				ErrorResponse error = errorReader.readValue(byteBufStream);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
 						error.getCode(), error.getMessage());
 			}
 		}
 		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.status().code(), inputStream.rawBuffer());
+			throw new InvalidJsonException(e, response.status().code(), byteBufStream.getRawBuffer());
 		}
 		catch (IOException e) {
 			// FIXME: custom exception

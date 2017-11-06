@@ -1,5 +1,7 @@
 package com.bhyoo.onedrive.network.async;
 
+import com.bhyoo.onedrive.RequestTool;
+import com.bhyoo.onedrive.utils.ByteBufStream;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -10,8 +12,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
-import com.bhyoo.onedrive.RequestTool;
-import com.bhyoo.onedrive.utils.DirectByteInputStream;
 
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -88,7 +88,7 @@ public class AsyncDownloadClient extends AbstractClient {
 
 		@Override public void operationComplete(ResponseFuture future) throws Exception {
 			HttpResponse response = future.response();
-			DirectByteInputStream result = future.get();
+			ByteBufStream result = future.get();
 
 			// if response is valid
 			if (future.isSuccess() && response.status().code() == HttpURLConnection.HTTP_MOVED_TEMP) {
@@ -150,7 +150,7 @@ public class AsyncDownloadClient extends AbstractClient {
 
 		@Override public void operationComplete(ResponseFuture future) throws Exception {
 			HttpResponse response = future.response();
-			DirectByteInputStream result = future.get();
+			ByteBufStream result = future.get();
 
 			// if response is valid
 			if (future.isSuccess() && response.status().code() == HttpURLConnection.HTTP_OK) {

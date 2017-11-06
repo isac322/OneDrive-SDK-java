@@ -4,6 +4,7 @@ import com.bhyoo.onedrive.container.items.BaseItem;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.network.ErrorResponse;
 import com.bhyoo.onedrive.utils.ByteBufStream;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -11,6 +12,7 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -29,6 +31,7 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 	private ErrorResponse errorResponse;
 	private BaseItem baseItem;
 	private Thread workerThread;
+	@Nullable private Exception workerException;
 
 	public BaseItemHandler(DefaultBaseItemPromise promise, ObjectMapper mapper) {
 		this.promise = promise;
@@ -39,6 +42,7 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 	@Override public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		super.exceptionCaught(ctx, cause);
 		promise.setFailure(cause);
+		stream.close();
 		ctx.close();
 	}
 
@@ -54,7 +58,10 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 						}
 						catch (IOException e) {
 							// FIXME: custom exception
-							throw new RuntimeException("DEV: Unrecognizable json response.", e);
+							workerException = new RuntimeException("DEV: Unrecognizable json response.", e);
+						}
+						catch (Exception e) {
+							workerException = e;
 						}
 					}
 				};
@@ -63,11 +70,17 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 				workerThread = new Thread() {
 					@Override public void run() {
 						try {
-							errorResponse = mapper.readValue(stream, ErrorResponse.class);
+							errorResponse = mapper
+									.readerFor(ErrorResponse.class)
+									.with(DeserializationFeature.UNWRAP_ROOT_VALUE)
+									.readValue(stream);
 						}
 						catch (IOException e) {
 							// FIXME: custom exception
-							throw new RuntimeException("DEV: Unrecognizable json response.", e);
+							workerException = new RuntimeException("DEV: Unrecognizable json response.", e);
+						}
+						catch (Exception e) {
+							workerException = e;
 						}
 					}
 				};
@@ -83,12 +96,16 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 				workerThread.join();
 				stream.close();
 
-				if (baseItem != null) {
+				if (workerException != null) {
+					promise.setFailure(workerException);
+				}
+				else if (response.status().code() == HTTP_OK) {
 					promise.setSuccess(baseItem);
 				}
 				else {
-					promise.setFailure(new ErrorResponseException(HTTP_OK, response.status().code(),
-							errorResponse.getCode(), errorResponse.getMessage()));
+					promise.setFailure(
+							new ErrorResponseException(HTTP_OK, response.status().code(),
+									errorResponse.getCode(), errorResponse.getMessage()));
 				}
 			}
 			else {

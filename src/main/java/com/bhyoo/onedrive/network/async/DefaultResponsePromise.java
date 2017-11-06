@@ -1,19 +1,19 @@
 package com.bhyoo.onedrive.network.async;
 
+import com.bhyoo.onedrive.utils.ByteBufStream;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import com.bhyoo.onedrive.utils.DirectByteInputStream;
 
 // TODO: Enhance javadoc
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-public class DefaultResponsePromise extends DefaultPromise<DirectByteInputStream> implements ResponsePromise {
+public class DefaultResponsePromise extends DefaultPromise<ByteBufStream> implements ResponsePromise {
 	protected HttpResponse response;
 	protected Channel channel;
 
@@ -39,12 +39,12 @@ public class DefaultResponsePromise extends DefaultPromise<DirectByteInputStream
 		return channel;
 	}
 
-	@Override public boolean trySuccess(DirectByteInputStream result) {
+	@Override public boolean trySuccess(ByteBufStream result) {
 		result.close();
 		return super.trySuccess(result);
 	}
 
-	@Override public ResponsePromise setSuccess(DirectByteInputStream result) {
+	@Override public ResponsePromise setSuccess(ByteBufStream result) {
 		result.close();
 		super.setSuccess(result);
 		return this;
@@ -57,25 +57,25 @@ public class DefaultResponsePromise extends DefaultPromise<DirectByteInputStream
 	}
 
 	@Override public ResponsePromise addListener(
-			GenericFutureListener<? extends Future<? super DirectByteInputStream>> listener) {
+			GenericFutureListener<? extends Future<? super ByteBufStream>> listener) {
 		super.addListener(listener);
 		return this;
 	}
 
 	@Override public ResponsePromise addListeners(
-			GenericFutureListener<? extends Future<? super DirectByteInputStream>>[] listeners) {
+			GenericFutureListener<? extends Future<? super ByteBufStream>>[] listeners) {
 		super.addListeners(listeners);
 		return this;
 	}
 
 	@Override public ResponsePromise removeListener(
-			GenericFutureListener<? extends Future<? super DirectByteInputStream>> listener) {
+			GenericFutureListener<? extends Future<? super ByteBufStream>> listener) {
 		super.removeListener(listener);
 		return this;
 	}
 
 	@Override public ResponsePromise removeListeners(
-			GenericFutureListener<? extends Future<? super DirectByteInputStream>>[] listeners) {
+			GenericFutureListener<? extends Future<? super ByteBufStream>>[] listeners) {
 		super.removeListeners(listeners);
 		return this;
 	}

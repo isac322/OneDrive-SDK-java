@@ -1,9 +1,19 @@
 package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.Client;
+import com.bhyoo.onedrive.container.IdentitySet;
+import com.bhyoo.onedrive.container.facet.FileSystemInfoFacet;
+import com.bhyoo.onedrive.container.facet.SearchResultFacet;
+import com.bhyoo.onedrive.container.facet.SharePointIdsFacet;
+import com.bhyoo.onedrive.container.facet.SharedFacet;
 import com.bhyoo.onedrive.container.items.pointer.BasePointer;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;
+import com.bhyoo.onedrive.container.items.pointer.PathPointer;
+import com.bhyoo.onedrive.exceptions.ErrorResponseException;
+import com.bhyoo.onedrive.exceptions.InternalException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
+import com.bhyoo.onedrive.network.async.ResponseFuture;
+import com.bhyoo.onedrive.network.async.ResponseFutureListener;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -18,16 +28,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import com.bhyoo.onedrive.container.IdentitySet;
-import com.bhyoo.onedrive.container.facet.FileSystemInfoFacet;
-import com.bhyoo.onedrive.container.facet.SearchResultFacet;
-import com.bhyoo.onedrive.container.facet.SharePointIdsFacet;
-import com.bhyoo.onedrive.container.facet.SharedFacet;
-import com.bhyoo.onedrive.container.items.pointer.PathPointer;
-import com.bhyoo.onedrive.exceptions.ErrorResponseException;
-import com.bhyoo.onedrive.exceptions.InternalException;
-import com.bhyoo.onedrive.network.async.ResponseFuture;
-import com.bhyoo.onedrive.network.async.ResponseFutureListener;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -36,6 +36,7 @@ import java.util.concurrent.CountDownLatch;
 import static lombok.AccessLevel.PROTECTED;
 
 // TODO: Enhance javadoc
+// TODO: Rework Item concept with multiple inheritance via interface for RemoteFileItem and RemoteFolderItem
 
 /**
  * https://dev.onedrive.com/resources/item.htm
@@ -75,7 +76,7 @@ abstract public class BaseItem {
 	@Getter @Setter(PROTECTED) protected String webDavUrl;
 	@Getter @Setter(PROTECTED) protected String webUrl;
 
-	@Getter @JsonIgnore @NotNull protected PathPointer pathPointer;
+	@Getter @JsonIgnore @Nullable protected PathPointer pathPointer;
 	@Getter @JsonIgnore @NotNull protected IdPointer idPointer;
 
 	@NotNull
@@ -83,7 +84,7 @@ abstract public class BaseItem {
 
 	@Override
 	public String toString() {
-		return '<' + id + ", " + pathPointer + '>';
+		return '<' + name + " (" + id + "), " + pathPointer + '>';
 	}
 
 
@@ -317,6 +318,7 @@ abstract public class BaseItem {
 	 */
 
 
+	// FIXME: https://stackoverflow.com/questions/34406808/deserializing-unwrapped-flattened-json-in-java
 	public static class ItemDeserializer extends JsonDeserializer<BaseItem> {
 		@Override
 		public BaseItem deserialize(JsonParser parser, DeserializationContext context) throws IOException {
@@ -349,10 +351,10 @@ abstract public class BaseItem {
 			}
 			// or remote item?
 			else if (node.has("remoteItem")) {
-				if (node.has("folder") || node.has("file") || node.has("file")) {
+				if (node.has("folder") || node.has("file") || node.has("package")) {
 					isMultipleType = true;
 				}
-				ret = codec.convertValue(node, RemoteFolderItem.class);
+				ret = codec.convertValue(node, RemoteItem.class);
 			}
 			// unrecognizable object!
 			else {

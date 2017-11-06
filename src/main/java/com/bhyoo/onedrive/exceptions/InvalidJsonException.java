@@ -1,5 +1,6 @@
 package com.bhyoo.onedrive.exceptions;
 
+import io.netty.buffer.ByteBuf;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,6 +27,13 @@ public class InvalidJsonException extends RuntimeException implements OneDriveSe
 		super("Invalid JSON response from server with " + responseCode + " response code.", cause);
 		this.responseCode = responseCode;
 		this.content = content;
+	}
+
+	public InvalidJsonException(@Nullable Throwable cause, int responseCode, @NotNull ByteBuf content) {
+		super("Invalid JSON response from server with " + responseCode + " response code.", cause);
+		this.responseCode = responseCode;
+		this.content = new byte[content.readableBytes()];
+		content.readBytes(this.content);
 	}
 
 	public InvalidJsonException(@Nullable String message, int responseCode, @Nullable byte[] content) {

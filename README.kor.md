@@ -31,6 +31,7 @@
 - support custom redirect url when login
 - REST-api response error handling
 - JRE6 version
+- synchronized operation할때 HTTPS의 GZIP지원
 
 ### Environment
 

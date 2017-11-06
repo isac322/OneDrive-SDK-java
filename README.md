@@ -30,6 +30,7 @@ purse fast, easy to use, intuitive API.
 - support custom redirect url when login
 - REST-api response error handling
 - JRE6 version
+- HTTPS GZIP support for synchronized operation
 
 
 ### Environment

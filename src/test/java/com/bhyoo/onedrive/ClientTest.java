@@ -5,11 +5,11 @@ import com.bhyoo.onedrive.container.items.BaseItem;
 import com.bhyoo.onedrive.container.items.FolderItem;
 import com.bhyoo.onedrive.container.items.ResponsePage;
 import org.jetbrains.annotations.NotNull;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 // TODO: Enhance javadoc
 
@@ -31,12 +31,12 @@ public class ClientTest {
 	public static String PACKAGE_2 = "D4FD82CA6DF96A47!2104";
 	private static Client client;
 
-	@BeforeClass
-	public static void getClient() {
+	@BeforeAll
+	static void getClient() {
 		assertNull(client);
 
 		final String clientId = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
-		final String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
+		final String[] scope = {"files.readwrite.all", "offline_access"};
 		final String redirectURL = "http://localhost:8080/";
 		final String clientSecret = "XXXXXXXXXXXXXXXXXXXXXXX";
 
@@ -54,13 +54,12 @@ public class ClientTest {
 		assertNotNull(client.getRedirectURL());
 		assertNotNull(client.getRefreshToken());
 		assertNotNull(client.getTokenType());
-		assertNotNull(client.getUserId());
 		assertArrayEquals(client.getScopes(), scope);
 		assertNotEquals(client.getExpirationTime(), 0L);
 	}
 
-	@AfterClass
-	public static void logout() throws Exception {
+	@AfterAll
+	static void logout() throws Exception {
 		assertNotNull(client);
 		assertTrue(client.isLogin());
 
@@ -79,8 +78,7 @@ public class ClientTest {
 		assertNotNull(drive.getUsedCapacity());
 	}
 
-	@Test
-	public void refreshLogin() throws Exception {
+	@Test void refreshLogin() throws Exception {
 		String accessToken = client.getAccessToken();
 		String authCode = client.getAuthCode();
 		String clientId = client.getClientId();
@@ -88,7 +86,6 @@ public class ClientTest {
 		String redirectURL = client.getRedirectURL();
 		String refreshToken = client.getRefreshToken();
 		String tokenType = client.getTokenType();
-		String userId = client.getUserId();
 		String[] scopes = client.getScopes();
 		long expirationTime = client.getExpirationTime();
 
@@ -104,27 +101,23 @@ public class ClientTest {
 		assertEquals(client.getRedirectURL(), redirectURL);
 		assertNotEquals(client.getRefreshToken(), refreshToken);
 		assertEquals(client.getTokenType(), tokenType);
-		assertEquals(client.getUserId(), userId);
 		assertArrayEquals(client.getScopes(), scopes);
 		assertNotEquals(client.getExpirationTime(), expirationTime);
 	}
 
-	@Test
-	public void getDefaultDrive() throws Exception {
+	@Test void getDefaultDrive() throws Exception {
 		Drive defaultDrive = client.getDefaultDrive();
 
 		testDrive(defaultDrive);
 	}
 
-	@Test
-	public void getAllDrive() throws Exception {
+	@Test void getAllDrive() throws Exception {
 		Drive[] drives = client.getAllDrive();
 
 		for (Drive drive : drives) testDrive(drive);
 	}
 
-	@Test
-	public void getRootDir() throws Exception {
+	@Test void getRootDir() throws Exception {
 		FolderItem rootDir = client.getRootDir();
 
 		assertTrue(rootDir.isRoot());
@@ -132,8 +125,7 @@ public class ClientTest {
 	}
 
 	// FIXME
-	@Test
-	public void getFolder() throws Exception {
+	@Test void getFolder() throws Exception {
 		FolderItem folder = client.getFolder(DIR_MANY_CHILD);
 
 		assertEquals(folder.getName(), DIR_MANY_CHILD_NAME);
@@ -147,8 +139,7 @@ public class ClientTest {
 		}
 	}
 
-	@Test
-	public void getFolder1() throws Exception {
+	@Test void getFolder1() throws Exception {
 		FolderItem folder = client.getFolder(DIR_MANY_CHILD, false);
 
 		assertEquals(folder.getName(), DIR_MANY_CHILD_NAME);
@@ -159,8 +150,7 @@ public class ClientTest {
 	}
 
 	// FIXME
-	@Test
-	public void getItem() throws Exception {
+	@Test void getItem() throws Exception {
 		long before = System.currentTimeMillis();
 		for (int i = 0; i < 100; i++) {
 			long l = System.currentTimeMillis();
@@ -171,8 +161,7 @@ public class ClientTest {
 	}
 
 	// FIXME
-	@Test
-	public void searchItem() throws Exception {
+	@Test void searchItem() throws Exception {
 		@NotNull ResponsePage<BaseItem> items = client.searchItem("1학기");
 
 		for (BaseItem item : items.getValue()) {
@@ -180,8 +169,7 @@ public class ClientTest {
 		}
 	}
 
-	@Test
-	public void getFullToken() throws Exception {
+	@Test void getFullToken() throws Exception {
 		assertEquals(client.getFullToken(), client.getTokenType() + ' ' + client.getAccessToken());
 	}
 

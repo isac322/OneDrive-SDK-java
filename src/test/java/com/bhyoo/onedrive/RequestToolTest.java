@@ -1,32 +1,30 @@
 package com.bhyoo.onedrive;
 
 import com.bhyoo.onedrive.container.items.BaseItem;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.network.async.BaseItemFuture;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 // TODO: Enhance javadoc
 
 /**
-
- *
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-public class RequestToolTest {
+class RequestToolTest {
 
 	private static Client client;
 	private static RequestTool requestTool;
 
-	@BeforeClass
-	public static void getClient() {
+	@BeforeAll
+	static void getClient() {
 		assertNull(client);
 
 		final String clientId = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
-		final String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
+		final String[] scope = {"files.readwrite.all", "offline_access"};
 		final String redirectURL = "http://localhost:8080/";
 		final String clientSecret = "XXXXXXXXXXXXXXXXXXXXXXX";
 
@@ -44,33 +42,36 @@ public class RequestToolTest {
 		assertNotNull(client.getRedirectURL());
 		assertNotNull(client.getRefreshToken());
 		assertNotNull(client.getTokenType());
-		assertNotNull(client.getUserId());
 		assertArrayEquals(client.getScopes(), scope);
 		assertNotEquals(client.getExpirationTime(), 0L);
 
 		requestTool = client.requestTool();
+
+		System.out.println(client.getFullToken());
 	}
 
-	@AfterClass
-	public static void logout() throws Exception {
+	@AfterAll
+	static void logout() throws Exception {
 		assertNotNull(client);
 		assertTrue(client.isLogin());
 
-		client.logout();
+		//		client.logout();
 
-		assertFalse(client.isLogin());
+		//		assertFalse(client.isLogin());
 	}
 
-	@Test
-	public void getItemAsync() throws Exception {
-		BaseItemFuture future = requestTool.getItemAsync(Client.ITEM_ID_PREFIX + ClientTest.MP3_UTF8_BIG)
+	@Test void getItemAsync() throws Exception {
+		BaseItemFuture future2 = requestTool.getItemAsync("/drive/items/D4FD82CA6DF96A47!25786")
+				.syncUninterruptibly();
+/*		BaseItemFuture future = requestTool.getItemAsync(Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784")
 				.syncUninterruptibly();
 
-		System.out.println(future.get());
+		if (future.isSuccess()) {
+			System.out.println(future.get());
+		}*/
 	}
 
-	@Test
-	public void getItem() throws ErrorResponseException {
+	@Test void getItem() throws ErrorResponseException {
 		long before = System.currentTimeMillis();
 		for (int i = 0; i < 100; i++) {
 			long l = System.currentTimeMillis();
@@ -78,5 +79,11 @@ public class RequestToolTest {
 			System.out.println(System.currentTimeMillis() - l);
 		}
 		System.out.println(System.currentTimeMillis() - before);
+	}
+
+	@Test void getItem1() throws ErrorResponseException {
+		BaseItem item = requestTool.getItem(Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784");
+		System.out.println(item.getName());
+		System.out.println(item.getId());
 	}
 }

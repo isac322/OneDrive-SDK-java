@@ -1,10 +1,7 @@
 package com.bhyoo.onedrive;
 
 import com.bhyoo.onedrive.container.Drive;
-import com.bhyoo.onedrive.container.items.BaseItem;
-import com.bhyoo.onedrive.container.items.FileItem;
-import com.bhyoo.onedrive.container.items.FolderItem;
-import com.bhyoo.onedrive.container.items.ResponsePage;
+import com.bhyoo.onedrive.container.items.*;
 import com.bhyoo.onedrive.container.items.pointer.BasePointer;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;
 import com.bhyoo.onedrive.container.items.pointer.Operator;
@@ -42,6 +39,8 @@ import java.util.concurrent.Semaphore;
 
 import static com.bhyoo.onedrive.RequestTool.BASE_URL;
 import static com.bhyoo.onedrive.container.items.pointer.Operator.UPLOAD_CREATE_SESSION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED;
 import static java.net.HttpURLConnection.*;
 
 // TODO: Enhance javadoc
@@ -51,6 +50,7 @@ import static java.net.HttpURLConnection.*;
  */
 public class Client {
 	public static final String ITEM_ID_PREFIX = "/drive/items/";
+	private static final String AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0";
 	@NotNull private static final IllegalStateException LOGIN_FIRST = new IllegalStateException("Do login first!!");
 
 	/**
@@ -192,8 +192,8 @@ public class Client {
 		StringBuilder scope = new StringBuilder();
 		for (String s : scopes) scope.append("%20").append(s);
 
-		String url = String.format("https://login.live.com/oauth20_authorize.srf" +
-				"?client_id=%s&scope=%s&response_type=code&redirect_uri=%s", clientId, scope.toString(), redirectURL)
+		String url = String.format(AUTH_URL + "/authorize?client_id=%s&scope=%s&response_type=code&redirect_uri=%s",
+				clientId, scope.toString(), redirectURL)
 				.replace(" ", "%20");
 
 		Semaphore answerLock = new Semaphore(1);
@@ -268,7 +268,7 @@ public class Client {
 		return getToken(
 				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&refresh_token=%s&grant_type" +
 								"=refresh_token",
-						clientId, redirectURL, clientSecret, authInfo.refreshToken()));
+						clientId, redirectURL, clientSecret, authInfo.getRefreshToken()));
 	}
 
 	/**
@@ -285,7 +285,9 @@ public class Client {
 	 */
 	@NotNull
 	private String getToken(String httpBody) {
-		SyncResponse response = new SyncRequest("https://login.live.com/oauth20_token.srf").doPost(httpBody);
+		SyncResponse response = new SyncRequest(AUTH_URL + "/token")
+				.setHeader(CONTENT_TYPE, APPLICATION_X_WWW_FORM_URLENCODED)
+				.doPost(httpBody);
 
 		try {
 			authInfo = requestTool.parseAuthAndHandle(response, HTTP_OK);
@@ -294,9 +296,9 @@ public class Client {
 			throw new InternalException("failed to acquire login token. check login info", e);
 		}
 
-		this.fullToken = authInfo.tokenType() + ' ' + authInfo.accessToken();
+		this.fullToken = authInfo.getTokenType() + ' ' + authInfo.getAccessToken();
 
-		return authInfo.accessToken();
+		return authInfo.getAccessToken();
 	}
 
 	/**
@@ -320,15 +322,15 @@ public class Client {
 	 * @throws ErrorResponseException if raises error while logout.
 	 */
 	public void logout() throws ErrorResponseException {
-		String url = String.format("https://login.live.com/oauth20_logout.srf?client_id=%s&redirect_uri=%s",
-				clientId, redirectURL);
+		String url = AUTH_URL + "/logout"; // AUTH_URL + "/logout?post_logout_redirect_uri=" + redirectURL;
 
 		SyncResponse response = new SyncRequest(url).doGet();
 
-		if (response.getCode() != HttpsURLConnection.HTTP_MOVED_TEMP) {
+		// FIXME: is it valid codes?
+		if (response.getCode() != HttpsURLConnection.HTTP_OK) {
 			String[] split = response.getUrl().getRef().split("&");
 			throw new ErrorResponseException(
-					HttpsURLConnection.HTTP_MOVED_TEMP,
+					HttpsURLConnection.HTTP_OK,
 					response.getCode(),
 					split[0].substring(split[0].indexOf('=') + 1),
 					QueryStringDecoder.decodeComponent(split[1].substring(split[1].indexOf('=') + 1)));
@@ -384,7 +386,7 @@ public class Client {
 	public FolderItem getRootDir() throws ErrorResponseException {
 		checkExpired();
 
-		SyncResponse response = requestTool.newRequest("/drive/root:/?expand=children").doGet();
+		SyncResponse response = requestTool.newRequest("/drive/root/?expand=children").doGet();
 		return requestTool.parseFolderItemAndHandle(response, HTTP_OK);
 	}
 
@@ -509,15 +511,16 @@ public class Client {
 		return requestTool.getItem(pointer.toASCIIApi());
 	}
 
+	// FIXME: read
 	@NotNull
-	public BaseItem[] getShared() throws ErrorResponseException {
+	public RemoteItem[] getShared() throws ErrorResponseException {
 		checkExpired();
 
 		// FIXME: convert to NONE Tree Model
-		ArrayNode values = (ArrayNode) requestTool.doGetJson("/drive/shared").get("value");
+		ArrayNode values = (ArrayNode) requestTool.doGetJson("/drive/sharedWithMe").get("value");
 
 		int size = values.size();
-		final BaseItem[] items = new BaseItem[size];
+		final RemoteItem[] items = new RemoteItem[size];
 		BaseItemFuture[] futures = new BaseItemFuture[size];
 
 		for (int i = 0; i < size; i++) {
@@ -531,7 +534,7 @@ public class Client {
 
 		for (int i = 0; i < size; i++) {
 			futures[i].syncUninterruptibly();
-			items[i] = futures[i].getNow();
+			items[i] = (RemoteItem) futures[i].getNow();
 		}
 
 		return items;
@@ -937,7 +940,7 @@ public class Client {
 
 	public boolean isExpired() {
 		if (!isLogin()) throw LOGIN_FIRST;
-		return System.currentTimeMillis() >= authInfo.expiresIn();
+		return System.currentTimeMillis() >= authInfo.getExpiresIn();
 	}
 
 	public boolean isLogin() {
@@ -946,22 +949,17 @@ public class Client {
 
 	public @NotNull String getTokenType() {
 		checkExpired();
-		return authInfo.tokenType();
+		return authInfo.getTokenType();
 	}
 
 	public @NotNull String getAccessToken() {
 		checkExpired();
-		return authInfo.accessToken();
-	}
-
-	public @NotNull String getUserId() {
-		checkExpired();
-		return authInfo.userId();
+		return authInfo.getAccessToken();
 	}
 
 	public @NotNull String getRefreshToken() {
 		checkExpired();
-		return authInfo.refreshToken();
+		return authInfo.getRefreshToken();
 	}
 
 	public @NotNull String getAuthCode() {
@@ -972,7 +970,7 @@ public class Client {
 
 	public long getExpirationTime() {
 		checkExpired();
-		return authInfo.expiresIn();
+		return authInfo.getExpiresIn();
 	}
 
 	public @NotNull String getFullToken() {

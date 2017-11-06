@@ -2,18 +2,21 @@ package com.bhyoo.onedrive.utils;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class ByteBufStreamTest {
+
+class ByteBufStreamTest {
 	private static final byte[] first = {0, 1, 2, 3}, second = {4, 5, 6, 7};
 
-	@Test
-	public void testCase1() throws InterruptedException, IOException {
+	@Test void testCase1() throws InterruptedException, IOException {
 		ByteBuf buffer = Unpooled.buffer();
 		final ByteBufStream inputStream = new ByteBufStream();
 
@@ -45,7 +48,7 @@ public class ByteBufStreamTest {
 		};
 		end.start();
 
-		TimeUnit.SECONDS.sleep(1);
+		TimeUnit.MILLISECONDS.sleep(50);
 		buffer.writeBytes(first);
 		inputStream.writeByteBuf(buffer);
 
@@ -60,8 +63,7 @@ public class ByteBufStreamTest {
 		inputStream.close();
 	}
 
-	@Test
-	public void emptyStreamRead() throws InterruptedException, IOException {
+	@Test void readEmptyStream() throws InterruptedException, IOException {
 		ByteBuf buffer = Unpooled.buffer();
 		final ByteBufStream inputStream = new ByteBufStream();
 
@@ -78,7 +80,7 @@ public class ByteBufStreamTest {
 		};
 		end.start();
 
-		TimeUnit.SECONDS.sleep(1);
+		TimeUnit.MILLISECONDS.sleep(50);
 
 		inputStream.setNoMoreBuf();
 
@@ -88,16 +90,51 @@ public class ByteBufStreamTest {
 		buffer.release();
 	}
 
-	@Test
-	public void writeAfterClose() {
-		ByteBufStream stream = new ByteBufStream();
+	@Test void writeAfterClose() {
+		final ByteBufStream stream = new ByteBufStream();
 		ByteBuf buf = Unpooled.buffer(100);
 		buf.writeBytes(first);
 
 		stream.writeByteBuf(buf);
 		stream.close();
 
-		buf = Unpooled.buffer(100);
+		assertThrows(IllegalStateException.class, new Executable() {
+			@Override public void execute() throws Throwable {
+				ByteBuf buf = Unpooled.buffer(100);
+				stream.writeByteBuf(buf);
+			}
+		});
+	}
+
+	@Test void readAfterClosed() {
+		ByteBufStream stream = new ByteBufStream();
+		stream.close();
+
+		assertEquals(-1, stream.read());
+	}
+
+	@Test void readWithOffset() {
+		ByteBufStream stream = new ByteBufStream();
+		ByteBuf buf = Unpooled.buffer(100);
+		buf.writeBytes(first);
+		buf.writeBytes(second);
 		stream.writeByteBuf(buf);
+		stream.setNoMoreBuf();
+
+		byte[] bytes = new byte[100];
+		byte[] expectedBytes = new byte[100];
+
+		expectedBytes[1] = first[0];
+		expectedBytes[2] = first[1];
+		expectedBytes[3] = first[2];
+		expectedBytes[4] = first[3];
+		expectedBytes[5] = second[0];
+
+		int n = stream.read(bytes, 1, 5);
+		assertEquals(5, n);
+
+		assertArrayEquals(expectedBytes, bytes);
+
+		stream.close();
 	}
 }

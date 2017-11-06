@@ -4,9 +4,13 @@ import com.bhyoo.onedrive.Client;
 import com.bhyoo.onedrive.container.facet.FolderFacet;
 import com.bhyoo.onedrive.container.facet.SpecialFolderFacet;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;
+import com.bhyoo.onedrive.container.items.pointer.PathPointer;
+import com.bhyoo.onedrive.exceptions.ErrorResponseException;
+import com.bhyoo.onedrive.exceptions.InternalException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.ResponseFuture;
 import com.bhyoo.onedrive.network.async.ResponseFutureListener;
+import com.bhyoo.onedrive.utils.ByteBufStream;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,10 +24,6 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import com.bhyoo.onedrive.container.items.pointer.PathPointer;
-import com.bhyoo.onedrive.exceptions.ErrorResponseException;
-import com.bhyoo.onedrive.exceptions.InternalException;
-import com.bhyoo.onedrive.utils.DirectByteInputStream;
 
 import java.io.IOException;
 import java.net.URI;
@@ -68,7 +68,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 			}
 			else {
 				// if child is neither FolderItem nor FileItem nor PackageItem.
-				assert item instanceof PackageItem : "Wrong item type";
+				assert item instanceof PackageItem || item instanceof RemoteItem : "Wrong item type";
 			}
 			all.add(item);
 		}
@@ -87,7 +87,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 					new URI(nextLink),
 					new ResponseFutureListener() {
 						@Override public void operationComplete(ResponseFuture future) throws Exception {
-							DirectByteInputStream result = future.get();
+							ByteBufStream result = future.get();
 
 							try {
 								jsonObject[0] = (ObjectNode) client.mapper().readTree(result);
@@ -96,7 +96,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 								throw new InvalidJsonException(
 										e,
 										future.response().status().code(),
-										result.rawBuffer());
+										result.getRawBuffer());
 							}
 							catch (IOException e) {
 								// FIXME: custom exception

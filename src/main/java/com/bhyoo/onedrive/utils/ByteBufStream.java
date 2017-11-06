@@ -8,14 +8,13 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
 
-import static com.bhyoo.onedrive.utils.DirectByteInputStream.INDEX_EXCEPTION;
-
 // TODO: Enhance javadoc
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class ByteBufStream extends InputStream {
+	@NotNull private static final IndexOutOfBoundsException INDEX_EXCEPTION = new IndexOutOfBoundsException();
 	@NotNull final private CompositeByteBuf compositeBuf;
 	private boolean noMoreBuf;
 	private boolean closed;
@@ -30,6 +29,12 @@ public class ByteBufStream extends InputStream {
 	}
 
 
+	public ByteBuf getRawBuffer() {
+		return compositeBuf.duplicate().readerIndex(0);
+	}
+
+
+	// TODO: add javadoc
 	public synchronized void setNoMoreBuf() {
 		noMoreBuf = true;
 		notifyAll();
