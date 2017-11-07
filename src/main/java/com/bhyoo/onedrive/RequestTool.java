@@ -97,13 +97,13 @@ public class RequestTool {
 		this.mapper = mapper;
 		this.errorReader = mapper.readerFor(ErrorResponse.class).with(UNWRAP_ROOT_VALUE);
 		this.baseItemReader = mapper.readerFor(BaseItem.class);
-		this.basePageItemReader = mapper.readerFor(
-				mapper.getTypeFactory().constructParametricType(ResponsePage.class, BaseItem.class));
+		this.basePageItemReader =
+				mapper.readerFor(mapper.getTypeFactory().constructParametricType(ResponsePage.class, BaseItem.class));
 		this.fileItemReader = mapper.readerFor(FileItem.class);
 		this.folderItemReader = mapper.readerFor(FolderItem.class);
 		this.driveReader = mapper.readerFor(Drive.class);
-		this.drivePageReader = mapper.readerFor(
-				mapper.getTypeFactory().constructParametricType(ResponsePage.class, Drive.class));
+		this.drivePageReader =
+				mapper.readerFor(mapper.getTypeFactory().constructParametricType(ResponsePage.class, Drive.class));
 		this.authReader = mapper.readerFor(AuthenticationInfo.class);
 	}
 

@@ -35,22 +35,16 @@ public class AsyncDefaultInitializer extends ChannelInitializer<SocketChannel> {
 
 	@Override
 	public void initChannel(SocketChannel ch) {
-		ChannelPipeline p = ch.pipeline();
-		final SslHandler sslHandler = sslContext.newHandler(ch.alloc());
-		ch.closeFuture().addListener(new ChannelFutureListener() {
-			@Override public void operationComplete(ChannelFuture future) throws Exception {
-				sslHandler.close();
-			}
-		});
+		ChannelPipeline pipeline = ch.pipeline();
 
 		// Enable HTTPS.
-		p.addLast("ssl", sslHandler);
+		pipeline.addLast("ssl", sslContext.newHandler(ch.alloc()));
 
-		p.addLast("codec", new HttpClientCodec());
+		pipeline.addLast("codec", new HttpClientCodec());
 
 		// Remove the following line if you don't want automatic content decompression.
-		p.addLast("inflater", new HttpContentDecompressor());
+		pipeline.addLast("inflater", new HttpContentDecompressor());
 
-		p.addLast("handler", handler);
+		pipeline.addLast("handler", handler);
 	}
 }
