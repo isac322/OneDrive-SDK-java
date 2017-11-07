@@ -3,19 +3,19 @@ package com.bhyoo.onedrive.network.sync;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.SneakyThrows;
+import lombok.val;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
 
 // TODO: Enhance javadoc
 
@@ -24,13 +24,13 @@ import java.util.Map;
  */
 public class SyncRequest {
 	public static final String NETWORK_ERR_MSG = "Network connection error. Please retry later or contact API author.";
-	private final HttpsURLConnection httpConnection;
+	private final HttpURLConnection httpConnection;
 
 	@SneakyThrows(MalformedURLException.class)
 	public SyncRequest(@NotNull String url) {
 		URL url1 = new URL(url);
 		try {
-			httpConnection = (HttpsURLConnection) url1.openConnection();
+			httpConnection = (HttpURLConnection) url1.openConnection();
 		}
 		catch (IOException e) {
 			// FIXME: custom exception
@@ -40,7 +40,7 @@ public class SyncRequest {
 
 	public SyncRequest(@NotNull URL url) {
 		try {
-			httpConnection = (HttpsURLConnection) url.openConnection();
+			httpConnection = (HttpURLConnection) url.openConnection();
 		}
 		catch (IOException e) {
 			// FIXME: custom exception
@@ -60,9 +60,16 @@ public class SyncRequest {
 		return this;
 	}
 
+
 	@NotNull
 	public SyncResponse doPost(String content) {
 		byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+		return doPost(bytes);
+	}
+
+	@NotNull
+	public SyncResponse doPost(String content, Charset charset) {
+		byte[] bytes = content.getBytes(charset);
 		return doPost(bytes);
 	}
 
@@ -77,10 +84,43 @@ public class SyncRequest {
 		}
 	}
 
+
+	@NotNull
+	public SyncResponse doPatch(String content) {
+		byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+		return doPatch(bytes);
+	}
+
+	@NotNull
+	public SyncResponse doPatch(String content, Charset charset) {
+		byte[] bytes = content.getBytes(charset);
+		return doPatch(bytes);
+	}
+
+	@NotNull
+	public SyncResponse doPatch(byte[] content) {
+		try {
+			// FIXME: unstable, not common way
+			httpConnection.setRequestMethod("POST");
+			setHeader("X-HTTP-Method-Override", "PATCH");
+			return sendContent(content);
+		}
+		catch (ProtocolException e) {
+			throw new UnsupportedOperationException("unsupported method PATCH. contact author with stacktrace", e);
+		}
+	}
+
+
 	@NotNull
 	public SyncResponse doPut(String content) {
 		byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
-		return doPost(bytes);
+		return doPut(bytes);
+	}
+
+	@NotNull
+	public SyncResponse doPut(String content, Charset charset) {
+		byte[] bytes = content.getBytes(charset);
+		return doPut(bytes);
 	}
 
 	@NotNull
@@ -93,6 +133,7 @@ public class SyncRequest {
 			throw new UnsupportedOperationException("unsupported method PUT. contact author with stacktrace", e);
 		}
 	}
+
 
 	public SyncResponse sendContent(byte[] content) {
 		try {
@@ -113,6 +154,7 @@ public class SyncRequest {
 		}
 	}
 
+
 	@NotNull
 	public SyncResponse doDelete() {
 		try {
@@ -123,6 +165,7 @@ public class SyncRequest {
 			throw new UnsupportedOperationException("unsupported method DELETE. contact author with stacktrace", e);
 		}
 	}
+
 
 	@NotNull
 	public SyncResponse doGet() {
@@ -135,6 +178,7 @@ public class SyncRequest {
 		}
 	}
 
+
 	/**
 	 * @return Response object.
 	 *
@@ -145,12 +189,14 @@ public class SyncRequest {
 		try {
 			int code = httpConnection.getResponseCode();
 			String message = httpConnection.getResponseMessage();
-			Map<String, List<String>> header = httpConnection.getHeaderFields();
+			val header = httpConnection.getHeaderFields();
 			URL url = httpConnection.getURL();
 
-			ByteBuf byteStream = Unpooled.buffer(512);
+			// TODO: performance test for directBuffer or Pooled buffer
+			ByteBuf byteBuf = Unpooled.buffer(512);
 			InputStream body;
 
+			// TODO: how about directly pass this steams to jackson for performance
 			if (code < 400)
 				body = httpConnection.getInputStream();
 			else
@@ -160,10 +206,10 @@ public class SyncRequest {
 
 			int readBytes;
 			while ((readBytes = body.read(buffer)) >= 0) {
-				byteStream.writeBytes(buffer, 0, readBytes);
+				byteBuf.writeBytes(buffer, 0, readBytes);
 			}
 			body.close();
-			return new SyncResponse(url, code, message, header, byteStream.array(), byteStream.writerIndex());
+			return new SyncResponse(url, code, message, header, byteBuf);
 
 			// which one is better?
 			/*

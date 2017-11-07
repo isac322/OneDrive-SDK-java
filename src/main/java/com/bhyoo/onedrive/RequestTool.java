@@ -134,7 +134,10 @@ public class RequestTool {
 	@NotNull
 	public SyncRequest newRequest(@NotNull String api) {
 		try {
-			return newRequest(new URL(BASE_URL + api));
+			return new SyncRequest(new URL(BASE_URL + api))
+					.setHeader(AUTHORIZATION, client.getFullToken())
+					// TODO: GZIP .setHeader(ACCEPT_ENCODING, GZIP)
+					.setHeader(ACCEPT, APPLICATION_JSON);
 		}
 		catch (MalformedURLException e) {
 			throw new IllegalArgumentException(

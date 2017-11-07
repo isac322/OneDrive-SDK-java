@@ -11,7 +11,7 @@ import static lombok.AccessLevel.PRIVATE;
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-public class AuthenticationInfo {
+class AuthenticationInfo {
 	@Getter @Setter(PRIVATE) @JsonProperty("token_type") private String tokenType;
 	@Getter @JsonProperty("expires_in") private long expiresIn;
 	@Getter @Setter(PRIVATE) @JsonProperty("access_token") private String accessToken;

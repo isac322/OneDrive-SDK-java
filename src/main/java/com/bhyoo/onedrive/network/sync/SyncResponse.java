@@ -1,5 +1,6 @@
 package com.bhyoo.onedrive.network.sync;
 
+import io.netty.buffer.ByteBuf;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,18 +19,16 @@ public class SyncResponse {
 	@Getter protected final int code;
 	@Getter protected final String message;
 	@Getter protected final Map<String, List<String>> header;
-	@Getter protected final byte[] content;
-	@Getter protected final int length;
+	@Getter protected final ByteBuf contentBuf;
 	protected String contentString;
 
 	public SyncResponse(URL url, int code, String message,
-						Map<String, List<String>> header, byte[] content, int length) {
+						Map<String, List<String>> header, ByteBuf contentBuf) {
 		this.url = url;
 		this.code = code;
 		this.message = message;
 		this.header = header;
-		this.content = content;
-		this.length = length;
+		this.contentBuf = contentBuf;
 	}
 
 	/**
@@ -42,9 +41,27 @@ public class SyncResponse {
 	@NotNull
 	public String getContentString() {
 		if (contentString == null) {
-			contentString = new String(content, StandardCharsets.UTF_8);
+			contentString = new String(contentBuf.array(), 0, contentBuf.readableBytes(), StandardCharsets.UTF_8);
 		}
 
 		return contentString;
+	}
+
+	public int getLength() {
+		return contentBuf.readableBytes();
+	}
+
+	public byte[] getContent() {
+		return getContent(true);
+	}
+
+	public byte[] getContent(boolean autoRelease) {
+		byte[] array = contentBuf.array();
+		if (autoRelease) release();
+		return array;
+	}
+
+	public void release() {
+		contentBuf.release();
 	}
 }
