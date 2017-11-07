@@ -26,11 +26,14 @@ import static java.net.HttpURLConnection.HTTP_OK;
 public class AuthHelper implements AbstractAuthHelper {
 	private static final String AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0";
 	private static final IllegalStateException LOGIN_FIRST = new IllegalStateException("Do login first!!");
+
 	@NotNull private final RequestTool requestTool;
+
 	@Getter(onMethod = @__(@Override)) @NotNull private final String[] scopes;
 	@Getter(onMethod = @__(@Override)) @NotNull private final String clientId;
 	@Getter(onMethod = @__(@Override)) @NotNull private final String clientSecret;
 	@Getter(onMethod = @__(@Override)) @NotNull private final String redirectURL;
+
 	@Nullable private String authCode;
 	@Nullable private String fullToken;
 	@Nullable private AuthenticationInfo authInfo;
@@ -53,21 +56,25 @@ public class AuthHelper implements AbstractAuthHelper {
 
 	@Override public boolean isExpired() {
 		if (!isLogin()) throw LOGIN_FIRST;
+		//noinspection ConstantConditions
 		return System.currentTimeMillis() >= authInfo.getExpiresIn();
 	}
 
 	@Override public @NotNull String getTokenType() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return authInfo.getTokenType();
 	}
 
 	@Override public @NotNull String getAccessToken() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return authInfo.getAccessToken();
 	}
 
 	@Override public @NotNull String getRefreshToken() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return authInfo.getRefreshToken();
 	}
 
@@ -79,6 +86,7 @@ public class AuthHelper implements AbstractAuthHelper {
 
 	@Override public long getExpirationTime() {
 		checkExpired();
+		//noinspection ConstantConditions
 		return authInfo.getExpiresIn();
 	}
 
@@ -153,6 +161,7 @@ public class AuthHelper implements AbstractAuthHelper {
 	@Override public @NotNull String refreshLogin() {
 		if (!isLogin()) throw LOGIN_FIRST;
 
+		//noinspection ConstantConditions
 		return getToken(
 				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&refresh_token=%s&grant_type" +
 								"=refresh_token",
