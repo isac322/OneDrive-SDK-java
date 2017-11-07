@@ -1,5 +1,6 @@
-package com.bhyoo.onedrive;
+package com.bhyoo.onedrive.client;
 
+import com.bhyoo.onedrive.client.auth.AuthenticationInfo;
 import com.bhyoo.onedrive.container.Drive;
 import com.bhyoo.onedrive.container.items.BaseItem;
 import com.bhyoo.onedrive.container.items.FileItem;

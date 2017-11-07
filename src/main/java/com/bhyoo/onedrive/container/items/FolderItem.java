@@ -1,6 +1,6 @@
 package com.bhyoo.onedrive.container.items;
 
-import com.bhyoo.onedrive.Client;
+import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.container.facet.FolderFacet;
 import com.bhyoo.onedrive.container.facet.SpecialFolderFacet;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;

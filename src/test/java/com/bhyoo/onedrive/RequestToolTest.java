@@ -1,5 +1,7 @@
 package com.bhyoo.onedrive;
 
+import com.bhyoo.onedrive.client.Client;
+import com.bhyoo.onedrive.client.RequestTool;
 import com.bhyoo.onedrive.container.items.BaseItem;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.network.async.BaseItemFuture;

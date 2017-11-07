@@ -1,4 +1,4 @@
-package com.bhyoo.onedrive;
+package com.bhyoo.onedrive.client.auth;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
@@ -11,7 +11,7 @@ import static lombok.AccessLevel.PRIVATE;
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-class AuthenticationInfo {
+public class AuthenticationInfo {
 	@Getter @Setter(PRIVATE) @JsonProperty("token_type") private String tokenType;
 	@Getter @JsonProperty("expires_in") private long expiresIn;
 	@Getter @Setter(PRIVATE) @JsonProperty("access_token") private String accessToken;

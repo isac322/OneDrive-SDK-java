@@ -1,5 +1,6 @@
 package com.bhyoo.onedrive;
 
+import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.container.Drive;
 import com.bhyoo.onedrive.container.items.BaseItem;
 import com.bhyoo.onedrive.container.items.FolderItem;

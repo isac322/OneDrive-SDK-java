@@ -1,5 +1,7 @@
-package com.bhyoo.onedrive;
+package com.bhyoo.onedrive.client;
 
+import com.bhyoo.onedrive.client.auth.AuthServer;
+import com.bhyoo.onedrive.client.auth.AuthenticationInfo;
 import com.bhyoo.onedrive.container.Drive;
 import com.bhyoo.onedrive.container.items.*;
 import com.bhyoo.onedrive.container.items.pointer.BasePointer;
@@ -12,7 +14,6 @@ import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.*;
 import com.bhyoo.onedrive.network.sync.SyncRequest;
 import com.bhyoo.onedrive.network.sync.SyncResponse;
-import com.bhyoo.onedrive.utils.AuthServer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -37,7 +38,7 @@ import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
-import static com.bhyoo.onedrive.RequestTool.BASE_URL;
+import static com.bhyoo.onedrive.client.RequestTool.BASE_URL;
 import static com.bhyoo.onedrive.container.items.pointer.Operator.UPLOAD_CREATE_SESSION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED;
@@ -51,7 +52,7 @@ import static java.net.HttpURLConnection.*;
 public class Client {
 	public static final String ITEM_ID_PREFIX = "/drive/items/";
 	private static final String AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0";
-	@NotNull private static final IllegalStateException LOGIN_FIRST = new IllegalStateException("Do login first!!");
+	private static final IllegalStateException LOGIN_FIRST = new IllegalStateException("Do login first!!");
 
 	/**
 	 * Only one {@code mapper} per a {@code Client} object.<br>

@@ -1,6 +1,6 @@
 package com.bhyoo.onedrive.container.items;
 
-import com.bhyoo.onedrive.Client;
+import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.container.IdentitySet;
 import com.bhyoo.onedrive.container.facet.FileSystemInfoFacet;
 import com.bhyoo.onedrive.container.facet.SearchResultFacet;

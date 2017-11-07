@@ -1,6 +1,6 @@
 package com.bhyoo.onedrive.container.items.pointer;
 
-import com.bhyoo.onedrive.RequestTool;
+import com.bhyoo.onedrive.client.RequestTool;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -1,4 +1,4 @@
-package com.bhyoo.onedrive.utils;
+package com.bhyoo.onedrive.client.auth;
 
 import com.bhyoo.onedrive.exceptions.InternalException;
 import com.sun.net.httpserver.HttpExchange;
