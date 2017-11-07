@@ -1,9 +1,9 @@
 package com.bhyoo.onedrive.container.items.pointer;
 
+import com.bhyoo.onedrive.RequestTool;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import com.bhyoo.onedrive.RequestTool;
 
 import java.net.URI;
 import java.net.URISyntaxException;

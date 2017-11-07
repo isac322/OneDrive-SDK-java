@@ -1,9 +1,9 @@
 package com.bhyoo.onedrive.network.async;
 
+import com.bhyoo.onedrive.RequestTool;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
 import org.jetbrains.annotations.NotNull;
-import com.bhyoo.onedrive.RequestTool;
 
 import static io.netty.handler.codec.http.HttpMethod.PUT;
 

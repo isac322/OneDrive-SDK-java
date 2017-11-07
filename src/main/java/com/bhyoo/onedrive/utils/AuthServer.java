@@ -1,10 +1,10 @@
 package com.bhyoo.onedrive.utils;
 
+import com.bhyoo.onedrive.exceptions.InternalException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import org.jetbrains.annotations.Nullable;
-import com.bhyoo.onedrive.exceptions.InternalException;
 
 import java.io.IOException;
 import java.io.OutputStream;

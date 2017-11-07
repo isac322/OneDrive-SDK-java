@@ -1,5 +1,6 @@
 package com.bhyoo.onedrive.container.items;
 
+import com.bhyoo.onedrive.container.items.pointer.PathPointer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -9,7 +10,6 @@ import lombok.Setter;
 import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import com.bhyoo.onedrive.container.items.pointer.PathPointer;
 
 import static lombok.AccessLevel.PRIVATE;
 
