@@ -4,6 +4,7 @@ import com.bhyoo.onedrive.exceptions.InternalException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
@@ -17,7 +18,7 @@ public class ByteBufStream extends InputStream {
 	@NotNull private static final IndexOutOfBoundsException INDEX_EXCEPTION = new IndexOutOfBoundsException();
 	@NotNull final private CompositeByteBuf compositeBuf;
 	private boolean noMoreBuf;
-	private boolean closed;
+	@Getter private boolean closed;
 
 
 	public ByteBufStream() {
@@ -44,9 +45,11 @@ public class ByteBufStream extends InputStream {
 	/**
 	 * Closes this input stream and releases any system resources associated with the stream.
 	 */
-	@Override public synchronized void close() {
-		setNoMoreBuf();
-		closed = true;
+	@Override
+	public synchronized void close() {
+		if (closed) throw new IllegalStateException("The stream already closed");
+
+		noMoreBuf = closed = true;
 		compositeBuf.release();
 		notifyAll();
 	}

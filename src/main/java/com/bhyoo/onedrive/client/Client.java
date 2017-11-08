@@ -13,7 +13,6 @@ import com.bhyoo.onedrive.exceptions.InternalException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.*;
 import com.bhyoo.onedrive.network.sync.SyncResponse;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -21,7 +20,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
-import lombok.Getter;
 import lombok.experimental.Delegate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,10 +49,10 @@ public class Client {
 	 * It makes possible to multi client usage
 	 */
 	private final ObjectMapper mapper;
-	@NotNull private final RequestTool requestTool;
+	private @NotNull final RequestTool requestTool;
 
 	@Delegate(types = AbstractAuthHelper.class)
-	@NotNull private final AuthHelper authHelper;
+	private @NotNull final AuthHelper authHelper;
 
 
 	/**
@@ -715,7 +713,7 @@ public class Client {
 	*************************************************************
 	 */
 
-	@JsonIgnore public @NotNull RequestTool requestTool() {return requestTool;}
+	public @NotNull RequestTool requestTool() {return requestTool;}
 
-	@JsonIgnore public @NotNull ObjectMapper mapper() {return mapper;}
+	public @NotNull ObjectMapper mapper() {return mapper;}
 }

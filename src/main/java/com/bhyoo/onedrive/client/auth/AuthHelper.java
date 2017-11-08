@@ -191,8 +191,9 @@ public class AuthHelper implements AbstractAuthHelper {
 		StringBuilder scope = new StringBuilder();
 		for (String s : scopes) scope.append("%20").append(s);
 
-		String url = String.format(AUTH_URL + "/authorize?client_id=%s&scope=%s&response_type=code&redirect_uri=%s",
-				clientId, scope.toString(), redirectURL)
+		String url = String
+				.format("%s/authorize?client_id=%s&scope=%s&response_type=code&redirect_uri=%s",
+						AUTH_URL, clientId, scope.toString(), redirectURL)
 				.replace(" ", "%20");
 
 		Semaphore answerLock = new Semaphore(1);
@@ -242,10 +243,9 @@ public class AuthHelper implements AbstractAuthHelper {
 	 *                              if there're unexpected value. both caused by server side not by SDK.
 	 * @throws InternalException    if the underlying input source has problems during parsing response body.
 	 */
-	private @NotNull String redeemToken() {
-		return getToken(
-				String.format("client_id=%s&redirect_uri=%s&client_secret=%s&code=%s&grant_type=authorization_code",
-						clientId, redirectURL, clientSecret, authCode));
+	private void redeemToken() {
+		getToken(String.format("client_id=%s&redirect_uri=%s&client_secret=%s&code=%s&grant_type=authorization_code",
+				clientId, redirectURL, clientSecret, authCode));
 	}
 
 	/**

@@ -42,7 +42,7 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 	@Override public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		super.exceptionCaught(ctx, cause);
 		promise.setFailure(cause);
-		stream.close();
+		if (!stream.isClosed()) stream.close();
 		ctx.close();
 	}
 
@@ -94,7 +94,6 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 				ctx.close();
 				stream.setNoMoreBuf();
 				workerThread.join();
-				stream.close();
 
 				if (workerException != null) {
 					promise.setFailure(workerException);
@@ -109,6 +108,7 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 				}
 			}
 			else {
+				content.content().retain();
 				stream.writeByteBuf(content.content());
 			}
 		}
