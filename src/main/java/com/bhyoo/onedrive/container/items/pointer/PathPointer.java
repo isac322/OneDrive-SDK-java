@@ -41,7 +41,7 @@ public class PathPointer extends BasePointer {
 	`pathMatcher` : will be treated as unescaped string
 	else : will be treated as "already escaped string"
 
-	because strings that matches with regex can be assumed that it's invoked by constructor of BaseItem.
+	because strings that matches with regex can be assumed that it's invoked by constructor of DriveItem.
 	and otherwise user invoked.
 	 */
 	public PathPointer(@NotNull String anyPath) {
@@ -95,7 +95,7 @@ public class PathPointer extends BasePointer {
 	`pathMatcher` : will be treated as unescaped string
 	else : will be treated as "already escaped string"
 
-	because strings that matches with regex can be assumed that it's invoked by constructor of BaseItem.
+	because strings that matches with regex can be assumed that it's invoked by constructor of DriveItem.
 	and otherwise user invoked.
 	 */
 	public PathPointer(@NotNull String anyPath, @Nullable String driveId) {

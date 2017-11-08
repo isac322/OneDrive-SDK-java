@@ -20,7 +20,7 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 @JsonDeserialize(as = PackageItem.class, converter = PackageItem.PointerInjector.class)
-public class PackageItem extends BaseItem {
+public class PackageItem extends DriveItem {
 	@Setter(PRIVATE) @JsonProperty("package") @NotNull private PackageFacet packages;
 
 	@JsonIgnore public String getType() {
@@ -28,5 +28,5 @@ public class PackageItem extends BaseItem {
 	}
 
 
-	static class PointerInjector extends BaseItem.PointerInjector<PackageItem> {}
+	static class PointerInjector extends DriveItem.PointerInjector<PackageItem> {}
 }

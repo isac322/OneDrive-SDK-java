@@ -2,6 +2,7 @@ package com.bhyoo.onedrive.container;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -14,21 +15,12 @@ import static lombok.AccessLevel.PRIVATE;
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
+@EqualsAndHashCode(of = {"id"})
 public class Drive {
 	@Getter @Setter(PRIVATE) @NotNull protected String id;
 	@Getter @Setter(PRIVATE) @Nullable protected String driveType;
-	@Getter @Setter(PRIVATE) @Nullable protected IdentitySet identitySet;
+	@Getter @Setter(PRIVATE) @Nullable protected IdentitySet owner;
 	@Setter(PRIVATE) @JsonProperty @NotNull private Quota quota;
-
-	@Override
-	public int hashCode() {
-		return id.hashCode();
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		return obj instanceof Drive && id.equals(((Drive) obj).getId());
-	}
 
 	@JsonIgnore public long getTotalCapacity() {return quota.total;}
 

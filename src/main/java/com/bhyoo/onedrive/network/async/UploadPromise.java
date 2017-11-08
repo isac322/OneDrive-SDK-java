@@ -1,6 +1,6 @@
 package com.bhyoo.onedrive.network.async;
 
-import com.bhyoo.onedrive.container.items.BaseItem;
+import com.bhyoo.onedrive.container.items.DriveItem;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -14,23 +14,23 @@ import java.net.URI;
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-public interface UploadPromise extends UploadFuture, Promise<BaseItem> {
+public interface UploadPromise extends UploadFuture, Promise<DriveItem> {
 	@Nullable URI uploadURI();
 
 	@NotNull UploadPromise setUploadURI(@NotNull URI uri);
 
 
-	@Override UploadPromise setSuccess(BaseItem result);
+	@Override UploadPromise setSuccess(DriveItem result);
 
 	@Override UploadPromise setFailure(Throwable cause);
 
-	@Override UploadPromise addListener(GenericFutureListener<? extends Future<? super BaseItem>> listener);
+	@Override UploadPromise addListener(GenericFutureListener<? extends Future<? super DriveItem>> listener);
 
-	@Override UploadPromise addListeners(GenericFutureListener<? extends Future<? super BaseItem>>[] listeners);
+	@Override UploadPromise addListeners(GenericFutureListener<? extends Future<? super DriveItem>>[] listeners);
 
-	@Override UploadPromise removeListener(GenericFutureListener<? extends Future<? super BaseItem>> listener);
+	@Override UploadPromise removeListener(GenericFutureListener<? extends Future<? super DriveItem>> listener);
 
-	@Override UploadPromise removeListeners(GenericFutureListener<? extends Future<? super BaseItem>>[] listeners);
+	@Override UploadPromise removeListeners(GenericFutureListener<? extends Future<? super DriveItem>>[] listeners);
 
 	@Override UploadPromise sync() throws InterruptedException;
 

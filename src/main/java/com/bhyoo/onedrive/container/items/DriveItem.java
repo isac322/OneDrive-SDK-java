@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.util.StdConverter;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -43,8 +44,9 @@ import static lombok.AccessLevel.PROTECTED;
  *
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-@JsonDeserialize(using = BaseItem.ItemDeserializer.class)
-abstract public class BaseItem {
+@EqualsAndHashCode(of = {"id", "parentReference"})
+@JsonDeserialize(using = DriveItem.ItemDeserializer.class)
+abstract public class DriveItem {
 	@NotNull private static final IllegalArgumentException ILLEGAL_REFERENCE =
 			new IllegalArgumentException("Can not address destination folder. `folder`'s id and path are both null");
 
@@ -89,7 +91,7 @@ abstract public class BaseItem {
 
 
 	// TODO: is there any way to merge with constructor? cause both are almost same
-	protected void refreshBy(@NotNull BaseItem newItem) {
+	protected void refreshBy(@NotNull DriveItem newItem) {
 		this.id = newItem.id;
 		this.createdBy = newItem.createdBy;
 		this.createdDateTime = newItem.createdDateTime;
@@ -128,7 +130,7 @@ abstract public class BaseItem {
 	}
 
 	private void update(byte[] content) throws ErrorResponseException {
-		final BaseItem[] newItem = new BaseItem[1];
+		final DriveItem[] newItem = new DriveItem[1];
 		final CountDownLatch latch = new CountDownLatch(1);
 		client.requestTool().patchMetadataAsync(Client.ITEM_ID_PREFIX + id, content,
 				new ResponseFutureListener() {
@@ -137,7 +139,7 @@ abstract public class BaseItem {
 								future.response(),
 								future.get(),
 								HttpURLConnection.HTTP_OK,
-								BaseItem.class);
+								DriveItem.class);
 						latch.countDown();
 					}
 				});
@@ -145,7 +147,7 @@ abstract public class BaseItem {
 			latch.await();
 		}
 		catch (InterruptedException e) {
-			throw new InternalException("Exception occurs while waiting lock in BaseItem#update()", e);
+			throw new InternalException("Exception occurs while waiting lock in DriveItem#update()", e);
 		}
 		this.refreshBy(newItem[0]);
 	}
@@ -251,12 +253,12 @@ abstract public class BaseItem {
 	}
 
 	public void moveTo(@NotNull String id) throws ErrorResponseException {
-		BaseItem item = client.moveItem(this.id, id);
+		DriveItem item = client.moveItem(this.id, id);
 		this.refreshBy(item);
 	}
 
 	public void moveTo(@NotNull BasePointer pointer) throws ErrorResponseException {
-		BaseItem item = client.moveItem(this.idPointer, pointer);
+		DriveItem item = client.moveItem(this.idPointer, pointer);
 		this.refreshBy(item);
 	}
 
@@ -319,13 +321,13 @@ abstract public class BaseItem {
 
 
 	// FIXME: https://stackoverflow.com/questions/34406808/deserializing-unwrapped-flattened-json-in-java
-	public static class ItemDeserializer extends JsonDeserializer<BaseItem> {
+	public static class ItemDeserializer extends JsonDeserializer<DriveItem> {
 		@Override
-		public BaseItem deserialize(JsonParser parser, DeserializationContext context) throws IOException {
+		public DriveItem deserialize(JsonParser parser, DeserializationContext context) throws IOException {
 			ObjectMapper codec = (ObjectMapper) parser.getCodec();
 			ObjectNode node = parser.readValueAsTree();
 
-			BaseItem ret;
+			DriveItem ret;
 			boolean isMultipleType = false;
 
 			// is the object a file??
@@ -376,10 +378,10 @@ abstract public class BaseItem {
 	}
 
 
-	static protected class PointerInjector<T extends BaseItem> extends StdConverter<T, T> {
+	static protected class PointerInjector<T extends DriveItem> extends StdConverter<T, T> {
 		@Override public T convert(T value) {
 			// are they always have `parentReference` except root directory?
-			assert value.parentReference != null : "`parentReference` is null on BaseItem";
+			assert value.parentReference != null : "`parentReference` is null on DriveItem";
 			assert value.parentReference.pathPointer != null : "`parentReference.pathPointer` is null on FileItem";
 			assert value.parentReference.rawPath != null : "`parentReference.rawPath` is null on FileItem";
 

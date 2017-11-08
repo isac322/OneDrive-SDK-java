@@ -17,7 +17,7 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 @JsonDeserialize(as = RemoteItem.class, converter = RemoteItem.PointerInjector.class)
-public class RemoteItem extends BaseItem {
+public class RemoteItem extends DriveItem {
 	@Getter @Setter(PRIVATE) @NotNull protected RemoteItemFacet remoteItem;
 
 	@NotNull
@@ -34,12 +34,12 @@ public class RemoteItem extends BaseItem {
 
 	@NotNull
 	@JsonIgnore
-	public BaseItem fetchRemoteItem() throws ErrorResponseException {
+	public DriveItem fetchRemoteItem() throws ErrorResponseException {
 		return client.requestTool().getItem("/drives/" + getRemoteDriveID() + "/items/" + getRemoteID());
 	}
 
 
-	static class PointerInjector extends BaseItem.PointerInjector<RemoteItem> {
+	static class PointerInjector extends DriveItem.PointerInjector<RemoteItem> {
 		@Override public RemoteItem convert(RemoteItem value) {
 			if (value.parentReference.pathPointer != null) {
 				value.pathPointer = value.parentReference.pathPointer.resolve(value.name);

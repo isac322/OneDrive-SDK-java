@@ -24,7 +24,7 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 @JsonDeserialize(as = FileItem.class, converter = FileItem.PointerInjector.class)
-public class FileItem extends BaseItem {
+public class FileItem extends DriveItem {
 	@Getter @Setter(PRIVATE) @Nullable protected AudioFacet audio;
 	@NotNull @Setter(PRIVATE) @JsonProperty protected FileFacet file;
 	@Getter @Setter(PRIVATE) @Nullable protected ImageFacet image;
@@ -108,7 +108,7 @@ public class FileItem extends BaseItem {
 
 
 	@Override
-	protected void refreshBy(@NotNull BaseItem newItem) {
+	protected void refreshBy(@NotNull DriveItem newItem) {
 		super.refreshBy(newItem);
 
 		FileItem item = (FileItem) newItem;
@@ -143,5 +143,5 @@ public class FileItem extends BaseItem {
 	@JsonIgnore public @Nullable String getQuickXorHash() {return this.file.getQuickXorHash();}
 
 
-	static class PointerInjector extends BaseItem.PointerInjector<FileItem> {}
+	static class PointerInjector extends DriveItem.PointerInjector<FileItem> {}
 }

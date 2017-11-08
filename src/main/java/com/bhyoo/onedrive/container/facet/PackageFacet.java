@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import static lombok.AccessLevel.PRIVATE;
 
 // TODO: Enhance javadoc
-// TODO: merge with BaseItem if possible
+// TODO: merge with DriveItem if possible
 
 /**
  * <a href="https://dev.onedrive.com/facets/package_facet.htm">https://dev.onedrive.com/facets/package_facet.htm</a>

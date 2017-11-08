@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.util.StdConverter;
 import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
@@ -18,22 +19,13 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
+@EqualsAndHashCode(of = {"id"})
 @JsonDeserialize(converter = Identity.IdentityConverter.class)
 public class Identity {
 	private static ConcurrentHashMap<String, Identity> identitySet = new ConcurrentHashMap<>();
 	@Getter @Setter(AccessLevel.PRIVATE) @NotNull protected String id;
 	@Getter @Setter(AccessLevel.PRIVATE) @Nullable protected String displayName;
 	@Getter @Setter(AccessLevel.PRIVATE) @Nullable protected ObjectNode thumbnails;
-
-	@Override
-	public int hashCode() {
-		return id.hashCode();
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		return obj instanceof Identity && id.equals(((Identity) obj).getId());
-	}
 
 	@Override
 	public String toString() {

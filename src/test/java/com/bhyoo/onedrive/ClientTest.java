@@ -2,7 +2,7 @@ package com.bhyoo.onedrive;
 
 import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.container.Drive;
-import com.bhyoo.onedrive.container.items.BaseItem;
+import com.bhyoo.onedrive.container.items.DriveItem;
 import com.bhyoo.onedrive.container.items.FolderItem;
 import com.bhyoo.onedrive.container.items.ResponsePage;
 import org.jetbrains.annotations.NotNull;
@@ -77,6 +77,14 @@ public class ClientTest {
 		assertNotNull(drive.getState());
 		assertNotNull(drive.getTotalCapacity());
 		assertNotNull(drive.getUsedCapacity());
+
+		System.out.println(drive.getDeleted());
+		System.out.println(drive.getDriveType());
+		System.out.println(drive.getId());
+		System.out.println(drive.getRemaining());
+		System.out.println(drive.getState());
+		System.out.println(drive.getTotalCapacity());
+		System.out.println(drive.getUsedCapacity());
 	}
 
 	@Test void refreshLogin() throws Exception {
@@ -110,6 +118,8 @@ public class ClientTest {
 		Drive defaultDrive = client.getDefaultDrive();
 
 		testDrive(defaultDrive);
+
+		assertEquals(client.getDefaultDrive(), client.getDefaultDrive());
 	}
 
 	@Test void getAllDrive() throws Exception {
@@ -135,7 +145,7 @@ public class ClientTest {
 		assertFalse(folder.isRoot());
 		assertTrue(folder.isChildrenFetched());
 
-		for (BaseItem item : folder) {
+		for (DriveItem item : folder) {
 			System.out.println(item.getName() + '\t' + item.getSize());
 		}
 	}
@@ -155,7 +165,7 @@ public class ClientTest {
 		long before = System.currentTimeMillis();
 		for (int i = 0; i < 100; i++) {
 			long l = System.currentTimeMillis();
-			BaseItem item = client.getItem(MP3_UTF8_BIG);
+			DriveItem item = client.getItem(MP3_UTF8_BIG);
 			System.out.println(System.currentTimeMillis() - l);
 		}
 		System.out.println(System.currentTimeMillis() - before);
@@ -163,9 +173,9 @@ public class ClientTest {
 
 	// FIXME
 	@Test void searchItem() throws Exception {
-		@NotNull ResponsePage<BaseItem> items = client.searchItem("1학기");
+		@NotNull ResponsePage<DriveItem> items = client.searchItem("1학기");
 
-		for (BaseItem item : items.getValue()) {
+		for (DriveItem item : items.getValue()) {
 			System.out.println(item.getClass().getName() + '\t' + item.getName());
 		}
 	}

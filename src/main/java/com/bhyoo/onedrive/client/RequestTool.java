@@ -2,7 +2,7 @@ package com.bhyoo.onedrive.client;
 
 import com.bhyoo.onedrive.client.auth.AuthenticationInfo;
 import com.bhyoo.onedrive.container.Drive;
-import com.bhyoo.onedrive.container.items.BaseItem;
+import com.bhyoo.onedrive.container.items.DriveItem;
 import com.bhyoo.onedrive.container.items.FileItem;
 import com.bhyoo.onedrive.container.items.FolderItem;
 import com.bhyoo.onedrive.container.items.ResponsePage;
@@ -84,8 +84,8 @@ public class RequestTool {
 
 	@Getter private final ObjectMapper mapper;
 	private final ObjectReader errorReader;
-	private final ObjectReader baseItemReader;
-	private final ObjectReader basePageItemReader;
+	private final ObjectReader driveItemReader;
+	private final ObjectReader driveItemPageReader;
 	private final ObjectReader fileItemReader;
 	private final ObjectReader folderItemReader;
 	private final ObjectReader driveReader;
@@ -97,9 +97,9 @@ public class RequestTool {
 		this.client = client;
 		this.mapper = mapper;
 		this.errorReader = mapper.readerFor(ErrorResponse.class).with(UNWRAP_ROOT_VALUE);
-		this.baseItemReader = mapper.readerFor(BaseItem.class);
-		this.basePageItemReader =
-				mapper.readerFor(mapper.getTypeFactory().constructParametricType(ResponsePage.class, BaseItem.class));
+		this.driveItemReader = mapper.readerFor(DriveItem.class);
+		this.driveItemPageReader =
+				mapper.readerFor(mapper.getTypeFactory().constructParametricType(ResponsePage.class, DriveItem.class));
 		this.fileItemReader = mapper.readerFor(FileItem.class);
 		this.folderItemReader = mapper.readerFor(FolderItem.class);
 		this.driveReader = mapper.readerFor(Drive.class);
@@ -218,21 +218,21 @@ public class RequestTool {
 				.addListener(onComplete);
 	}
 
-	public BaseItemFuture getItemAsync(@NotNull String asciiApi) {
+	public DriveItemFuture getItemAsync(@NotNull String asciiApi) {
 		final DefaultFullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, BASE_URL + asciiApi);
 		request.headers()
 				.set(HttpHeaderNames.HOST, REAL_HOST)
 				.set(ACCEPT_ENCODING, GZIP)
 				.set(AUTHORIZATION, client.getFullToken());
 
-		DefaultBaseItemPromise promise = new DefaultBaseItemPromise(group.next());
+		DefaultDriveItemPromise promise = new DefaultDriveItemPromise(group.next());
 
 
 		// Configure the client.
 		Bootstrap bootstrap = new Bootstrap()
 				.group(group)
 				.channel(socketChannelClass())
-				.handler(new AsyncDefaultInitializer(new BaseItemHandler(promise, mapper)));
+				.handler(new AsyncDefaultInitializer(new DriveItemHandler(promise, mapper)));
 
 
 		bootstrap.connect(REAL_HOST, 443).addListener(new ChannelFutureListener() {
@@ -246,7 +246,7 @@ public class RequestTool {
 		return promise;
 	}
 
-	public BaseItem getItem(@NotNull String asciiApi) throws ErrorResponseException {
+	public DriveItem getItem(@NotNull String asciiApi) throws ErrorResponseException {
 		HttpsURLConnection httpsConnection;
 
 		try {
@@ -267,7 +267,7 @@ public class RequestTool {
 
 			if (code == HTTP_OK) {
 				body = httpsConnection.getInputStream();
-				return baseItemReader.readValue(body);
+				return driveItemReader.readValue(body);
 			}
 			else {
 				body = httpsConnection.getErrorStream();
@@ -497,14 +497,14 @@ public class RequestTool {
 		}
 	}
 
-	public BaseItem parseBaseItemAndHandle(@NotNull SyncResponse response, int expectedCode)
+	public DriveItem parseBaseItemAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, baseItemReader);
+		return parseAndHandle(response, expectedCode, driveItemReader);
 	}
 
-	public ResponsePage<BaseItem> parseBaseItemPageAndHandle(@NotNull SyncResponse response, int expectedCode)
+	public ResponsePage<DriveItem> parseBaseItemPageAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, basePageItemReader);
+		return parseAndHandle(response, expectedCode, driveItemPageReader);
 	}
 
 	public FileItem parseFileItemAndHandle(@NotNull SyncResponse response, int expectedCode)

@@ -2,9 +2,9 @@ package com.bhyoo.onedrive;
 
 import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.client.RequestTool;
-import com.bhyoo.onedrive.container.items.BaseItem;
+import com.bhyoo.onedrive.container.items.DriveItem;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
-import com.bhyoo.onedrive.network.async.BaseItemFuture;
+import com.bhyoo.onedrive.network.async.DriveItemFuture;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -63,9 +63,9 @@ class RequestToolTest {
 	}
 
 	@Test void getItemAsync() throws Exception {
-		BaseItemFuture future2 = requestTool.getItemAsync("/drive/items/D4FD82CA6DF96A47!25786")
+		DriveItemFuture future2 = requestTool.getItemAsync("/drive/items/D4FD82CA6DF96A47!25786")
 				.syncUninterruptibly();
-/*		BaseItemFuture future = requestTool.getItemAsync(Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784")
+/*		DriveItemFuture future = requestTool.getItemAsync(Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784")
 				.syncUninterruptibly();
 
 		if (future.isSuccess()) {
@@ -77,14 +77,14 @@ class RequestToolTest {
 		long before = System.currentTimeMillis();
 		for (int i = 0; i < 100; i++) {
 			long l = System.currentTimeMillis();
-			BaseItem item = requestTool.getItem(Client.ITEM_ID_PREFIX + ClientTest.MP3_UTF8_BIG);
+			DriveItem item = requestTool.getItem(Client.ITEM_ID_PREFIX + ClientTest.MP3_UTF8_BIG);
 			System.out.println(System.currentTimeMillis() - l);
 		}
 		System.out.println(System.currentTimeMillis() - before);
 	}
 
 	@Test void getItem1() throws ErrorResponseException {
-		BaseItem item = requestTool.getItem(Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784");
+		DriveItem item = requestTool.getItem(Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784");
 		System.out.println(item.getName());
 		System.out.println(item.getId());
 	}

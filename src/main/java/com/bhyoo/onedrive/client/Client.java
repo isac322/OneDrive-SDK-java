@@ -133,7 +133,7 @@ public class Client {
 	public Drive getDefaultDrive() throws ErrorResponseException {
 		authHelper.checkExpired();
 
-		SyncResponse response = requestTool.newRequest("/drive").doGet();
+		SyncResponse response = requestTool.newRequest("/me/drive").doGet();
 		return requestTool.parseDriveAndHandle(response, HTTP_OK);
 	}
 
@@ -141,7 +141,7 @@ public class Client {
 	public Drive[] getAllDrive() throws ErrorResponseException {
 		authHelper.checkExpired();
 
-		SyncResponse response = requestTool.newRequest("/drives").doGet();
+		SyncResponse response = requestTool.newRequest("/me/drives").doGet();
 
 		return requestTool.parseDrivePageAndHandle(response, HTTP_OK).getValue();
 	}
@@ -264,25 +264,25 @@ public class Client {
 
 
 	@NotNull
-	public BaseItemFuture getItemAsync(@NotNull String id) {
+	public DriveItemFuture getItemAsync(@NotNull String id) {
 		authHelper.checkExpired();
 		return requestTool.getItemAsync(ITEM_ID_PREFIX + id);
 	}
 
 	@NotNull
-	public BaseItemFuture getItemAsync(@NotNull BasePointer pointer) {
+	public DriveItemFuture getItemAsync(@NotNull BasePointer pointer) {
 		authHelper.checkExpired();
 		return requestTool.getItemAsync(pointer.toASCIIApi());
 	}
 
 	@NotNull
-	public BaseItem getItem(@NotNull String id) throws ErrorResponseException {
+	public DriveItem getItem(@NotNull String id) throws ErrorResponseException {
 		authHelper.checkExpired();
 		return requestTool.getItem(ITEM_ID_PREFIX + id);
 	}
 
 	@NotNull
-	public BaseItem getItem(@NotNull BasePointer pointer) throws ErrorResponseException {
+	public DriveItem getItem(@NotNull BasePointer pointer) throws ErrorResponseException {
 		authHelper.checkExpired();
 		return requestTool.getItem(pointer.toASCIIApi());
 	}
@@ -297,7 +297,7 @@ public class Client {
 
 		int size = values.size();
 		final RemoteItem[] items = new RemoteItem[size];
-		BaseItemFuture[] futures = new BaseItemFuture[size];
+		DriveItemFuture[] futures = new DriveItemFuture[size];
 
 		for (int i = 0; i < size; i++) {
 			JsonNode id = values.get(i).get("id");
@@ -439,42 +439,42 @@ public class Client {
 	 */
 
 	@NotNull
-	public BaseItem moveItem(@NotNull String srcId, @NotNull String destId) throws ErrorResponseException {
+	public DriveItem moveItem(@NotNull String srcId, @NotNull String destId) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
 		return moveItem(ITEM_ID_PREFIX + srcId, content);
 	}
 
 	@NotNull
-	public BaseItem moveItem(@NotNull String srcId, @NotNull PathPointer destPath) throws ErrorResponseException {
+	public DriveItem moveItem(@NotNull String srcId, @NotNull PathPointer destPath) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + destPath.toJson() + "}").getBytes();
 		return moveItem(ITEM_ID_PREFIX + srcId, content);
 	}
 
 	@NotNull
-	public BaseItem moveItem(@NotNull PathPointer srcPath, @NotNull String destId) throws ErrorResponseException {
+	public DriveItem moveItem(@NotNull PathPointer srcPath, @NotNull String destId) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
 		return moveItem(srcPath.toASCIIApi(), content);
 	}
 
 	@NotNull
-	public BaseItem moveItem(@NotNull BasePointer src, @NotNull BasePointer dest) throws ErrorResponseException {
+	public DriveItem moveItem(@NotNull BasePointer src, @NotNull BasePointer dest) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + "}").getBytes();
 		return moveItem(src.toASCIIApi(), content);
 	}
 
 	@NotNull
-	private BaseItem moveItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
+	private DriveItem moveItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		authHelper.checkExpired();
 
 		final CountDownLatch latch = new CountDownLatch(1);
-		final BaseItem[] newItem = new BaseItem[1];
+		final DriveItem[] newItem = new DriveItem[1];
 		ResponseFuture responseFuture = requestTool.patchMetadataAsync(api, content, new ResponseFutureListener() {
 			@Override public void operationComplete(ResponseFuture future) throws Exception {
 				newItem[0] = requestTool.parseAndHandle(
 						future.response(),
 						future.get(),
 						HTTP_OK,
-						BaseItem.class);
+						DriveItem.class);
 				latch.countDown();
 			}
 		});
@@ -484,7 +484,7 @@ public class Client {
 			latch.await();
 		}
 		catch (InterruptedException e) {
-			throw new InternalException("Exception occurs while waiting lock in BaseItem#update()", e);
+			throw new InternalException("Exception occurs while waiting lock in DriveItem#update()", e);
 		}
 
 		return newItem[0];
@@ -694,7 +694,7 @@ public class Client {
 	 */
 
 	@NotNull
-	public ResponsePage<BaseItem> searchItem(String query) throws ErrorResponseException, IOException {
+	public ResponsePage<DriveItem> searchItem(String query) throws ErrorResponseException, IOException {
 		String rawQuery = URLEncoder.encode(query, "UTF-8");
 		SyncResponse response = requestTool.newRequest("/drive/root/view.search?q=" + rawQuery).doGet();
 

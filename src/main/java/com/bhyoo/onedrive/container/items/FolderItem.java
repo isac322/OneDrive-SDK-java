@@ -41,24 +41,24 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 @JsonDeserialize(as = FolderItem.class, converter = FolderItem.PointerInjector.class)
-public class FolderItem extends BaseItem implements Iterable<BaseItem> {
+public class FolderItem extends DriveItem implements Iterable<DriveItem> {
 	@Setter(PRIVATE) @JsonProperty protected FolderFacet folder;
 	@Setter(PRIVATE) @JsonProperty protected SpecialFolderFacet specialFolder;
 	@Setter(PRIVATE) @JsonProperty protected ObjectNode root;
 	@JsonIgnore protected List<FolderItem> folderChildren;
 	@JsonIgnore protected List<FileItem> fileChildren;
-	@JsonIgnore protected List<BaseItem> allChildren;
+	@JsonIgnore protected List<DriveItem> allChildren;
 	@JsonProperty("children@odata.nextLink") @Nullable String nextLink;
 	@JsonProperty("children") @Nullable ArrayNode children;
 
-	protected static void addChildren(@NotNull Client client, @NotNull JsonNode array, @NotNull List<BaseItem> all,
+	protected static void addChildren(@NotNull Client client, @NotNull JsonNode array, @NotNull List<DriveItem> all,
 									  @NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
 		for (JsonNode child : array) {
 			if (!child.isObject())
 				// if child isn't object
 				throw new InvalidJsonException("Response isn't object in JSON. response : " + child);
 
-			BaseItem item = client.mapper().convertValue(child, BaseItem.class);
+			DriveItem item = client.mapper().convertValue(child, DriveItem.class);
 
 			if (item instanceof FolderItem) {
 				folder.add((FolderItem) item);
@@ -76,7 +76,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 
 	@SneakyThrows(URISyntaxException.class)
 	protected static void parseChildren(@NotNull final Client client, @NotNull JsonNode array,
-										@Nullable String nextLink, @NotNull List<BaseItem> all,
+										@Nullable String nextLink, @NotNull List<DriveItem> all,
 										@NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
 		final ObjectNode jsonObject[] = new ObjectNode[1];
 		while (nextLink != null) {
@@ -113,7 +113,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 				latch.await();
 			}
 			catch (InterruptedException e) {
-				throw new InternalException("Exception occurs while waiting lock in BaseItem#update()", e);
+				throw new InternalException("Exception occurs while waiting lock in DriveItem#update()", e);
 			}
 
 			if (jsonObject[0].has("@odata.nextLink"))
@@ -180,7 +180,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	 * @throws InternalException        if parameter {@code parentReference} is null even if this isn't root directory.
 	 */
 	@Override
-	protected void refreshBy(@NotNull BaseItem newItem) {
+	protected void refreshBy(@NotNull DriveItem newItem) {
 		super.refreshBy(newItem);
 
 		FolderItem item = (FolderItem) newItem;
@@ -234,7 +234,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 	}
 
 	@NotNull
-	public List<BaseItem> allChildren() throws ErrorResponseException {
+	public List<DriveItem> allChildren() throws ErrorResponseException {
 		if (!isChildrenFetched()) fetchChildren();
 		return allChildren;
 	}
@@ -263,7 +263,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 
 	@NotNull
 	@Override
-	public Iterator<BaseItem> iterator() {
+	public Iterator<DriveItem> iterator() {
 		try {
 			return new ChildrenIterator(allChildren().iterator());
 		}
@@ -301,10 +301,10 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		}
 	}
 
-	private class ChildrenIterator implements Iterator<BaseItem> {
-		private final Iterator<BaseItem> itemIterator;
+	private class ChildrenIterator implements Iterator<DriveItem> {
+		private final Iterator<DriveItem> itemIterator;
 
-		ChildrenIterator(Iterator<BaseItem> iterator) {
+		ChildrenIterator(Iterator<DriveItem> iterator) {
 			this.itemIterator = iterator;
 		}
 
@@ -314,7 +314,7 @@ public class FolderItem extends BaseItem implements Iterable<BaseItem> {
 		}
 
 		@Override
-		public BaseItem next() {
+		public DriveItem next() {
 			return itemIterator.next();
 		}
 

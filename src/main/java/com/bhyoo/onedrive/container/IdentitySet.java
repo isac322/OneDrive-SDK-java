@@ -1,5 +1,6 @@
 package com.bhyoo.onedrive.container;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
@@ -13,6 +14,7 @@ import static lombok.AccessLevel.PRIVATE;
  *
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
+@EqualsAndHashCode
 public class IdentitySet {
 	@Getter @Setter(PRIVATE) @Nullable protected Identity user;
 	@Getter @Setter(PRIVATE) @Nullable protected Identity application;

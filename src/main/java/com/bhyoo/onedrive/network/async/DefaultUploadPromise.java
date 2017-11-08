@@ -1,6 +1,6 @@
 package com.bhyoo.onedrive.network.async;
 
-import com.bhyoo.onedrive.container.items.BaseItem;
+import com.bhyoo.onedrive.container.items.DriveItem;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -17,7 +17,7 @@ import java.nio.file.Path;
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-public class DefaultUploadPromise extends DefaultPromise<BaseItem> implements UploadPromise {
+public class DefaultUploadPromise extends DefaultPromise<DriveItem> implements UploadPromise {
 	@NotNull private final Path filePath;
 	@Nullable private URI uploadURI;
 
@@ -41,7 +41,7 @@ public class DefaultUploadPromise extends DefaultPromise<BaseItem> implements Up
 	}
 
 
-	@Override public DefaultUploadPromise setSuccess(BaseItem result) {
+	@Override public DefaultUploadPromise setSuccess(DriveItem result) {
 		super.setSuccess(result);
 		return this;
 	}
@@ -52,26 +52,26 @@ public class DefaultUploadPromise extends DefaultPromise<BaseItem> implements Up
 	}
 
 	@Override
-	public DefaultUploadPromise addListener(GenericFutureListener<? extends Future<? super BaseItem>> listener) {
+	public DefaultUploadPromise addListener(GenericFutureListener<? extends Future<? super DriveItem>> listener) {
 		super.addListener(listener);
 		return this;
 	}
 
 	@Override
-	public DefaultUploadPromise addListeners(GenericFutureListener<? extends Future<? super BaseItem>>[] listeners) {
+	public DefaultUploadPromise addListeners(GenericFutureListener<? extends Future<? super DriveItem>>[] listeners) {
 		super.addListeners(listeners);
 		return this;
 	}
 
 	@Override
-	public DefaultUploadPromise removeListener(GenericFutureListener<? extends Future<? super BaseItem>> listener) {
+	public DefaultUploadPromise removeListener(GenericFutureListener<? extends Future<? super DriveItem>> listener) {
 		super.removeListener(listener);
 		return this;
 	}
 
 	@Override
 	public DefaultUploadPromise removeListeners(
-			GenericFutureListener<? extends Future<? super BaseItem>>[] listeners) {
+			GenericFutureListener<? extends Future<? super DriveItem>>[] listeners) {
 		super.removeListeners(listeners);
 		return this;
 	}

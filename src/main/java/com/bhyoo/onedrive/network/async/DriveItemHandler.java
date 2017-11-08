@@ -1,6 +1,6 @@
 package com.bhyoo.onedrive.network.async;
 
-import com.bhyoo.onedrive.container.items.BaseItem;
+import com.bhyoo.onedrive.container.items.DriveItem;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.network.ErrorResponse;
 import com.bhyoo.onedrive.utils.ByteBufStream;
@@ -23,17 +23,17 @@ import static java.net.HttpURLConnection.HTTP_OK;
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
-	private final DefaultBaseItemPromise promise;
+public class DriveItemHandler extends SimpleChannelInboundHandler<HttpObject> {
+	private final DefaultDriveItemPromise promise;
 	private final ObjectMapper mapper;
 	private final ByteBufStream stream;
 	private HttpResponse response;
 	private ErrorResponse errorResponse;
-	private BaseItem baseItem;
+	private DriveItem driveItem;
 	private Thread workerThread;
 	@Nullable private Exception workerException;
 
-	public BaseItemHandler(DefaultBaseItemPromise promise, ObjectMapper mapper) {
+	public DriveItemHandler(DefaultDriveItemPromise promise, ObjectMapper mapper) {
 		this.promise = promise;
 		this.mapper = mapper;
 		this.stream = new ByteBufStream();
@@ -54,7 +54,7 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 				workerThread = new Thread() {
 					@Override public void run() {
 						try {
-							baseItem = mapper.readValue(stream, BaseItem.class);
+							driveItem = mapper.readValue(stream, DriveItem.class);
 						}
 						catch (IOException e) {
 							// FIXME: custom exception
@@ -99,7 +99,7 @@ public class BaseItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 					promise.setFailure(workerException);
 				}
 				else if (response.status().code() == HTTP_OK) {
-					promise.setSuccess(baseItem);
+					promise.setSuccess(driveItem);
 				}
 				else {
 					promise.setFailure(
