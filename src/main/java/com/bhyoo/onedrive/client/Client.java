@@ -293,7 +293,7 @@ public class Client {
 		authHelper.checkExpired();
 
 		// FIXME: convert to NONE Tree Model
-		ArrayNode values = (ArrayNode) requestTool.doGetJson("/drive/sharedWithMe").get("value");
+		ArrayNode values = (ArrayNode) requestTool.doGetJson("/me/drive/sharedWithMe").get("value");
 
 		int size = values.size();
 		final RemoteItem[] items = new RemoteItem[size];
