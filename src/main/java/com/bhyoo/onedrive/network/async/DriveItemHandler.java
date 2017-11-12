@@ -1,5 +1,6 @@
 package com.bhyoo.onedrive.network.async;
 
+import com.bhyoo.onedrive.container.items.AbstractDriveItem;
 import com.bhyoo.onedrive.container.items.DriveItem;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.network.ErrorResponse;
@@ -54,7 +55,7 @@ public class DriveItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 				workerThread = new Thread() {
 					@Override public void run() {
 						try {
-							driveItem = mapper.readValue(stream, DriveItem.class);
+							driveItem = mapper.readValue(stream, AbstractDriveItem.class);
 						}
 						catch (IOException e) {
 							// FIXME: custom exception

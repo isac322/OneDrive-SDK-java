@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
+import java.net.URI;
+
 import static lombok.AccessLevel.PRIVATE;
 
 // TODO: Enhance javadoc
@@ -15,5 +17,5 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class SearchResultFacet {
-	@Getter @Setter(PRIVATE) @NotNull protected String onClickTelemetryUrl;
+	@Getter @Setter(PRIVATE) protected @NotNull URI onClickTelemetryUrl;
 }

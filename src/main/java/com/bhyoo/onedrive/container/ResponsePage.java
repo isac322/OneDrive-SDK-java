@@ -1,4 +1,4 @@
-package com.bhyoo.onedrive.container.items;
+package com.bhyoo.onedrive.container;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;

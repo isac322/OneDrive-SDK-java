@@ -1,5 +1,7 @@
 package com.bhyoo.onedrive.container.items;
 
+import com.bhyoo.onedrive.container.DriveType;
+import com.bhyoo.onedrive.container.facet.SharePointIdsFacet;
 import com.bhyoo.onedrive.container.items.pointer.PathPointer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -28,10 +30,15 @@ import static lombok.AccessLevel.PRIVATE;
 @EqualsAndHashCode(of = {"id", "driveId"})
 @JsonDeserialize(converter = ItemReference.PointerInjector.class)
 public class ItemReference {
-	@Setter(PRIVATE) @Getter @NotNull protected String driveId;
-	@Setter(PRIVATE) @Getter @Nullable protected String id;
-	@Getter @JsonIgnore @Nullable protected PathPointer pathPointer;
-	@Setter(PRIVATE) @Getter @Nullable @JsonProperty("path") protected String rawPath;
+	@Getter @Setter(PRIVATE) protected @NotNull String driveId;
+	@Getter @Setter(PRIVATE) protected @Nullable DriveType driveType;
+	@Getter @Setter(PRIVATE) protected @Nullable String id;
+	@Getter @Setter(PRIVATE) protected @Nullable String name;
+	@Getter @JsonIgnore protected @Nullable PathPointer pathPointer;
+	@JsonProperty("path")
+	@Getter @Setter(PRIVATE) protected @Nullable String rawPath;
+	@Getter @Setter(PRIVATE) protected @Nullable String shareId;
+	@Getter @Setter(PRIVATE) protected @Nullable SharePointIdsFacet sharepointIds;
 
 	// used by jackson deserialize
 	@SuppressWarnings("unused") ItemReference() {}

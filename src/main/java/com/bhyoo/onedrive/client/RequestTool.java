@@ -2,10 +2,8 @@ package com.bhyoo.onedrive.client;
 
 import com.bhyoo.onedrive.client.auth.AuthenticationInfo;
 import com.bhyoo.onedrive.container.Drive;
-import com.bhyoo.onedrive.container.items.DriveItem;
-import com.bhyoo.onedrive.container.items.FileItem;
-import com.bhyoo.onedrive.container.items.FolderItem;
-import com.bhyoo.onedrive.container.items.ResponsePage;
+import com.bhyoo.onedrive.container.ResponsePage;
+import com.bhyoo.onedrive.container.items.*;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InternalException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
@@ -97,11 +95,12 @@ public class RequestTool {
 		this.client = client;
 		this.mapper = mapper;
 		this.errorReader = mapper.readerFor(ErrorResponse.class).with(UNWRAP_ROOT_VALUE);
-		this.driveItemReader = mapper.readerFor(DriveItem.class);
-		this.driveItemPageReader =
-				mapper.readerFor(mapper.getTypeFactory().constructParametricType(ResponsePage.class, DriveItem.class));
-		this.fileItemReader = mapper.readerFor(FileItem.class);
-		this.folderItemReader = mapper.readerFor(FolderItem.class);
+		this.driveItemReader = mapper.readerFor(AbstractDriveItem.class);
+		this.driveItemPageReader = mapper.readerFor(
+				mapper.getTypeFactory().constructParametricType(
+						ResponsePage.class, AbstractDriveItem.class));
+		this.fileItemReader = mapper.readerFor(DefaultFileItem.class);
+		this.folderItemReader = mapper.readerFor(DefaultFolderItem.class);
 		this.driveReader = mapper.readerFor(Drive.class);
 		this.drivePageReader =
 				mapper.readerFor(mapper.getTypeFactory().constructParametricType(ResponsePage.class, Drive.class));
@@ -323,19 +322,19 @@ public class RequestTool {
 	 */
 	public ObjectNode doGetJson(@NotNull String api) throws ErrorResponseException {
 		SyncResponse response = newRequest(api).doGet();
+		byte[] content = response.getContent();
 
 		try {
 			if (response.getCode() == HTTP_OK) {
-				return (ObjectNode) mapper.readTree(response.getContent());
+				return (ObjectNode) mapper.readTree(content);
 			}
 			else {
-				ErrorResponse error = errorReader.readValue(response.getContent());
-				throw new ErrorResponseException(HTTP_OK, response.getCode(),
-						error.getCode(), error.getMessage());
+				ErrorResponse error = errorReader.readValue(content);
+				throw new ErrorResponseException(HTTP_OK, response.getCode(), error.getCode(), error.getMessage());
 			}
 		}
 		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.getCode(), response.getContent());
+			throw new InvalidJsonException(e, response.getCode(), content);
 		}
 		catch (IOException e) {
 			// FIXME: custom exception
@@ -464,13 +463,15 @@ public class RequestTool {
 
 	public void errorHandling(@NotNull SyncResponse response, int expectedCode) throws ErrorResponseException {
 		if (response.getCode() != expectedCode) {
+			byte[] content = response.getContent();
+
 			try {
-				ErrorResponse error = errorReader.readValue(response.getContent());
+				ErrorResponse error = errorReader.readValue(content);
 				throw new ErrorResponseException(expectedCode, response.getCode(),
 						error.getCode(), error.getMessage());
 			}
 			catch (JsonProcessingException e) {
-				throw new InvalidJsonException(e, response.getCode(), response.getContent());
+				throw new InvalidJsonException(e, response.getCode(), content);
 			}
 			catch (IOException e) {
 				// FIXME: custom exception
@@ -534,17 +535,19 @@ public class RequestTool {
 
 	private <T> T parseAndHandle(@NotNull SyncResponse response, int expectedCode, ObjectReader reader)
 			throws ErrorResponseException {
+		byte[] content = response.getContent();
+
 		try {
 			if (response.getCode() == expectedCode) {
-				return reader.readValue(response.getContent());
+				return reader.readValue(content);
 			}
 			else {
-				ErrorResponse err = errorReader.readValue(response.getContent());
+				ErrorResponse err = errorReader.readValue(content);
 				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
 			}
 		}
 		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.getCode(), response.getContent());
+			throw new InvalidJsonException(e, response.getCode(), content);
 		}
 		catch (IOException e) {
 			// FIXME: custom exception

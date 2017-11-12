@@ -1,52 +1,16 @@
 package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.container.facet.RemoteItemFacet;
-import com.bhyoo.onedrive.container.items.pointer.IdPointer;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import lombok.Getter;
-import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-import static lombok.AccessLevel.PRIVATE;
+public interface RemoteItem extends DriveItem {
+	@JsonIgnore @NotNull String getRemoteDriveID();
 
-// TODO: Enhance javadoc
+	@JsonIgnore @NotNull String getRemoteID();
 
-/**
- * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
- */
-@JsonDeserialize(as = RemoteItem.class, converter = RemoteItem.PointerInjector.class)
-public class RemoteItem extends DriveItem {
-	@Getter @Setter(PRIVATE) @NotNull protected RemoteItemFacet remoteItem;
+	@JsonIgnore @NotNull DriveItem fetchRemoteItem() throws ErrorResponseException;
 
-	@NotNull
-	@JsonIgnore
-	public String getRemoteDriveID() {
-		return remoteItem.getParentReference().driveId;
-	}
-
-	@NotNull
-	@JsonIgnore
-	public String getRemoteID() {
-		return remoteItem.getId();
-	}
-
-	@NotNull
-	@JsonIgnore
-	public DriveItem fetchRemoteItem() throws ErrorResponseException {
-		return client.requestTool().getItem("/drives/" + getRemoteDriveID() + "/items/" + getRemoteID());
-	}
-
-
-	static class PointerInjector extends DriveItem.PointerInjector<RemoteItem> {
-		@Override public RemoteItem convert(RemoteItem value) {
-			if (value.parentReference.pathPointer != null) {
-				value.pathPointer = value.parentReference.pathPointer.resolve(value.name);
-			}
-			value.idPointer = new IdPointer(value.id, value.parentReference.driveId);
-
-			return value;
-		}
-	}
+	@NotNull RemoteItemFacet getRemoteItem();
 }

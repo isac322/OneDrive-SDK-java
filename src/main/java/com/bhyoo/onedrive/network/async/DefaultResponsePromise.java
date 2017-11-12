@@ -40,19 +40,18 @@ public class DefaultResponsePromise extends DefaultPromise<ByteBufStream> implem
 	}
 
 	@Override public boolean trySuccess(ByteBufStream result) {
-		result.close();
+		result.setNoMoreBuf();
 		return super.trySuccess(result);
 	}
 
 	@Override public ResponsePromise setSuccess(ByteBufStream result) {
-		result.close();
+		result.setNoMoreBuf();
 		super.setSuccess(result);
 		return this;
 	}
 
 	@Override public ResponsePromise setFailure(Throwable cause) {
 		super.setFailure(cause);
-		// TODO: should close result stream??
 		return this;
 	}
 

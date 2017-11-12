@@ -15,6 +15,8 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class SharedFacet {
-	@Getter @Setter(PRIVATE) @Nullable protected IdentitySet owner;
-	@Getter @Setter(PRIVATE) @Nullable protected String scope;
+	@Getter @Setter(PRIVATE) protected @Nullable IdentitySet owner;
+	@Getter @Setter(PRIVATE) protected @Nullable ShareScopeType scope;
+	@Getter @Setter(PRIVATE) protected @Nullable IdentitySet sharedBy;
+	@Getter @Setter(PRIVATE) protected @Nullable String sharedDateTime;
 }

@@ -3,6 +3,7 @@ package com.bhyoo.onedrive.client;
 import com.bhyoo.onedrive.client.auth.AbstractAuthHelper;
 import com.bhyoo.onedrive.client.auth.AuthHelper;
 import com.bhyoo.onedrive.container.Drive;
+import com.bhyoo.onedrive.container.ResponsePage;
 import com.bhyoo.onedrive.container.items.*;
 import com.bhyoo.onedrive.container.items.pointer.BasePointer;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;
@@ -42,7 +43,7 @@ import static java.net.HttpURLConnection.*;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class Client {
-	public static final String ITEM_ID_PREFIX = "/drive/items/";
+	public static final String ITEM_ID_PREFIX = "/me/drive/items/";
 
 	/**
 	 * Only one {@code mapper} per a {@code Client} object.<br>
@@ -181,6 +182,7 @@ public class Client {
 	}
 
 	// TODO: handling error if `id`'s item isn't folder item.
+	// FIXME: microsoft's graph issue : expend query doesn't include nextLink
 	@NotNull
 	public FolderItem getFolder(@NotNull String id, boolean childrenFetching) throws ErrorResponseException {
 		authHelper.checkExpired();
@@ -474,7 +476,7 @@ public class Client {
 						future.response(),
 						future.get(),
 						HTTP_OK,
-						DriveItem.class);
+						AbstractDriveItem.class);
 				latch.countDown();
 			}
 		});
@@ -696,7 +698,7 @@ public class Client {
 	@NotNull
 	public ResponsePage<DriveItem> searchItem(String query) throws ErrorResponseException, IOException {
 		String rawQuery = URLEncoder.encode(query, "UTF-8");
-		SyncResponse response = requestTool.newRequest("/drive/root/view.search?q=" + rawQuery).doGet();
+		SyncResponse response = requestTool.newRequest("/me/drive/root/search(q='" + rawQuery + "')").doGet();
 
 		return requestTool.parseBaseItemPageAndHandle(response, HTTP_OK);
 	}

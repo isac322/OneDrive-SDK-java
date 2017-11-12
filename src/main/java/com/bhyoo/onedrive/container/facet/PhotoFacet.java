@@ -17,12 +17,12 @@ public class PhotoFacet {
 	/**
 	 * Always ensure local date time.
 	 */
-	@Getter @Setter(PRIVATE) @Nullable protected String takenDateTime;
-	@Getter @Setter(PRIVATE) @Nullable protected String cameraMake;
-	@Getter @Setter(PRIVATE) @Nullable protected String cameraModel;
-	@Getter @Setter(PRIVATE) @Nullable protected Double fNumber;
-	@Getter @Setter(PRIVATE) @Nullable protected Double exposureDenominator;
-	@Getter @Setter(PRIVATE) @Nullable protected Double exposureNumerator;
-	@Getter @Setter(PRIVATE) @Nullable protected Double focalLength;
-	@Getter @Setter(PRIVATE) @Nullable protected Long iso;
+	@Getter @Setter(PRIVATE) protected @Nullable String cameraMake;
+	@Getter @Setter(PRIVATE) protected @Nullable String cameraModel;
+	@Getter @Setter(PRIVATE) protected @Nullable Double exposureDenominator;
+	@Getter @Setter(PRIVATE) protected @Nullable Double exposureNumerator;
+	@Getter @Setter(PRIVATE) protected @Nullable Double fNumber;
+	@Getter @Setter(PRIVATE) protected @Nullable Double focalLength;
+	@Getter @Setter(PRIVATE) protected @Nullable Long iso;
+	@Getter @Setter(PRIVATE) protected @Nullable String takenDateTime;
 }

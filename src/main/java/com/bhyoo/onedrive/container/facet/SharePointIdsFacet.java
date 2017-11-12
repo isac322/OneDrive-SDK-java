@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
 
+import java.net.URI;
+
 import static lombok.AccessLevel.PRIVATE;
 
 // TODO: Enhance javadoc
@@ -15,9 +17,10 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class SharePointIdsFacet {
-	@Getter @Setter(PRIVATE) @Nullable protected String siteId;
-	@Getter @Setter(PRIVATE) @Nullable protected String webId;
-	@Getter @Setter(PRIVATE) @Nullable protected String listId;
-	@Getter @Setter(PRIVATE) @Nullable protected Long listItemId;
-	@Getter @Setter(PRIVATE) @Nullable protected String listItemUniqueId;
+	@Getter @Setter(PRIVATE) protected @Nullable String listId;
+	@Getter @Setter(PRIVATE) protected @Nullable String listItemId;
+	@Getter @Setter(PRIVATE) protected @Nullable String listItemUniqueId;
+	@Getter @Setter(PRIVATE) protected @Nullable String siteId;
+	@Getter @Setter(PRIVATE) protected @Nullable URI siteUrl;
+	@Getter @Setter(PRIVATE) protected @Nullable String webId;
 }

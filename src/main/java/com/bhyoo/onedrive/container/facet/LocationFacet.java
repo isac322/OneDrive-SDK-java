@@ -14,7 +14,7 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class LocationFacet {
-	@Getter @Setter(PRIVATE) @Nullable protected Double altitude;
-	@Getter @Setter(PRIVATE) @Nullable protected Double latitude;
-	@Getter @Setter(PRIVATE) @Nullable protected Double longitude;
+	@Getter @Setter(PRIVATE) protected @Nullable Double altitude;
+	@Getter @Setter(PRIVATE) protected @Nullable Double latitude;
+	@Getter @Setter(PRIVATE) protected @Nullable Double longitude;
 }

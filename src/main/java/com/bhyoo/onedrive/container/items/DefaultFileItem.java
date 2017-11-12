@@ -5,13 +5,33 @@ import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.DownloadFuture;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import lombok.Getter;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
-public interface FileItem extends DriveItem {
+import static lombok.AccessLevel.PRIVATE;
+
+// TODO: Enhance javadoc
+
+/**
+ * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
+ */
+@JsonDeserialize(as = DefaultFileItem.class, converter = DefaultFileItem.PointerInjector.class)
+public class DefaultFileItem extends AbstractDriveItem implements FileItem {
+	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable AudioFacet audio;
+	@Setter(PRIVATE) @JsonProperty protected @NotNull FileFacet file;
+	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable ImageFacet image;
+	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable LocationFacet location;
+	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable PhotoFacet photo;
+	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable VideoFacet video;
+
 	/**
 	 * Works just like {@link FileItem#download(Path, String)}} except new name of item will automatically set with
 	 * {@link FileItem#getName()}.
@@ -21,7 +41,9 @@ public interface FileItem extends DriveItem {
 	 *
 	 * @see FileItem#download(Path, String)
 	 */
-	void download(@NotNull String path) throws IOException, ErrorResponseException;
+	public void download(@NotNull String path) throws IOException, ErrorResponseException {
+		client.download(this.id, Paths.get(path), this.name);
+	}
 
 	/**
 	 * Works just like {@link FileItem#download(Path, String)}}.
@@ -32,7 +54,9 @@ public interface FileItem extends DriveItem {
 	 *
 	 * @see FileItem#download(Path, String)
 	 */
-	void download(@NotNull String path, @NotNull String newName) throws IOException, ErrorResponseException;
+	public void download(@NotNull String path, @NotNull String newName) throws IOException, ErrorResponseException {
+		client.download(this.id, Paths.get(path), newName);
+	}
 
 	/**
 	 * Works just like {@link FileItem#download(Path, String)}} except new name of item will automatically set with
@@ -43,10 +67,11 @@ public interface FileItem extends DriveItem {
 	 *
 	 * @see FileItem#download(Path, String)
 	 */
-	void download(@NotNull Path folderPath) throws IOException, ErrorResponseException;
+	public void download(@NotNull Path folderPath) throws IOException, ErrorResponseException {
+		client.download(this.id, folderPath, this.name);
+	}
 
 	// TODO: handling overwriting file
-
 
 	/**
 	 * Download file from OneDrive to {@code folderPath} with {@code newName}.
@@ -68,12 +93,34 @@ public interface FileItem extends DriveItem {
 	 *                                  side not by SDK.
 	 * @throws IOException              if an I/O error occurs
 	 */
-	void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException;
+	public void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException {
+		client.download(this.id, folderPath, newName);
+	}
 
 
-	DownloadFuture downloadAsync(@NotNull Path folderPath) throws IOException;
+	public DownloadFuture downloadAsync(@NotNull Path folderPath) throws IOException {
+		return client.downloadAsync(this.id, folderPath, this.name);
+	}
 
-	DownloadFuture downloadAsync(@NotNull Path folderPath, String newName) throws IOException;
+	public DownloadFuture downloadAsync(@NotNull Path folderPath, String newName) throws IOException {
+		return client.downloadAsync(this.id, folderPath, newName);
+	}
+
+
+	@Override
+	protected void refreshBy(@NotNull AbstractDriveItem newItem) {
+		super.refreshBy(newItem);
+
+		DefaultFileItem item = (DefaultFileItem) newItem;
+
+		this.audio = item.audio;
+		this.file = item.file;
+		this.image = item.image;
+		this.location = item.location;
+		this.photo = item.photo;
+		this.video = item.video;
+	}
+
 
 
 	/*
@@ -85,22 +132,14 @@ public interface FileItem extends DriveItem {
 	 */
 
 
-	@JsonIgnore @Nullable String getMimeType();
+	@JsonIgnore public @Nullable String getMimeType() {return this.file.getMimeType();}
 
-	@JsonIgnore @Nullable String getCRC32();
+	@JsonIgnore public @Nullable String getCRC32() {return this.file.getCrc32Hash();}
 
-	@JsonIgnore @Nullable String getSHA1();
+	@JsonIgnore public @Nullable String getSHA1() {return this.file.getSha1Hash();}
 
-	@JsonIgnore @Nullable String getQuickXorHash();
+	@JsonIgnore public @Nullable String getQuickXorHash() {return this.file.getQuickXorHash();}
 
 
-	@Nullable AudioFacet getAudio();
-
-	@Nullable ImageFacet getImage();
-
-	@Nullable LocationFacet getLocation();
-
-	@Nullable PhotoFacet getPhoto();
-
-	@Nullable VideoFacet getVideo();
+	static class PointerInjector extends AbstractDriveItem.PointerInjector<DefaultFileItem> {}
 }

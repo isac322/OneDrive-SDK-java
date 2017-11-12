@@ -2,9 +2,9 @@ package com.bhyoo.onedrive;
 
 import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.container.Drive;
+import com.bhyoo.onedrive.container.ResponsePage;
 import com.bhyoo.onedrive.container.items.DriveItem;
 import com.bhyoo.onedrive.container.items.FolderItem;
-import com.bhyoo.onedrive.container.items.ResponsePage;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -141,7 +141,8 @@ public class ClientTest {
 
 		assertEquals(folder.getName(), DIR_MANY_CHILD_NAME);
 		assertEquals(folder.getId(), DIR_MANY_CHILD);
-		assertEquals(folder.childrenCount(), folder.allChildren().size());
+		// FIXME: microsoft's graph issue : expend query doesn't include nextLink
+		assertEquals(folder.countChildren(), folder.allChildren().length);
 		assertFalse(folder.isRoot());
 		assertTrue(folder.isChildrenFetched());
 
