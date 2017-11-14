@@ -19,6 +19,7 @@ import static lombok.AccessLevel.PRIVATE;
 @JsonDeserialize(as = RemoteFileItem.class, converter = RemoteFileItem.PointerInjector.class)
 public class RemoteFileItem extends DefaultFileItem implements RemoteItem {
 	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) @NotNull protected RemoteItemFacet remoteItem;
+	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) @NotNull protected IdPointer remotePointer;
 
 	public @NotNull String getRemoteDriveID() {
 		return remoteItem.getParentReference().driveId;
@@ -28,9 +29,9 @@ public class RemoteFileItem extends DefaultFileItem implements RemoteItem {
 		return remoteItem.getId();
 	}
 
-	@Override public @NotNull DriveItem fetchRemoteItem() throws ErrorResponseException {
-		// TODO
-		return null;
+
+	@Override public @NotNull FileItem fetchRemoteItem() throws ErrorResponseException {
+		return (FileItem) client.getItem(remotePointer);
 	}
 
 
@@ -40,6 +41,8 @@ public class RemoteFileItem extends DefaultFileItem implements RemoteItem {
 				value.pathPointer = value.parentReference.pathPointer.resolve(value.name);
 			}
 			value.idPointer = new IdPointer(value.id, value.parentReference.driveId);
+			value.remotePointer =
+					new IdPointer(value.remoteItem.getId(), value.remoteItem.getParentReference().driveId);
 
 			return value;
 		}

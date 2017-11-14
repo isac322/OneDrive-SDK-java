@@ -284,8 +284,7 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 						value.fileChildren);
 			}
 
-			assert value.parentReference != null :
-					"All item can't have null `parentReference` argument";
+			assert value.parentReference != null : "All item can't have null `parentReference` argument";
 			if (value.isRoot()) {
 				value.pathPointer = new PathPointer("/", value.getDriveId());
 			}
