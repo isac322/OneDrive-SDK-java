@@ -12,8 +12,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 
-// TODO: Enhance javadoc 
-
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */

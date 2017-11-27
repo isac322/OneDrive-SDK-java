@@ -105,7 +105,7 @@ public interface DriveItem extends BaseItem {
 	 */
 
 
-	@JsonIgnore @NotNull String getDriveId();
+	@NotNull String getDriveId();
 
 	@NotNull String getCTag();
 
@@ -139,7 +139,7 @@ public interface DriveItem extends BaseItem {
 	 */
 
 
-	@JsonIgnore void updateDescription(String description) throws ErrorResponseException;
+	void updateDescription(String description) throws ErrorResponseException;
 
-	@JsonIgnore void updateName(@NotNull String name) throws ErrorResponseException;
+	void updateName(@NotNull String name) throws ErrorResponseException;
 }

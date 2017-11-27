@@ -1,15 +1,13 @@
 package com.bhyoo.onedrive.container.items;
 
-import com.bhyoo.onedrive.container.facet.PackageFacet;
-import com.bhyoo.onedrive.container.facet.PackageType;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import lombok.Setter;
+import com.bhyoo.onedrive.client.Client;
+import com.bhyoo.onedrive.container.IdentitySet;
+import com.bhyoo.onedrive.container.facet.*;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import static lombok.AccessLevel.PRIVATE;
-
-// TODO: Enhance javadoc
+import java.net.URI;
 
 /**
  * <a href='https://dev.onedrive.com/facets/package_facet.htm'>https://dev.onedrive.com/facets/package_facet.htm</a>
@@ -19,14 +17,26 @@ import static lombok.AccessLevel.PRIVATE;
  *
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-@JsonDeserialize(as = DefaultPackageItem.class, converter = DefaultPackageItem.PointerInjector.class)
 public class DefaultPackageItem extends AbstractDriveItem implements PackageItem {
-	@Setter(PRIVATE) @JsonProperty("package") @NotNull private PackageFacet packages;
+	@NotNull private PackageFacet packages;
+
+	DefaultPackageItem(@NotNull String id, @NotNull IdentitySet creator, @NotNull String createdDateTime,
+					   @Nullable String description, @NotNull String eTag, @NotNull IdentitySet lastModifier,
+					   @NotNull String lastModifiedDateTime, @NotNull String name, @NotNull URI webUrl,
+					   @NotNull Client client, @NotNull String cTag, @Nullable ObjectNode deleted,
+					   FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
+					   @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
+					   @Nullable SharePointIdsFacet sharePointIds, @NotNull Long size, URI webDavUrl,
+					   @NotNull PackageFacet packages) {
+		super(id, creator, createdDateTime, description, eTag, lastModifier, lastModifiedDateTime, name, webUrl,
+				client, cTag, deleted, fileSystemInfo, parentReference, searchResult, shared, sharePointIds, size,
+				webDavUrl);
+		this.packages = packages;
+
+		createPointers();
+	}
 
 	@Override public PackageType getType() {
 		return packages.getType();
 	}
-
-
-	static class PointerInjector extends AbstractDriveItem.PointerInjector<DefaultPackageItem> {}
 }

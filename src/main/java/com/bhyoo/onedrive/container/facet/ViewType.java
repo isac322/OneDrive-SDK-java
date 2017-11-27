@@ -1,16 +1,31 @@
 package com.bhyoo.onedrive.container.facet;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jetbrains.annotations.NotNull;
 
 public enum ViewType {
-	@JsonProperty("default") DEFAULT("default"),
-	@JsonProperty("icons") ICONS("icons"),
-	@JsonProperty("details") DETAILS("details"),
-	@JsonProperty("thumbnails") THUMBNAILS("thumbnails");
+	DEFAULT("default"),
+	ICONS("icons"),
+	DETAILS("details"),
+	THUMBNAILS("thumbnails");
 
 	private final String type;
 
 	ViewType(String type) {this.type = type;}
+
+	public static ViewType deserialize(@NotNull String type) {
+		switch (type) {
+			case "default":
+				return DEFAULT;
+			case "icons":
+				return ICONS;
+			case "details":
+				return DETAILS;
+			case "thumbnails":
+				return THUMBNAILS;
+			default:
+				throw new IllegalStateException("Unknown attribute detected in ViewType : " + type);
+		}
+	}
 
 	@Override public String toString() {return type;}
 }

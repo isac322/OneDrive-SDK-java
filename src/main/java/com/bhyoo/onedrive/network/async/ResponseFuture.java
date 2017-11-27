@@ -6,8 +6,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
-// TODO: Enhance javadoc
-
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */

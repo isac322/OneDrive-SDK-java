@@ -9,8 +9,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
 
-// TODO: Enhance javadoc
-
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
@@ -35,7 +33,6 @@ public class ByteBufStream extends InputStream {
 	}
 
 
-	// TODO: add javadoc
 	public synchronized void setNoMoreBuf() {
 		noMoreBuf = true;
 		notifyAll();
@@ -124,6 +121,7 @@ public class ByteBufStream extends InputStream {
 	 */
 	public synchronized void writeByteBuf(@NotNull ByteBuf sourceBuf) {
 		if (closed || noMoreBuf) throw new IllegalStateException("The stream already closed");
+		sourceBuf.retain();
 		compositeBuf.addComponent(true, sourceBuf);
 		notifyAll();
 	}

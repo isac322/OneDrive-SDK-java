@@ -9,65 +9,59 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.regex.Pattern;
 
-// TODO: Enhance javadoc
+import static com.bhyoo.onedrive.client.Client.ITEM_ID_PREFIX;
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class IdPointer extends BasePointer {
-	@NotNull private static final IllegalArgumentException DOESNT_MATCH =
-			new IllegalArgumentException("`id` isn't match with regex \"[a-fA-F0-9!]+\"");
-	private static final Pattern idPattern = Pattern.compile("[a-fA-F0-9!]+");
-	@Getter @Nullable private final String driveId;
-	@Getter @NotNull private final String id;
-	@NotNull private final String path;
+	private static final @NotNull Pattern idPattern = Pattern.compile("[a-zA-Z0-9!]+");
+
+	@Getter protected final @Nullable String driveId;
+	@Getter protected final @NotNull String id;
+	private final @NotNull String path;
 
 
 	public IdPointer(@NotNull String id) {
 		if (!idPattern.matcher(id).matches())
-			throw DOESNT_MATCH;
+			throw new IllegalArgumentException("`id` isn't match with regex \"[a-zA-Z0-9!]+\"");
 
 		this.id = id;
 		this.driveId = null;
-		this.path = "/drive/items/" + id;
+		this.path = ITEM_ID_PREFIX + id;
 	}
 
 	public IdPointer(@NotNull String id, @Nullable String driveId) {
 		if (!idPattern.matcher(id).matches())
-			throw DOESNT_MATCH;
+			throw new IllegalArgumentException("`id` isn't match with regex \"[a-zA-Z0-9!]+\"");
 
 		this.id = id;
 		this.driveId = driveId;
 		this.path = "/drives/" + driveId + "/items/" + id;
 	}
 
-	@NotNull
 	@Override
-	public String toJson() {
+	public @NotNull String toJson() {
 		return "{\"id\":\"" + path + "\"}";
 	}
 
-	@NotNull
 	@Override
-	public String resolveOperator(@NotNull Operator op) {
-		return path + '/' + op.getString();
+	public @NotNull String resolveOperator(@NotNull Operator op) {
+		return path + '/' + op;
 	}
 
-	@NotNull
 	@Override
-	public URI toURI() throws URISyntaxException {
+	public @NotNull URI toURI() throws URISyntaxException {
 		return new URI(RequestTool.SCHEME, RequestTool.HOST, path, null);
 	}
 
-	@NotNull
 	@Override
-	public String toApi() {
+	public @NotNull String toApi() {
 		return path;
 	}
 
-	@NotNull
 	@Override
-	public String toASCIIApi() {
+	public @NotNull String toASCIIApi() {
 		return path;
 	}
 }

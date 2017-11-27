@@ -1,109 +1,87 @@
 package com.bhyoo.onedrive.container.items;
 
+import com.bhyoo.onedrive.client.Client;
+import com.bhyoo.onedrive.container.IdentitySet;
 import com.bhyoo.onedrive.container.facet.*;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
-import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.DownloadFuture;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
-import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import static lombok.AccessLevel.PRIVATE;
-
-// TODO: Enhance javadoc
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-@JsonDeserialize(as = DefaultFileItem.class, converter = DefaultFileItem.PointerInjector.class)
 public class DefaultFileItem extends AbstractDriveItem implements FileItem {
-	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable AudioFacet audio;
-	@Setter(PRIVATE) @JsonProperty protected @NotNull FileFacet file;
-	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable ImageFacet image;
-	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable LocationFacet location;
-	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable PhotoFacet photo;
-	@Getter(onMethod = @__(@Override)) @Setter(PRIVATE) protected @Nullable VideoFacet video;
+	@Getter(onMethod = @__(@Override)) protected @Nullable AudioFacet audio;
+	protected @NotNull FileFacet file;
+	@Getter(onMethod = @__(@Override)) protected @Nullable ImageFacet image;
+	@Getter(onMethod = @__(@Override)) protected @Nullable LocationFacet location;
+	@Getter(onMethod = @__(@Override)) protected @Nullable PhotoFacet photo;
+	@Getter(onMethod = @__(@Override)) protected @Nullable VideoFacet video;
 
-	/**
-	 * Works just like {@link FileItem#download(Path, String)}} except new name of item will automatically set with
-	 * {@link FileItem#getName()}.
-	 *
-	 * @param path Folder path. It could be relative path (like . or ..). Note that this parameter <b>isn't
-	 *             path of item that will be downloaded</b>. It must point parent directory of the item.
-	 *
-	 * @see FileItem#download(Path, String)
-	 */
+
+	DefaultFileItem(@NotNull String id, @NotNull IdentitySet creator, @NotNull String createdDateTime,
+					@Nullable String description, @NotNull String eTag, @NotNull IdentitySet lastModifier,
+					@NotNull String lastModifiedDateTime, @NotNull String name, @NotNull URI webUrl,
+					// TODO: change @Nullable to @NotNull on cTag
+					// (https://github.com/OneDrive/onedrive-api-docs/issues/742)
+					@NotNull Client client, @Nullable String cTag, @Nullable ObjectNode deleted,
+					FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
+					@Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
+					@Nullable SharePointIdsFacet sharePointIds, @NotNull Long size, URI webDavUrl,
+					@Nullable AudioFacet audio, @NotNull FileFacet file, @Nullable ImageFacet image,
+					@Nullable LocationFacet location, @Nullable PhotoFacet photo, @Nullable VideoFacet video) {
+		super(id, creator, createdDateTime, description, eTag, lastModifier, lastModifiedDateTime, name, webUrl,
+				client, cTag, deleted, fileSystemInfo, parentReference, searchResult, shared, sharePointIds, size,
+				webDavUrl);
+		this.audio = audio;
+		this.file = file;
+		this.image = image;
+		this.location = location;
+		this.photo = photo;
+		this.video = video;
+
+		createPointers();
+	}
+
+	@Override
 	public void download(@NotNull String path) throws IOException, ErrorResponseException {
-		client.download(this.id, Paths.get(path), this.name);
+		client.download(idPointer, Paths.get(path), this.name);
 	}
 
-	/**
-	 * Works just like {@link FileItem#download(Path, String)}}.
-	 *
-	 * @param path    Folder path. It could be relative path (like . or ..). Note that this parameter <b>isn't
-	 *                path of item that will be downloaded</b>. It must point parent directory of the item.
-	 * @param newName new file name.
-	 *
-	 * @see FileItem#download(Path, String)
-	 */
+	@Override
 	public void download(@NotNull String path, @NotNull String newName) throws IOException, ErrorResponseException {
-		client.download(this.id, Paths.get(path), newName);
+		client.download(idPointer, Paths.get(path), newName);
 	}
 
-	/**
-	 * Works just like {@link FileItem#download(Path, String)}} except new name of item will automatically set with
-	 * {@link FileItem#getName()}.
-	 *
-	 * @param folderPath Folder path. It could be relative path (like . or ..). Note that this parameter <b>isn't
-	 *                   path of item that will be downloaded</b>. It must point parent directory of the item.
-	 *
-	 * @see FileItem#download(Path, String)
-	 */
+	@Override
 	public void download(@NotNull Path folderPath) throws IOException, ErrorResponseException {
-		client.download(this.id, folderPath, this.name);
+		client.download(idPointer, folderPath, this.name);
 	}
 
 	// TODO: handling overwriting file
 
-	/**
-	 * Download file from OneDrive to {@code folderPath} with {@code newName}.
-	 * It could be relative path (like . or ..).<br>
-	 * If {@code newName} is already exists in {@code folderPath} or {@code folderPath} is not folder,
-	 * it will throw {@link IllegalArgumentException}.
-	 *
-	 * @param folderPath Folder path. It could be relative path (like . or ..). Note that this parameter <b>isn't
-	 *                   path of item that will be downloaded</b>. It must point parent directory of the item.
-	 * @param newName    new file name.
-	 *
-	 * @throws SecurityException        If a required system property value cannot be accessed, or if a security
-	 *                                  manager exists and its SecurityManager.checkRead method denies read access to
-	 *                                  the file
-	 * @throws IllegalArgumentException If {@code folderPath} is exists and is not directory.
-	 * @throws ErrorResponseException   if error happens while requesting downloading operation. such as trying to
-	 *                                  download already deleted file.
-	 * @throws InvalidJsonException     if fail to parse response of copying request into json. it caused by server
-	 *                                  side not by SDK.
-	 * @throws IOException              if an I/O error occurs
-	 */
+	@Override
 	public void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException {
-		client.download(this.id, folderPath, newName);
+		client.download(idPointer, folderPath, newName);
 	}
 
 
-	public DownloadFuture downloadAsync(@NotNull Path folderPath) throws IOException {
-		return client.downloadAsync(this.id, folderPath, this.name);
+	@Override
+	public @NotNull DownloadFuture downloadAsync(@NotNull Path folderPath) throws IOException {
+		return client.downloadAsync(idPointer, folderPath, this.name);
 	}
 
-	public DownloadFuture downloadAsync(@NotNull Path folderPath, String newName) throws IOException {
-		return client.downloadAsync(this.id, folderPath, newName);
+	@Override
+	public @NotNull DownloadFuture downloadAsync(@NotNull Path folderPath, String newName) throws IOException {
+		return client.downloadAsync(idPointer, folderPath, newName);
 	}
 
 
@@ -132,14 +110,15 @@ public class DefaultFileItem extends AbstractDriveItem implements FileItem {
 	 */
 
 
-	@JsonIgnore public @Nullable String getMimeType() {return this.file.getMimeType();}
+	@Override
+	public @Nullable String getMimeType() {return this.file.getMimeType();}
 
-	@JsonIgnore public @Nullable String getCRC32() {return this.file.getCrc32Hash();}
+	@Override
+	public @Nullable String getCRC32() {return this.file.getCrc32Hash();}
 
-	@JsonIgnore public @Nullable String getSHA1() {return this.file.getSha1Hash();}
+	@Override
+	public @Nullable String getSHA1() {return this.file.getSha1Hash();}
 
-	@JsonIgnore public @Nullable String getQuickXorHash() {return this.file.getQuickXorHash();}
-
-
-	static class PointerInjector extends AbstractDriveItem.PointerInjector<DefaultFileItem> {}
+	@Override
+	public @Nullable String getQuickXorHash() {return this.file.getQuickXorHash();}
 }

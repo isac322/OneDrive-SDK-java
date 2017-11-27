@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.jetbrains.annotations.NotNull;
 
 public interface FolderItem extends DriveItem, Iterable<DriveItem> {
-	// TODO: Enhance javadoc
 	// TODO: Implement '@name.conflictBehavior'
 
 	// TODO: add more @throws
@@ -33,15 +32,15 @@ public interface FolderItem extends DriveItem, Iterable<DriveItem> {
 	 */
 
 
-	@JsonIgnore boolean isRoot();
+	boolean isRoot();
 
-	@JsonIgnore boolean isChildrenFetched();
+	boolean isChildrenFetched();
 
-	@JsonIgnore boolean isSpecial();
+	public void fetchChildren() throws ErrorResponseException;
 
-	long countChildren();
+	boolean isSpecial();
 
-	@Override @NotNull String getDriveId();
+	long childCount();
 
 	@NotNull DriveItem[] allChildren() throws ErrorResponseException;
 

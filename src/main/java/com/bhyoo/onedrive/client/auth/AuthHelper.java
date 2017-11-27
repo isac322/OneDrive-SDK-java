@@ -121,8 +121,6 @@ public class AuthHelper implements AbstractAuthHelper {
 		}
 	}
 
-	// TODO: Enhance javadoc
-
 	/**
 	 * @throws ErrorResponseException if raises error while logout.
 	 */

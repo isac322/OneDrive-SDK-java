@@ -15,8 +15,6 @@ import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
 import static java.net.HttpURLConnection.*;
 
-// TODO: Enhance javadoc
-
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */

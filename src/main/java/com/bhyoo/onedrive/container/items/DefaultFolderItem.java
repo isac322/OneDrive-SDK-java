@@ -1,165 +1,155 @@
 package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.client.Client;
-import com.bhyoo.onedrive.container.facet.FolderFacet;
-import com.bhyoo.onedrive.container.facet.SpecialFolderFacet;
+import com.bhyoo.onedrive.container.IdentitySet;
+import com.bhyoo.onedrive.container.facet.*;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;
+import com.bhyoo.onedrive.container.items.pointer.Operator;
 import com.bhyoo.onedrive.container.items.pointer.PathPointer;
+import com.bhyoo.onedrive.container.pager.DriveItemPager.DriveItemPage;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InternalException;
-import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.ResponseFuture;
-import com.bhyoo.onedrive.network.async.ResponseFutureListener;
-import com.bhyoo.onedrive.utils.ByteBufStream;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.util.StdConverter;
-import io.netty.handler.codec.http.HttpMethod;
-import lombok.Setter;
-import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
 
-import static lombok.AccessLevel.PRIVATE;
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static java.net.HttpURLConnection.HTTP_OK;
 
-@JsonDeserialize(as = DefaultFolderItem.class, converter = DefaultFolderItem.PointerInjector.class)
 public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
-	@Setter(PRIVATE) @JsonProperty protected FolderFacet folder;
-	@Setter(PRIVATE) @JsonProperty protected SpecialFolderFacet specialFolder;
-	@Setter(PRIVATE) @JsonProperty protected ObjectNode root;
-	@JsonIgnore protected List<FolderItem> folderChildren;
-	@JsonIgnore protected List<FileItem> fileChildren;
-	@JsonIgnore protected List<DriveItem> allChildren;
-	@JsonProperty("children@odata.nextLink") @Nullable String nextLink;
-	@JsonProperty("children") @Nullable ArrayNode children;
+	protected @NotNull FolderFacet folder;
+	protected @Nullable SpecialFolderFacet specialFolder;
+	protected @Nullable ObjectNode root;
+	protected @Nullable URI nextLink;
+	protected @Nullable AbstractDriveItem[] children;
+	protected List<FolderItem> folderChildren;
+	protected List<FileItem> fileChildren;
+	protected List<DriveItem> allChildren;
 
-	protected static void addChildren(@NotNull Client client, @NotNull JsonNode array, @NotNull List<DriveItem> all,
-									  @NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
-		for (JsonNode child : array) {
-			if (!child.isObject())
-				// if child isn't object
-				throw new InvalidJsonException("Response isn't object in JSON. response : " + child);
+	DefaultFolderItem(@NotNull String id, @Nullable IdentitySet creator, @NotNull String createdDateTime,
+					  @Nullable String description, @Nullable String eTag, @Nullable IdentitySet lastModifier,
+					  @NotNull String lastModifiedDateTime, @NotNull String name, @NotNull URI webUrl,
+					  @NotNull Client client, @Nullable String cTag, @Nullable ObjectNode deleted,
+					  FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
+					  @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
+					  @Nullable SharePointIdsFacet sharePointIds, @NotNull Long size, URI webDavUrl,
+					  @NotNull FolderFacet folder, @Nullable SpecialFolderFacet specialFolder,
+					  @Nullable ObjectNode root, @Nullable URI nextLink, @Nullable AbstractDriveItem[] children) {
+		super(id, creator, createdDateTime, description, eTag, lastModifier, lastModifiedDateTime, name, webUrl,
+				client, cTag, deleted, fileSystemInfo, parentReference, searchResult, shared, sharePointIds, size,
+				webDavUrl);
+		this.folder = folder;
+		this.specialFolder = specialFolder;
+		this.root = root;
+		this.nextLink = nextLink;
+		this.children = children;
 
-			DriveItem item = client.mapper().convertValue(child, AbstractDriveItem.class);
+/* currently do not use this code because of onedrive's bug (https://github.com/OneDrive/onedrive-api-docs/issues/732)
+		if (children != null || folder.getChildCount() == 0) {
+			folderChildren = new ArrayList<>();
+			fileChildren = new ArrayList<>();
+			allChildren = new ArrayList<>();
+		}
 
+		if (children != null) {
+			addChildren(children);
+			parseChildren(nextLink);
+		}
+*/
+
+		createPointers();
+
+		if (children != null) {
+			try {
+				fetchChildren();
+			}
+			catch (ErrorResponseException e) {
+				// FIXME: handle it!
+				e.printStackTrace();
+			}
+		}
+		else if (folder.getChildCount() == 0) {
+			folderChildren = new ArrayList<>();
+			fileChildren = new ArrayList<>();
+			allChildren = new ArrayList<>();
+		}
+	}
+
+	@Override
+	protected void createPointers() {
+		if (isRoot()) {
+			pathPointer = new PathPointer("/", getDriveId());
+		}
+		else {
+			assert parentReference.pathPointer != null : "`parentReference.pathPointer` is null on FolderItem";
+			assert parentReference.rawPath != null : "`parentReference.rawPath` is null on FolderItem";
+			pathPointer = parentReference.pathPointer.resolve(name);
+		}
+		idPointer = new IdPointer(id, getDriveId());
+	}
+
+	protected void addChildren(@NotNull DriveItem[] array) {
+		for (DriveItem item : array) {
 			if (item instanceof FolderItem) {
-				folder.add((FolderItem) item);
+				folderChildren.add((FolderItem) item);
 			}
 			else if (item instanceof FileItem) {
-				file.add((FileItem) item);
+				fileChildren.add((FileItem) item);
 			}
 			else {
 				// if child is neither FolderItem nor FileItem nor PackageItem.
 				assert item instanceof PackageItem || item instanceof RemoteItem : "Wrong item type";
 			}
-			all.add(item);
+			allChildren.add(item);
 		}
 	}
 
-	@SneakyThrows(URISyntaxException.class)
-	protected static void parseChildren(@NotNull final Client client, @NotNull JsonNode array,
-										@Nullable String nextLink, @NotNull List<DriveItem> all,
-										@NotNull List<FolderItem> folder, @NotNull List<FileItem> file) {
-		final ObjectNode jsonObject[] = new ObjectNode[1];
+	protected void parseChildren(@Nullable URI nextLink) {
 		while (nextLink != null) {
-			final CountDownLatch latch = new CountDownLatch(1);
+			ResponseFuture responseFuture = client.requestTool()
+					.doAsync(GET, nextLink)
+					.syncUninterruptibly();
 
-			ResponseFuture responseFuture = client.requestTool().doAsync(
-					HttpMethod.GET,
-					new URI(nextLink),
-					new ResponseFutureListener() {
-						@Override public void operationComplete(ResponseFuture future) throws Exception {
-							ByteBufStream result = future.get();
-
-							try {
-								jsonObject[0] = (ObjectNode) client.mapper().readTree(result);
-							}
-							catch (JsonProcessingException e) {
-								throw new InvalidJsonException(
-										e,
-										future.response().status().code(),
-										result.getRawBuffer());
-							}
-							catch (IOException e) {
-								// FIXME: custom exception
-								throw new RuntimeException("DEV: Unrecognizable json response.", e);
-							}
-							latch.countDown();
-						}
-					});
-
-			addChildren(client, array, all, folder, file);
-
-			// responseFuture.syncUninterruptibly();
 			try {
-				latch.await();
-			}
-			catch (InterruptedException e) {
-				throw new InternalException("Exception occurs while waiting lock in DriveItem#update()", e);
-			}
+				DriveItemPage itemPage = client.requestTool()
+						.parseDriveItemPageAndHandle(responseFuture.response(), responseFuture.getNow(), HTTP_OK);
 
-			if (jsonObject[0].has("@odata.nextLink"))
-				nextLink = jsonObject[0].get("@odata.nextLink").asText();
-			else
-				nextLink = null;
-
-			array = jsonObject[0].get("value");
+				nextLink = itemPage.getNextLink();
+				addChildren(itemPage.getValue());
+			}
+			catch (ErrorResponseException e) {
+				// FIXME: handle it!
+				e.printStackTrace();
+			}
 		}
-
-		addChildren(client, array, all, folder, file);
-	}
-
-	protected void fetchChildren() throws ErrorResponseException {
-		_fetchChildren(Client.ITEM_ID_PREFIX + id + "/children");
-	}
-
-	protected void _fetchChildren(String url) throws ErrorResponseException {
-		ObjectNode content = client.requestTool().doGetJson(url);
-
-		allChildren = new CopyOnWriteArrayList<>();
-		folderChildren = new CopyOnWriteArrayList<>();
-		fileChildren = new CopyOnWriteArrayList<>();
-
-		JsonNode value = content.get("value");
-		JsonNode nextLink = content.get("@odata.nextLink");
-
-		// TODO: if-none-match request header handling.
-		// TODO: not 200 OK response handling.
-		parseChildren(client, value, nextLink == null ? null : nextLink.asText(),
-				allChildren, folderChildren, fileChildren);
 	}
 
 
-	// TODO: Enhance javadoc
+	@Override
+	public void fetchChildren() throws ErrorResponseException {
+		allChildren = new ArrayList<>();
+		folderChildren = new ArrayList<>();
+		fileChildren = new ArrayList<>();
+
+		ResponseFuture responseFuture = client.requestTool()
+				.doAsync(GET, idPointer.resolveOperator(Operator.CHILDREN))
+				.syncUninterruptibly();
+
+		addChildren(client.requestTool()
+				.parseDriveItemRecursiveAndHandle(responseFuture.response(), responseFuture.getNow(), HTTP_OK));
+	}
+
+
 	// TODO: Implement '@name.conflictBehavior'
 
-	// TODO: add more @throws
-
-	/**
-	 * Implementation of <a href='https://dev.onedrive.com/items/create.htm'>detail</a>.
-	 * <p>
-	 *
-	 * @param name New folder name.
-	 *
-	 * @return New folder's object.
-	 *
-	 * @throws RuntimeException If creating folder or converting response is fails.
-	 */
-	@NotNull
-	public FolderItem createFolder(@NotNull String name) throws ErrorResponseException {
+	@Override
+	public @NotNull FolderItem createFolder(@NotNull String name) throws ErrorResponseException {
 		return client.createFolder(this.id, name);
 	}
 
@@ -183,6 +173,7 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 
 		this.folder = item.folder;
 		this.specialFolder = item.specialFolder;
+		this.root = item.root;
 
 		folderChildren = null;
 		fileChildren = null;
@@ -204,34 +195,19 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 
 
 	@Override
-	@JsonIgnore
-	public boolean isRoot() {
-		return root != null;
-	}
+	public boolean isRoot() {return root != null;}
 
 	@Override
-	@JsonIgnore
 	public boolean isChildrenFetched() {
-		return allChildren != null && folderChildren != null && fileChildren != null;
+		return folder.getChildCount() == 0 || allChildren != null && folderChildren != null && fileChildren != null;
 	}
 
 	@Override
-	@JsonIgnore
-	public boolean isSpecial() {
-		return specialFolder != null;
-	}
+	public boolean isSpecial() {return specialFolder != null;}
 
 	@Override
-	public long countChildren() {
-		return folder.getChildCount();
-	}
+	public long childCount() {return folder.getChildCount();}
 
-
-	@Override
-	public @NotNull String getDriveId() {
-		if (isRoot()) return id.split("!")[0];
-		return parentReference.driveId;
-	}
 
 	@Override
 	public final @NotNull DriveItem[] allChildren() throws ErrorResponseException {
@@ -265,53 +241,11 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 	public @NotNull Iterator<DriveItem> iterator() {
 		try {
 			if (!isChildrenFetched()) fetchChildren();
-			return new ChildrenIterator(allChildren.iterator());
+			return allChildren.iterator();
 		}
 		catch (ErrorResponseException e) {
 			// FIXME: custom exception
 			throw new RuntimeException(e);
 		}
-	}
-
-	static class PointerInjector<T extends DefaultFolderItem> extends StdConverter<T, T> {
-		@Override public T convert(T value) {
-			if (value.children != null) {
-				value.folderChildren = new CopyOnWriteArrayList<>();
-				value.fileChildren = new CopyOnWriteArrayList<>();
-				value.allChildren = new CopyOnWriteArrayList<>();
-
-				parseChildren(value.client, value.children, value.nextLink, value.allChildren, value.folderChildren,
-						value.fileChildren);
-			}
-
-			assert value.parentReference != null : "All item can't have null `parentReference` argument";
-			if (value.isRoot()) {
-				value.pathPointer = new PathPointer("/", value.getDriveId());
-			}
-			else {
-				assert value.parentReference.pathPointer != null :
-						"`parentReference.pathPointer` is null on FolderItem";
-				assert value.parentReference.rawPath != null : "`parentReference.rawPath` is null on FolderItem";
-				value.pathPointer = value.parentReference.pathPointer.resolve(value.name);
-			}
-			value.idPointer = new IdPointer(value.id, value.getDriveId());
-
-			return value;
-		}
-	}
-
-	private class ChildrenIterator implements Iterator<DriveItem> {
-		private final Iterator<DriveItem> itemIterator;
-
-		ChildrenIterator(Iterator<DriveItem> iterator) { this.itemIterator = iterator; }
-
-		@Override
-		public boolean hasNext() { return itemIterator.hasNext(); }
-
-		@Override
-		public DriveItem next() { return itemIterator.next(); }
-
-		@Override
-		public void remove() { itemIterator.remove(); }
 	}
 }

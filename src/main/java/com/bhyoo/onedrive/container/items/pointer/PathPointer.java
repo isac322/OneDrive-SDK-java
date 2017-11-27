@@ -11,7 +11,6 @@ import java.net.URISyntaxException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// TODO: Enhance javadoc
 // TODO: this class can be static factory!. consider this later (if path is same, give caller same object to save memory
 
 /**
@@ -26,7 +25,7 @@ import java.util.regex.Pattern;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class PathPointer extends BasePointer {
-	private final static Pattern pathMatcher = Pattern.compile("^/drive/root:(.*)$");
+	private final static Pattern pathMatcher = Pattern.compile("^(/me)?/drive/root:(.*)$");
 	private final static Pattern drivePathMatcher = Pattern.compile("^/drives/([a-fA-F0-9]+)/root:(.*)$");
 	@Getter @Nullable private final String driveId;
 	@Getter @NotNull private final String readablePath;
@@ -63,7 +62,7 @@ public class PathPointer extends BasePointer {
 			rawPath = anyPath;
 			anyPath = QueryStringDecoder.decodeComponent(anyPath);
 
-			this.readablePath = matcher.group(1);
+			this.readablePath = matcher.group(2);
 			this.path = anyPath;
 			this.driveId = null;
 			this.rawPath = rawPath;
@@ -126,7 +125,7 @@ public class PathPointer extends BasePointer {
 		// anyPath is OneDrive-path notation that does not contain drive-id
 		else if ((matcher = pathMatcher.matcher(anyPath)).matches()) {
 
-			this.readablePath = matcher.group(1);
+			this.readablePath = matcher.group(2);
 			this.driveId = driveId;
 
 			if (driveId == null) {
@@ -178,38 +177,33 @@ public class PathPointer extends BasePointer {
 		this.rawPath = rawPath;
 	}
 
-	@NotNull
 	@Override
-	public URI toURI() throws URISyntaxException {
+	public @NotNull URI toURI() throws URISyntaxException {
 		return new URI(RequestTool.SCHEME, RequestTool.HOST, path, null);
 	}
 
-	@NotNull
 	@Override
-	public String toApi() {
+	public @NotNull String toApi() {
 		return path;
 	}
 
-	@NotNull
 	@Override
-	public String toASCIIApi() {
+	public @NotNull String toASCIIApi() {
 		return rawPath;
 	}
 
-	@NotNull
 	@Override
-	public String toJson() {
+	public @NotNull String toJson() {
 		return "{\"path\":\"" + path + "\"}";
 	}
 
-	@NotNull
 	@Override
-	public String resolveOperator(@NotNull Operator op) {
-		return rawPath + ":/" + op.getString();
+	public @NotNull String resolveOperator(@NotNull Operator op) {
+		return rawPath + ":/" + op;
 	}
 
-	@NotNull
-	public PathPointer resolve(@NotNull String name) {
+
+	public @NotNull PathPointer resolve(@NotNull String name) {
 		// raise exception if `name` is absolute path
 		if (name.charAt(0) == '/') {
 			throw new IllegalArgumentException("`name` doesn't starts with '/'. given : " + name);

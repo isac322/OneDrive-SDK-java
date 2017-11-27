@@ -1,42 +1,34 @@
 package com.bhyoo.onedrive.network.async;
 
-import com.bhyoo.onedrive.container.items.AbstractDriveItem;
+import com.bhyoo.onedrive.client.RequestTool;
 import com.bhyoo.onedrive.container.items.DriveItem;
-import com.bhyoo.onedrive.exceptions.ErrorResponseException;
-import com.bhyoo.onedrive.network.ErrorResponse;
 import com.bhyoo.onedrive.utils.ByteBufStream;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-
 import static java.net.HttpURLConnection.HTTP_OK;
-
-// TODO: Enhance javadoc
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class DriveItemHandler extends SimpleChannelInboundHandler<HttpObject> {
-	private final DefaultDriveItemPromise promise;
-	private final ObjectMapper mapper;
+	private final @NotNull DefaultDriveItemPromise promise;
+	private final @NotNull RequestTool requestTool;
 	private final ByteBufStream stream;
 	private HttpResponse response;
-	private ErrorResponse errorResponse;
 	private DriveItem driveItem;
 	private Thread workerThread;
-	@Nullable private Exception workerException;
+	private @Nullable Exception workerException;
 
-	public DriveItemHandler(DefaultDriveItemPromise promise, ObjectMapper mapper) {
+	public DriveItemHandler(@NotNull DefaultDriveItemPromise promise, @NotNull RequestTool requestTool) {
 		this.promise = promise;
-		this.mapper = mapper;
+		this.requestTool = requestTool;
 		this.stream = new ByteBufStream();
 	}
 
@@ -51,41 +43,16 @@ public class DriveItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 		if (msg instanceof HttpResponse) {
 			this.response = (HttpResponse) msg;
 
-			if (response.status().code() == HTTP_OK) {
-				workerThread = new Thread() {
-					@Override public void run() {
-						try {
-							driveItem = mapper.readValue(stream, AbstractDriveItem.class);
-						}
-						catch (IOException e) {
-							// FIXME: custom exception
-							workerException = new RuntimeException("DEV: Unrecognizable json response.", e);
-						}
-						catch (Exception e) {
-							workerException = e;
-						}
+			workerThread = new Thread() {
+				@Override public void run() {
+					try {
+						driveItem = requestTool.parseDriveItemAndHandle(response, stream, HTTP_OK);
 					}
-				};
-			}
-			else {
-				workerThread = new Thread() {
-					@Override public void run() {
-						try {
-							errorResponse = mapper
-									.readerFor(ErrorResponse.class)
-									.with(DeserializationFeature.UNWRAP_ROOT_VALUE)
-									.readValue(stream);
-						}
-						catch (IOException e) {
-							// FIXME: custom exception
-							workerException = new RuntimeException("DEV: Unrecognizable json response.", e);
-						}
-						catch (Exception e) {
-							workerException = e;
-						}
+					catch (Exception e) {
+						workerException = e;
 					}
-				};
-			}
+				}
+			};
 			workerThread.start();
 		}
 		else if (msg instanceof HttpContent) {
@@ -103,13 +70,11 @@ public class DriveItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 					promise.setSuccess(driveItem);
 				}
 				else {
-					promise.setFailure(
-							new ErrorResponseException(HTTP_OK, response.status().code(),
-									errorResponse.getCode(), errorResponse.getMessage()));
+					throw new IllegalStateException(
+							"HTTP response code is not " + HTTP_OK + " and not occurs any exception");
 				}
 			}
 			else {
-				content.content().retain();
 				stream.writeByteBuf(content.content());
 			}
 		}

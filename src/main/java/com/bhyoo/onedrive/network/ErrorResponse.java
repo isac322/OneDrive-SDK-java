@@ -7,8 +7,6 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
-// TODO: Enhance javadoc
-
 /**
  * <a href="https://dev.onedrive.com/misc/errors.htm">explain of error types</a>
  *

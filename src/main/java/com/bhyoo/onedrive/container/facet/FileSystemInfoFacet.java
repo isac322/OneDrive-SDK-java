@@ -1,12 +1,11 @@
 package com.bhyoo.onedrive.container.facet;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
-import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-import static lombok.AccessLevel.PRIVATE;
-
-// TODO: Enhance javadoc
+import java.io.IOException;
 
 /**
  * <a href="https://dev.onedrive.com/facets/filesysteminfo_facet.htm">https://dev.onedrive
@@ -15,6 +14,35 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class FileSystemInfoFacet {
-	@Getter @Setter(PRIVATE) @NotNull protected String createdDateTime;
-	@Getter @Setter(PRIVATE) @NotNull protected String lastModifiedDateTime;
+	@Getter protected final @NotNull String createdDateTime;
+	@Getter protected final @NotNull String lastModifiedDateTime;
+
+	protected FileSystemInfoFacet(@NotNull String createdDateTime, @NotNull String lastModifiedDateTime) {
+		this.createdDateTime = createdDateTime;
+		this.lastModifiedDateTime = lastModifiedDateTime;
+	}
+
+	public static FileSystemInfoFacet deserialize(@NotNull JsonParser parser) throws IOException {
+		@NotNull String createdDateTime = null;
+		@NotNull String lastModifiedDateTime = null;
+
+		while (parser.nextToken() != JsonToken.END_OBJECT) {
+			String currentName = parser.getCurrentName();
+			parser.nextToken();
+
+			switch (currentName) {
+				case "createdDateTime":
+					createdDateTime = parser.getText();
+					break;
+				case "lastModifiedDateTime":
+					lastModifiedDateTime = parser.getText();
+					break;
+				default:
+					throw new IllegalStateException(
+							"Unknown attribute detected in FileSystemInfoFacet : " + currentName);
+			}
+		}
+
+		return new FileSystemInfoFacet(createdDateTime, lastModifiedDateTime);
+	}
 }

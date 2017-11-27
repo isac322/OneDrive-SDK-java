@@ -1,7 +1,5 @@
 package com.bhyoo.onedrive.exceptions;
 
-// TODO: Enhance javadoc
-
 /**
  * Exception that happens in OneDrive server, such as invalid json.<br>
  * Most of this exception can be resolved by retrying. but if same exception happens continuously,

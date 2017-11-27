@@ -2,8 +2,6 @@ package com.bhyoo.onedrive.exceptions;
 
 import lombok.Getter;
 
-// TODO: Enhance javadoc
-
 /**
  * Exception that server rejects to response.<br>
  * Mostly because of invalid request, such as requesting deleting item that already deleted.<br>

@@ -1,13 +1,11 @@
 package com.bhyoo.onedrive.container.facet;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
-import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-import static lombok.AccessLevel.PRIVATE;
-
-// TODO: Enhance javadoc
-// TODO: merge with AbstractDriveItem if possible
+import java.io.IOException;
 
 /**
  * <a href="https://dev.onedrive.com/facets/package_facet.htm">https://dev.onedrive.com/facets/package_facet.htm</a>
@@ -15,5 +13,26 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class PackageFacet {
-	@Getter @Setter(PRIVATE) protected @NotNull PackageType type;
+	@Getter protected final @NotNull PackageType type;
+
+	protected PackageFacet(@NotNull PackageType type) {this.type = type;}
+
+	public static PackageFacet deserialize(@NotNull JsonParser parser) throws IOException {
+		@NotNull PackageType type = null;
+
+		while (parser.nextToken() != JsonToken.END_OBJECT) {
+			String currentName = parser.getCurrentName();
+			parser.nextToken();
+
+			switch (currentName) {
+				case "type":
+					type = PackageType.deserialize(parser.getText());
+					break;
+				default:
+					throw new IllegalStateException("Unknown attribute detected in PackageFacet : " + currentName);
+			}
+		}
+
+		return new PackageFacet(type);
+	}
 }

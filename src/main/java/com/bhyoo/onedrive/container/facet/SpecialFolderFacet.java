@@ -1,12 +1,13 @@
 package com.bhyoo.onedrive.container.facet;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
-import lombok.Setter;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static lombok.AccessLevel.PRIVATE;
+import java.io.IOException;
 
-// TODO: Enhance javadoc
 // TODO: merge with AbstractDriveItem if possible
 
 /**
@@ -15,5 +16,27 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class SpecialFolderFacet {
-	@Getter @Setter(PRIVATE) @Nullable protected String name;
+	@Getter protected final @Nullable String name;
+
+	protected SpecialFolderFacet(@Nullable String name) {this.name = name;}
+
+	public static SpecialFolderFacet deserialize(@NotNull JsonParser parser) throws IOException {
+		@Nullable String name = null;
+
+		while (parser.nextToken() != JsonToken.END_OBJECT) {
+			String currentName = parser.getCurrentName();
+			parser.nextToken();
+
+			switch (currentName) {
+				case "name":
+					name = parser.getText();
+					break;
+				default:
+					throw new IllegalStateException(
+							"Unknown attribute detected in SpecialFolderFacet : " + currentName);
+			}
+		}
+
+		return new SpecialFolderFacet(name);
+	}
 }

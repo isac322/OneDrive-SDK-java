@@ -1,11 +1,34 @@
 package com.bhyoo.onedrive.container.action;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
-import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-import static lombok.AccessLevel.PRIVATE;
+import java.io.IOException;
 
 public class RenameAction {
-	@Getter @Setter(PRIVATE) protected @NotNull String oldName;
+	@Getter protected final @NotNull String oldName;
+
+	protected RenameAction(@NotNull String oldName) {this.oldName = oldName;}
+
+	@SuppressWarnings("ConstantConditions")
+	public static @NotNull RenameAction deserialize(@NotNull JsonParser parser) throws IOException {
+		@NotNull String oldName = null;
+
+		while (parser.nextToken() != JsonToken.END_OBJECT) {
+			String currentName = parser.getCurrentName();
+			parser.nextToken();
+
+			switch (currentName) {
+				case "oldName":
+					oldName = parser.getText();
+					break;
+				default:
+					throw new IllegalStateException("Unknown attribute detected in RenameAction : " + currentName);
+			}
+		}
+
+		return new RenameAction(oldName);
+	}
 }

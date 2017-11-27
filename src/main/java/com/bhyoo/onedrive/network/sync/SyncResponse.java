@@ -9,8 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
-// TODO: Enhance javadoc
-
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
@@ -45,10 +43,6 @@ public class SyncResponse {
 		}
 
 		return contentString;
-	}
-
-	public int getLength() {
-		return contentBuf.readableBytes();
 	}
 
 	public byte[] getContent() {

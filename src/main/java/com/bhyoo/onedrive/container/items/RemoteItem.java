@@ -7,13 +7,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.jetbrains.annotations.NotNull;
 
 public interface RemoteItem extends DriveItem {
-	@JsonIgnore @NotNull String getRemoteDriveID();
+	@NotNull String getRemoteDriveID();
 
-	@JsonIgnore @NotNull String getRemoteID();
+	@NotNull String getRemoteID();
 
-	@JsonIgnore @NotNull IdPointer getRemotePointer();
+	@NotNull IdPointer getRemotePointer();
 
-	@JsonIgnore @NotNull DriveItem fetchRemoteItem() throws ErrorResponseException;
+	@NotNull DriveItem fetchRemoteItem() throws ErrorResponseException;
 
 	@NotNull RemoteItemFacet getRemoteItem();
 }

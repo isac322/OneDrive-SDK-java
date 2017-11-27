@@ -18,8 +18,6 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 
-// TODO: Enhance javadoc
-
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
@@ -127,7 +125,6 @@ public class AsyncDownloadClient extends AbstractClient {
 					promise.setFailure(e);
 					throw e;
 				}
-
 			}
 		}
 	}
@@ -155,7 +152,7 @@ public class AsyncDownloadClient extends AbstractClient {
 			// if response is valid
 			if (future.isSuccess() && response.status().code() == HttpURLConnection.HTTP_OK) {
 				// FIXME: speed up
-				JsonNode jsonNode = requestTool.getClient().mapper().readTree(result);
+				JsonNode jsonNode = RequestTool.getMapper().readTree(result);
 				URI uri = new URI(jsonNode.get("@content.downloadUrl").asText());
 				downloadPath = downloadPath.resolve(jsonNode.get("name").asText());
 
@@ -189,7 +186,6 @@ public class AsyncDownloadClient extends AbstractClient {
 					promise.setFailure(e);
 					throw e;
 				}
-
 			}
 		}
 	}

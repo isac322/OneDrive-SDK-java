@@ -1,9 +1,11 @@
 package com.bhyoo.onedrive.client;
 
 import com.bhyoo.onedrive.client.auth.AuthenticationInfo;
-import com.bhyoo.onedrive.container.Drive;
-import com.bhyoo.onedrive.container.ResponsePage;
 import com.bhyoo.onedrive.container.items.*;
+import com.bhyoo.onedrive.container.pager.DriveItemPager;
+import com.bhyoo.onedrive.container.pager.DriveItemPager.DriveItemPage;
+import com.bhyoo.onedrive.container.pager.DrivePager;
+import com.bhyoo.onedrive.container.pager.DrivePager.DrivePage;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InternalException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
@@ -13,10 +15,16 @@ import com.bhyoo.onedrive.network.async.*;
 import com.bhyoo.onedrive.network.sync.SyncRequest;
 import com.bhyoo.onedrive.network.sync.SyncResponse;
 import com.bhyoo.onedrive.utils.ByteBufStream;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -47,7 +55,6 @@ import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static java.net.HttpURLConnection.HTTP_OK;
 
-// TODO: Enhance javadoc
 // TODO: Support OneDrive for Business
 
 /**
@@ -61,8 +68,13 @@ public class RequestTool {
 	 * OneDrive API base URL.
 	 */
 	public static final String BASE_URL = SCHEME + "://" + HOST;
+	public static final JsonFactory jsonFactory;
 	private static final EventLoopGroup group;
 	private static final Class<? extends SocketChannel> socketChannelClass;
+	@Getter private static final ObjectMapper mapper;
+	private static final ObjectReader errorReader;
+	private static final ObjectReader authReader;
+	private static final ObjectReader uploadSessionReader;
 
 	static {
 		EventLoopGroup tmpGroup;
@@ -78,38 +90,125 @@ public class RequestTool {
 
 		group = tmpGroup;
 		socketChannelClass = tmpClass;
+
+
+		mapper = new ObjectMapper();
+		mapper.registerModule(new AfterburnerModule());
+		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		// in serialization, ignore null values.
+		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+		errorReader = mapper.readerFor(ErrorResponse.class).with(UNWRAP_ROOT_VALUE);
+		authReader = mapper.readerFor(AuthenticationInfo.class);
+		uploadSessionReader = mapper.readerFor(UploadSession.class);
+
+		jsonFactory = mapper.getFactory();
 	}
 
-	@Getter private final ObjectMapper mapper;
-	private final ObjectReader errorReader;
-	private final ObjectReader driveItemReader;
-	private final ObjectReader driveItemPageReader;
-	private final ObjectReader fileItemReader;
-	private final ObjectReader folderItemReader;
-	private final ObjectReader driveReader;
-	private final ObjectReader drivePageReader;
-	private final ObjectReader authReader;
 	@Getter private final Client client;
+	private final InjectableValues.Std clientInjectValue;
 
-	public RequestTool(@NotNull Client client, @NotNull ObjectMapper mapper) {
+
+	public RequestTool(final @NotNull Client client) {
 		this.client = client;
-		this.mapper = mapper;
-		this.errorReader = mapper.readerFor(ErrorResponse.class).with(UNWRAP_ROOT_VALUE);
-		this.driveItemReader = mapper.readerFor(AbstractDriveItem.class);
-		this.driveItemPageReader = mapper.readerFor(
-				mapper.getTypeFactory().constructParametricType(
-						ResponsePage.class, AbstractDriveItem.class));
-		this.fileItemReader = mapper.readerFor(DefaultFileItem.class);
-		this.folderItemReader = mapper.readerFor(DefaultFolderItem.class);
-		this.driveReader = mapper.readerFor(Drive.class);
-		this.drivePageReader =
-				mapper.readerFor(mapper.getTypeFactory().constructParametricType(ResponsePage.class, Drive.class));
-		this.authReader = mapper.readerFor(AuthenticationInfo.class);
+
+		clientInjectValue = new InjectableValues.Std().addValue("OneDriveClient", client);
 	}
+
 
 	public static EventLoopGroup group() {return group;}
 
 	public static Class<? extends SocketChannel> socketChannelClass() {return socketChannelClass;}
+
+	private static <T> T parseAndHandle(@NotNull SyncResponse response, int expectedCode, ObjectReader reader)
+			throws ErrorResponseException {
+		byte[] content = response.getContent();
+
+		try {
+			if (response.getCode() == expectedCode) {
+				return reader.readValue(content);
+			}
+			else {
+				ErrorResponse err = errorReader.readValue(content);
+				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
+			}
+		}
+		catch (JsonProcessingException e) {
+			throw new InvalidJsonException(e, response.getCode(), content);
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	private static @NotNull AbstractDriveItem parseDriveItem(@NotNull SyncResponse response, int expectedCode,
+															 @NotNull Client client) throws ErrorResponseException {
+		try {
+			if (response.getCode() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(response.getContent());
+				parser.nextToken();
+				return AbstractDriveItem.deserialize(client, parser, true);
+			}
+			else {
+				ErrorResponse err = errorReader.readValue(response.getContent());
+				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	private static <T> T parseAndHandle(@NotNull HttpResponse response, @NotNull ByteBufStream byteBufStream,
+										int expectedCode, ObjectReader reader) throws ErrorResponseException {
+		byteBufStream.getRawBuffer().retain();
+
+		try {
+			if (response.status().code() == expectedCode) {
+				return reader.readValue(byteBufStream);
+			}
+			else {
+				ErrorResponse error = errorReader.readValue(byteBufStream);
+				throw new ErrorResponseException(expectedCode, response.status().code(),
+						error.getCode(), error.getMessage());
+			}
+		}
+		catch (JsonProcessingException e) {
+			throw new InvalidJsonException(e, response.status().code(), byteBufStream.getRawBuffer());
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+		finally {
+			byteBufStream.getRawBuffer().release();
+		}
+	}
+
+	private static @NotNull AbstractDriveItem parseDriveItem(@NotNull HttpResponse response,
+															 @NotNull ByteBufStream byteBufStream,
+															 int expectedCode,
+															 @NotNull Client client) throws ErrorResponseException {
+		try {
+			if (response.status().code() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(byteBufStream);
+				parser.nextToken();
+				return AbstractDriveItem.deserialize(client, parser, true);
+			}
+			else {
+				ErrorResponse error = errorReader.readValue(byteBufStream);
+				throw new ErrorResponseException(expectedCode, response.status().code(),
+						error.getCode(), error.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
 
 	/**
 	 * <h1>Refrain to use this method. you can find API that wants to process in {@link Client}.</h1>
@@ -146,6 +245,15 @@ public class RequestTool {
 	}
 
 
+
+
+
+	/* *******************************************
+	 *
+	 *           Non Blocking Member
+	 *
+	 *********************************************/
+
 	/**
 	 * <h1>Refrain to use this method. you can find API that wants to process in {@link Client}.</h1>
 	 * Make {@link SyncRequest} object with given {@code url} for programmer's convenience.<br>
@@ -170,17 +278,6 @@ public class RequestTool {
 				// TODO: GZIP .setHeader(ACCEPT_ENCODING, GZIP)
 				.setHeader(ACCEPT, APPLICATION_JSON);
 	}
-
-
-
-
-
-	/* *******************************************
-	 *
-	 *           Non Blocking Member
-	 *
-	 *********************************************/
-
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api) {
 		try {
@@ -231,7 +328,7 @@ public class RequestTool {
 		Bootstrap bootstrap = new Bootstrap()
 				.group(group)
 				.channel(socketChannelClass())
-				.handler(new AsyncDefaultInitializer(new DriveItemHandler(promise, mapper)));
+				.handler(new AsyncDefaultInitializer(new DriveItemHandler(promise, this)));
 
 
 		bootstrap.connect(REAL_HOST, 443).addListener(new ChannelFutureListener() {
@@ -244,6 +341,16 @@ public class RequestTool {
 
 		return promise;
 	}
+
+
+
+
+
+	/* *******************************************
+	 *
+	 *             Blocking member
+	 *
+	 *********************************************/
 
 	public DriveItem getItem(@NotNull String asciiApi) throws ErrorResponseException {
 		HttpsURLConnection httpsConnection;
@@ -266,7 +373,9 @@ public class RequestTool {
 
 			if (code == HTTP_OK) {
 				body = httpsConnection.getInputStream();
-				return driveItemReader.readValue(body);
+				JsonParser parser = jsonFactory.createParser(body);
+				parser.nextToken();
+				return AbstractDriveItem.deserialize(client, parser, true);
 			}
 			else {
 				body = httpsConnection.getErrorStream();
@@ -283,64 +392,6 @@ public class RequestTool {
 		}
 	}
 
-
-
-
-
-	/* *******************************************
-	 *
-	 *             Blocking member
-	 *
-	 *********************************************/
-
-
-	/**
-	 * <a href='https://dev.onedrive.com/items/get.htm'>https://dev.onedrive.com/items/get.htm</a>
-	 * <br><br>
-	 * Instantly send GET request to OneDrive with {@code api}, and return parsed JSON response object.
-	 * <br><br>
-	 * It is assured that the return value is always not {@code null}, if the response is successfully received.
-	 * (when 200 OK or even non-OK response like 404 NOT FOUND or something is received).
-	 * <br>
-	 * But if other error happens while requesting (for example network error, bad api, wrong token... etc.),
-	 * it will throw {@link RuntimeException}.
-	 * <br><br>
-	 * {@code api} must fallow API form.
-	 * <br>
-	 * Example:<br>
-	 * {@code
-	 * RequestTool.doGetJson("/drives", "AAD....2XA")
-	 * }
-	 *
-	 * @param api API to get. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
-	 *            <tt>/drive/root:/{item-path}</tt>)
-	 *
-	 * @return that parsed from HTTP GET's json response.
-	 *
-	 * @throws RuntimeException If {@code api} form is incorrect or connection fails.
-	 * @see ObjectNode
-	 */
-	public ObjectNode doGetJson(@NotNull String api) throws ErrorResponseException {
-		SyncResponse response = newRequest(api).doGet();
-		byte[] content = response.getContent();
-
-		try {
-			if (response.getCode() == HTTP_OK) {
-				return (ObjectNode) mapper.readTree(content);
-			}
-			else {
-				ErrorResponse error = errorReader.readValue(content);
-				throw new ErrorResponseException(HTTP_OK, response.getCode(), error.getCode(), error.getMessage());
-			}
-		}
-		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.getCode(), content);
-		}
-		catch (IOException e) {
-			// FIXME: custom exception
-			throw new RuntimeException("DEV: Unrecognizable json response.", e);
-		}
-	}
 
 	public SyncResponse postMetadata(@NotNull String api, byte[] content) {
 		return newRequest(api)
@@ -384,6 +435,14 @@ public class RequestTool {
 		return asyncClient.execute().addListener(handler);
 	}
 
+
+
+
+	/* *******************************************
+	 *
+	 *                      Tools
+	 *
+	 *********************************************/
 
 	public UploadFuture upload(@NotNull String api, @NotNull Path filePath) throws IOException {
 		URI uri;
@@ -435,31 +494,17 @@ public class RequestTool {
 		responsePromise.addListener(new ResponseFutureListener() {
 			@Override public void operationComplete(ResponseFuture future) throws Exception {
 				if (future.isSuccess()) {
-					HttpResponse response = future.response();
-					if (response.status().code() == HTTP_OK) {
-						UploadSession session = parseAndHandle(response, future.get(), HTTP_OK, UploadSession.class);
-						uploadPromise.setUploadURI(new URI(session.getUploadUrl()));
+					UploadSession session = parseUploadSessionAndHandle(future.response(), future.get(), HTTP_OK);
+					uploadPromise.setUploadURI(new URI(session.getUploadUrl()));
 
-						AsyncUploadClient uploadClient = new AsyncUploadClient(group, uploadPromise);
-						uploadClient.execute();
-					}
-					else errorHandling(response, future.get(), HTTP_OK);
+					AsyncUploadClient uploadClient = new AsyncUploadClient(group, uploadPromise);
+					uploadClient.execute();
 				}
 			}
 		});
 
 		return uploadPromise;
 	}
-
-
-
-
-	/* *******************************************
-	 *
-	 *                      Tools
-	 *
-	 *********************************************/
-
 
 	public void errorHandling(@NotNull SyncResponse response, int expectedCode) throws ErrorResponseException {
 		if (response.getCode() != expectedCode) {
@@ -498,56 +543,33 @@ public class RequestTool {
 		}
 	}
 
-	public DriveItem parseBaseItemAndHandle(@NotNull SyncResponse response, int expectedCode)
+	public @NotNull DriveItem parseDriveItemAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, driveItemReader);
+		return parseDriveItem(response, expectedCode, client);
 	}
 
-	public ResponsePage<DriveItem> parseBaseItemPageAndHandle(@NotNull SyncResponse response, int expectedCode)
+	public @NotNull FileItem parseFileItemAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, driveItemPageReader);
+		return (FileItem) parseDriveItem(response, expectedCode, client);
 	}
 
-	public FileItem parseFileItemAndHandle(@NotNull SyncResponse response, int expectedCode)
+	public @NotNull FolderItem parseFolderItemAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, fileItemReader);
+		return (FolderItem) parseDriveItem(response, expectedCode, client);
 	}
 
-	public FolderItem parseFolderItemAndHandle(@NotNull SyncResponse response, int expectedCode)
+	public @NotNull DriveItemPage parseDriveItemPageAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, folderItemReader);
-	}
-
-	public Drive parseDriveAndHandle(@NotNull SyncResponse response, int expectedCode)
-			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, driveReader);
-	}
-
-	public ResponsePage<Drive> parseDrivePageAndHandle(@NotNull SyncResponse response, int expectedCode)
-			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, drivePageReader);
-	}
-
-	public AuthenticationInfo parseAuthAndHandle(@NotNull SyncResponse response, int expectedCode)
-			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, authReader);
-	}
-
-	private <T> T parseAndHandle(@NotNull SyncResponse response, int expectedCode, ObjectReader reader)
-			throws ErrorResponseException {
-		byte[] content = response.getContent();
-
 		try {
 			if (response.getCode() == expectedCode) {
-				return reader.readValue(content);
+				JsonParser parser = jsonFactory.createParser(response.getContent());
+				parser.nextToken();
+				return DriveItemPage.deserialize(client, parser, true);
 			}
 			else {
-				ErrorResponse err = errorReader.readValue(content);
+				ErrorResponse err = errorReader.readValue(response.getContent());
 				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
 			}
-		}
-		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.getCode(), content);
 		}
 		catch (IOException e) {
 			// FIXME: custom exception
@@ -555,11 +577,106 @@ public class RequestTool {
 		}
 	}
 
-	public <T> T parseAndHandle(@NotNull HttpResponse response, @NotNull ByteBufStream byteBufStream,
-								int expectedCode, Class<T> classType) throws ErrorResponseException {
+	public @NotNull DriveItemPager parseDriveItemPagerAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		try {
+			if (response.getCode() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(response.getContent());
+				parser.nextToken();
+				return DriveItemPager.deserialize(client, parser, true);
+			}
+			else {
+				ErrorResponse err = errorReader.readValue(response.getContent());
+				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	/*
+	Parse Drive
+	 */
+
+	public @NotNull Drive parseDriveAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		try {
+			if (response.getCode() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(response.getContent());
+				parser.nextToken();
+				return Drive.deserialize(client, parser);
+			}
+			else {
+				ErrorResponse err = errorReader.readValue(response.getContent());
+				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	public @NotNull DrivePage parseDrivePageAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		try {
+			if (response.getCode() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(response.getContent());
+				parser.nextToken();
+				return DrivePage.deserialize(client, parser);
+			}
+			else {
+				ErrorResponse err = errorReader.readValue(response.getContent());
+				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	public @NotNull DrivePager parseDrivePagerAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		try {
+			if (response.getCode() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(response.getContent());
+				parser.nextToken();
+				return DrivePager.deserialize(client, parser);
+			}
+			else {
+				ErrorResponse err = errorReader.readValue(response.getContent());
+				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	public @NotNull AuthenticationInfo parseAuthAndHandle(@NotNull SyncResponse response, int expectedCode)
+			throws ErrorResponseException {
+		return parseAndHandle(response, expectedCode, authReader.with(clientInjectValue));
+	}
+
+
+	public @NotNull DriveItem parseDriveItemAndHandle(@NotNull HttpResponse response,
+													  @NotNull ByteBufStream byteBufStream,
+													  int expectedCode) throws ErrorResponseException {
+		return parseDriveItem(response, byteBufStream, expectedCode, client);
+	}
+
+	public @NotNull DriveItemPage parseDriveItemPageAndHandle(@NotNull HttpResponse response,
+															  @NotNull ByteBufStream byteBufStream, int expectedCode)
+			throws ErrorResponseException {
 		try {
 			if (response.status().code() == expectedCode) {
-				return mapper.readValue(byteBufStream, classType);
+				JsonParser parser = jsonFactory.createParser(byteBufStream);
+				parser.nextToken();
+				return DriveItemPage.deserialize(client, parser, true);
 			}
 			else {
 				ErrorResponse error = errorReader.readValue(byteBufStream);
@@ -567,12 +684,99 @@ public class RequestTool {
 						error.getCode(), error.getMessage());
 			}
 		}
-		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.status().code(), byteBufStream.getRawBuffer());
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	public @NotNull DriveItemPager parseDriveItemPagerAndHandle(@NotNull HttpResponse response,
+																@NotNull ByteBufStream byteBufStream, int expectedCode)
+			throws ErrorResponseException {
+		try {
+			if (response.status().code() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(byteBufStream);
+				parser.nextToken();
+				return DriveItemPager.deserialize(client, parser, true);
+			}
+			else {
+				ErrorResponse error = errorReader.readValue(byteBufStream);
+				throw new ErrorResponseException(expectedCode, response.status().code(),
+						error.getCode(), error.getMessage());
+			}
 		}
 		catch (IOException e) {
 			// FIXME: custom exception
 			throw new RuntimeException("DEV: Unrecognizable json response.", e);
 		}
+	}
+
+	public @NotNull DriveItem[] parseDriveItemRecursiveAndHandle(@NotNull HttpResponse response,
+																 @NotNull ByteBufStream byteBufStream,
+																 int expectedCode) throws ErrorResponseException {
+		try {
+			if (response.status().code() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(byteBufStream);
+				parser.nextToken();
+				return DriveItemPager.deserializeRecursive(client, parser, true);
+			}
+			else {
+				ErrorResponse error = errorReader.readValue(byteBufStream);
+				throw new ErrorResponseException(expectedCode, response.status().code(),
+						error.getCode(), error.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	public @NotNull DrivePage parseDrivePageAndHandle(@NotNull HttpResponse response,
+													  @NotNull ByteBufStream byteBufStream, int expectedCode)
+			throws ErrorResponseException {
+		try {
+			if (response.status().code() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(byteBufStream);
+				parser.nextToken();
+				return DrivePage.deserialize(client, parser);
+			}
+			else {
+				ErrorResponse error = errorReader.readValue(byteBufStream);
+				throw new ErrorResponseException(expectedCode, response.status().code(),
+						error.getCode(), error.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	public @NotNull DrivePager parseDrivePagerAndHandle(@NotNull HttpResponse response,
+														@NotNull ByteBufStream byteBufStream, int expectedCode)
+			throws ErrorResponseException {
+		try {
+			if (response.status().code() == expectedCode) {
+				JsonParser parser = jsonFactory.createParser(byteBufStream);
+				parser.nextToken();
+				return DrivePager.deserialize(client, parser);
+			}
+			else {
+				ErrorResponse error = errorReader.readValue(byteBufStream);
+				throw new ErrorResponseException(expectedCode, response.status().code(),
+						error.getCode(), error.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
+	}
+
+	public @NotNull UploadSession parseUploadSessionAndHandle(@NotNull HttpResponse response,
+															  @NotNull ByteBufStream byteBufStream,
+															  int expectedCode) throws ErrorResponseException {
+		return parseAndHandle(response, byteBufStream, expectedCode, uploadSessionReader);
 	}
 }

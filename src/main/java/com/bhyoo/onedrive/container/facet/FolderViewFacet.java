@@ -1,13 +1,11 @@
 package com.bhyoo.onedrive.container.facet;
 
-
-// TODO: Enhance javadoc
-
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
-import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-import static lombok.AccessLevel.PRIVATE;
+import java.io.IOException;
 
 /**
  * <a href="https://dev.onedrive.com/facets/folder_facet.htm">https://dev.onedrive.com/facets/folder_facet.htm</a>
@@ -15,7 +13,40 @@ import static lombok.AccessLevel.PRIVATE;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class FolderViewFacet {
-	@Getter @Setter(PRIVATE) protected @NotNull SortType sortBy;
-	@Getter @Setter(PRIVATE) protected @NotNull SortOrderType sortOrder;
-	@Getter @Setter(PRIVATE) protected @NotNull ViewType viewType;
+	@Getter protected final @NotNull SortType sortBy;
+	@Getter protected final @NotNull SortOrderType sortOrder;
+	@Getter protected final @NotNull ViewType viewType;
+
+	protected FolderViewFacet(@NotNull SortType sortBy, @NotNull SortOrderType sortOrder, @NotNull ViewType viewType) {
+		this.sortBy = sortBy;
+		this.sortOrder = sortOrder;
+		this.viewType = viewType;
+	}
+
+	public static FolderViewFacet deserialize(@NotNull JsonParser parser) throws IOException {
+		@NotNull SortType sortBy = null;
+		@NotNull SortOrderType sortOrder = null;
+		@NotNull ViewType viewType = null;
+
+		while (parser.nextToken() != JsonToken.END_OBJECT) {
+			String currentName = parser.getCurrentName();
+			parser.nextToken();
+
+			switch (currentName) {
+				case "sortBy":
+					sortBy = SortType.deserialize(parser.getText());
+					break;
+				case "sortOrder":
+					sortOrder = SortOrderType.deserialize(parser.getText());
+					break;
+				case "viewType":
+					viewType = ViewType.deserialize(parser.getText());
+					break;
+				default:
+					throw new IllegalStateException("Unknown attribute detected in FolderViewFacet : " + currentName);
+			}
+		}
+
+		return new FolderViewFacet(sortBy, sortOrder, viewType);
+	}
 }

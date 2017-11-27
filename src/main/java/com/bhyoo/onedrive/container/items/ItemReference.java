@@ -3,22 +3,18 @@ package com.bhyoo.onedrive.container.items;
 import com.bhyoo.onedrive.container.DriveType;
 import com.bhyoo.onedrive.container.facet.SharePointIdsFacet;
 import com.bhyoo.onedrive.container.items.pointer.PathPointer;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.util.StdConverter;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static lombok.AccessLevel.PRIVATE;
+import java.io.IOException;
+import java.util.Objects;
 
-// TODO: Enhance javadoc }
-// TODO: is there any way to merge with {@link BasePointer}? cause it's conflict
-// in behavior
+// TODO: is there any way to merge with {@link BasePointer}? cause it's conflict in behavior
 
 /**
  * <a href="https://dev.onedrive.com/resources/itemReference.htm">https://dev.onedrive.com/resources/itemReference
@@ -28,20 +24,31 @@ import static lombok.AccessLevel.PRIVATE;
  */
 @ToString
 @EqualsAndHashCode(of = {"id", "driveId"})
-@JsonDeserialize(converter = ItemReference.PointerInjector.class)
 public class ItemReference {
-	@Getter @Setter(PRIVATE) protected @NotNull String driveId;
-	@Getter @Setter(PRIVATE) protected @Nullable DriveType driveType;
-	@Getter @Setter(PRIVATE) protected @Nullable String id;
-	@Getter @Setter(PRIVATE) protected @Nullable String name;
-	@Getter @JsonIgnore protected @Nullable PathPointer pathPointer;
-	@JsonProperty("path")
-	@Getter @Setter(PRIVATE) protected @Nullable String rawPath;
-	@Getter @Setter(PRIVATE) protected @Nullable String shareId;
-	@Getter @Setter(PRIVATE) protected @Nullable SharePointIdsFacet sharepointIds;
+	@Getter protected @NotNull String driveId;
+	@Getter protected @Nullable DriveType driveType;
+	@Getter protected @Nullable String id;
+	@Getter protected @Nullable String name;
+	@Getter protected @Nullable PathPointer pathPointer;
+	@Getter protected @Nullable String rawPath;
+	@Getter protected @Nullable String shareId;
+	@Getter protected @Nullable SharePointIdsFacet sharepointIds;
 
-	// used by jackson deserialize
-	@SuppressWarnings("unused") ItemReference() {}
+	protected ItemReference(@NotNull String driveId, @Nullable DriveType driveType, @Nullable String id,
+							@Nullable String name, @Nullable String rawPath, @Nullable String shareId,
+							@Nullable SharePointIdsFacet sharepointIds) {
+		this.driveId = driveId;
+		this.driveType = driveType;
+		this.id = id;
+		this.name = name;
+		this.rawPath = rawPath;
+		this.shareId = shareId;
+		this.sharepointIds = sharepointIds;
+
+		if (rawPath != null) {
+			this.pathPointer = new PathPointer(rawPath, driveId);
+		}
+	}
 
 	ItemReference(@NotNull String driveId, @Nullable String id, @Nullable PathPointer pathPointer) {
 		this.driveId = driveId;
@@ -54,13 +61,46 @@ public class ItemReference {
 			this.rawPath = null;
 	}
 
-	static class PointerInjector extends StdConverter<ItemReference, ItemReference> {
-		@Override public ItemReference convert(ItemReference value) {
-			if (value.rawPath != null)
-				value.pathPointer = new PathPointer(value.rawPath, value.driveId);
-			else
-				value.pathPointer = null;
-			return value;
+	public static ItemReference deserialize(@NotNull JsonParser parser) throws IOException {
+		@NotNull String driveId = null;
+		@Nullable DriveType driveType = null;
+		@Nullable String id = null;
+		@Nullable String name = null;
+		@Nullable String rawPath = null;
+		@Nullable String shareId = null;
+		@Nullable SharePointIdsFacet sharepointIds = null;
+
+		while (parser.nextToken() != JsonToken.END_OBJECT) {
+			String currentName = parser.getCurrentName();
+			parser.nextToken();
+
+			switch (currentName) {
+				case "driveId":
+					driveId = parser.getText();
+					break;
+				case "driveType":
+					driveType = DriveType.deserialize(parser.getText());
+					break;
+				case "id":
+					id = parser.getText();
+					break;
+				case "name":
+					name = parser.getText();
+					break;
+				case "path":
+					rawPath = parser.getText();
+					break;
+				case "shareId":
+					shareId = parser.getText();
+					break;
+				case "sharepointIds":
+					sharepointIds = SharePointIdsFacet.deserialize(parser);
+					break;
+				default:
+					throw new IllegalStateException("Unknown attribute detected in ItemReference : " + currentName);
+			}
 		}
+
+		return new ItemReference(driveId, driveType, id, name, rawPath, shareId, sharepointIds);
 	}
 }

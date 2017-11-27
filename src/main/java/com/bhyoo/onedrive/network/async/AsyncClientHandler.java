@@ -39,7 +39,6 @@ public class AsyncClientHandler extends SimpleChannelInboundHandler<HttpObject> 
 		if (msg instanceof HttpContent) {
 			HttpContent content = (HttpContent) msg;
 
-			content.content().retain();
 			resultStream.writeByteBuf(content.content());
 
 			// if this message is last of response

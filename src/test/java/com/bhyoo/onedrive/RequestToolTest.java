@@ -11,8 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-// TODO: Enhance javadoc
-
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
@@ -25,10 +23,10 @@ class RequestToolTest {
 	static void getClient() {
 		assertNull(client);
 
-		final String clientId = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
+		final String clientId = "f21d2eff-49e2-4a10-a515-4a077f23c694";
 		final String[] scope = {"files.readwrite.all", "offline_access"};
 		final String redirectURL = "http://localhost:8080/";
-		final String clientSecret = "XXXXXXXXXXXXXXXXXXXXXXX";
+		final String clientSecret = "1t5UhiBewLrVUoKqWZWYiiS";
 
 		client = new Client(clientId, scope, redirectURL, clientSecret);
 

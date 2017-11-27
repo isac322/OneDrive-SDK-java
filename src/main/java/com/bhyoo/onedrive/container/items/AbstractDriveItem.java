@@ -1,41 +1,28 @@
 package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.client.Client;
-import com.bhyoo.onedrive.container.facet.FileSystemInfoFacet;
-import com.bhyoo.onedrive.container.facet.SearchResultFacet;
-import com.bhyoo.onedrive.container.facet.SharePointIdsFacet;
-import com.bhyoo.onedrive.container.facet.SharedFacet;
+import com.bhyoo.onedrive.client.RequestTool;
+import com.bhyoo.onedrive.container.IdentitySet;
+import com.bhyoo.onedrive.container.facet.*;
 import com.bhyoo.onedrive.container.items.pointer.BasePointer;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;
 import com.bhyoo.onedrive.container.items.pointer.PathPointer;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
-import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.ResponseFuture;
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.util.StdConverter;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
-
-import static lombok.AccessLevel.PROTECTED;
-
-// TODO: Enhance javadoc
-// TODO: Rework Item concept with multiple inheritance via interface for RemoteFileItem and RemoteFolderItem
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 
 /**
  * https://dev.onedrive.com/resources/item.htm
@@ -43,12 +30,11 @@ import static lombok.AccessLevel.PROTECTED;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 @EqualsAndHashCode(of = "parentReference", callSuper = true)
-@JsonDeserialize(using = AbstractDriveItem.ItemDeserializer.class)
 abstract public class AbstractDriveItem extends AbstractBaseItem implements DriveItem {
-	@NotNull private static final IllegalArgumentException ILLEGAL_REFERENCE =
+	private static final @NotNull IllegalArgumentException ILLEGAL_REFERENCE =
 			new IllegalArgumentException("Can not address destination folder. `folder`'s id and path are both null");
 
-	@JacksonInject("OneDriveClient") @JsonIgnore @NotNull protected Client client;
+	protected @NotNull Client client;
 
 
 	// TODO: missing attributes : publication, sharepointIds, activities, content, permissions, thumbnails,
@@ -57,24 +43,311 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	/**
 	 * The {@code cTag} value is modified when content or metadata of any descendant of the folder is changed.
 	 */
-	@Getter(onMethod = @__(@Override)) @Setter(PROTECTED) @JsonProperty("cTag") @NotNull protected String cTag;
+	@Getter(onMethod = @__(@Override)) protected @Nullable String cTag;
 
 	// TODO: custom class for this variable
-	@Setter(PROTECTED) @JsonProperty protected ObjectNode deleted;
+	protected @Nullable ObjectNode deleted;
 	/**
 	 * The {@code eTag} value is only modified when the folder's properties are changed, except for properties that are
 	 * derived from descendants (like {@code childCount} or {@code lastModifiedDateTime}).
 	 */
-	@Getter(onMethod = @__(@Override)) @Setter(PROTECTED) protected FileSystemInfoFacet fileSystemInfo;
-	@Getter(onMethod = @__(@Override)) @Setter(PROTECTED) @NotNull protected ItemReference parentReference;
-	@Getter(onMethod = @__(@Override)) @Setter(PROTECTED) @Nullable protected SearchResultFacet searchResult;
-	@Getter(onMethod = @__(@Override)) @Setter(PROTECTED) @Nullable protected SharedFacet shared;
-	@Getter(onMethod = @__(@Override)) @Setter(PROTECTED) @Nullable protected SharePointIdsFacet sharePointIds;
-	@Getter(onMethod = @__(@Override)) @Setter(PROTECTED) protected long size;
-	@Getter(onMethod = @__(@Override)) @Setter(PROTECTED) protected URI webDavUrl;
+	@Getter(onMethod = @__(@Override)) protected FileSystemInfoFacet fileSystemInfo;
+	@Getter(onMethod = @__(@Override)) protected @NotNull ItemReference parentReference;
+	@Getter(onMethod = @__(@Override)) protected @Nullable SearchResultFacet searchResult;
+	@Getter(onMethod = @__(@Override)) protected @Nullable SharedFacet shared;
+	@Getter(onMethod = @__(@Override)) protected @Nullable SharePointIdsFacet sharePointIds;
+	@Getter(onMethod = @__(@Override)) protected long size;
+	@Getter(onMethod = @__(@Override)) protected URI webDavUrl;
 
-	@Getter(onMethod = @__(@Override)) @JsonIgnore @Nullable protected PathPointer pathPointer;
-	@Getter(onMethod = @__(@Override)) @JsonIgnore @NotNull protected IdPointer idPointer;
+	@Getter(onMethod = @__(@Override)) protected @Nullable PathPointer pathPointer;
+	@Getter(onMethod = @__(@Override)) protected @NotNull IdPointer idPointer;
+
+
+	AbstractDriveItem(@NotNull String id, @Nullable IdentitySet creator, @NotNull String createdDateTime,
+					  @Nullable String description, @Nullable String eTag, @Nullable IdentitySet lastModifier,
+					  @NotNull String lastModifiedDateTime, @NotNull String name, @NotNull URI webUrl,
+					  @NotNull Client client, @Nullable String cTag, @Nullable ObjectNode deleted,
+					  FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
+					  @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
+					  @Nullable SharePointIdsFacet sharePointIds, @NotNull Long size, URI webDavUrl) {
+		super(id, creator, createdDateTime, description, eTag, lastModifier, lastModifiedDateTime, name, webUrl);
+
+		this.client = client;
+		this.cTag = cTag;
+		this.deleted = deleted;
+		this.fileSystemInfo = fileSystemInfo;
+		this.parentReference = parentReference;
+		this.searchResult = searchResult;
+		this.shared = shared;
+		this.sharePointIds = sharePointIds;
+		this.size = size;
+		this.webDavUrl = webDavUrl;
+	}
+
+	@SneakyThrows(URISyntaxException.class)
+	public static @NotNull AbstractDriveItem deserialize(@NotNull Client client, @NotNull JsonParser parser,
+														 boolean autoClose) throws IOException {
+		// BaseItem
+		@NotNull String id = null;
+		@NotNull IdentitySet creator = null;
+		@NotNull String createdDateTime = null;
+		@Nullable String description = null;
+		@NotNull String eTag = null;
+		@NotNull IdentitySet lastModifier = null;
+		@NotNull String lastModifiedDateTime = null;
+		@NotNull String name = null;
+		@NotNull URI webUrl = null;
+
+		// DriveItem
+		@NotNull String cTag = null;
+		@NotNull ObjectNode deleted = null;
+		@NotNull FileSystemInfoFacet fileSystemInfo = null;
+		@NotNull ItemReference parentReference = null;
+		@NotNull SearchResultFacet searchResult = null;
+		@NotNull SharedFacet shared = null;
+		@NotNull SharePointIdsFacet sharePointIds = null;
+		@NotNull Long size = null;
+		@NotNull URI webDavUrl = null;
+
+		// FileItem
+		@Nullable AudioFacet audio = null;
+		@Nullable FileFacet file = null;
+		@Nullable ImageFacet image = null;
+		@Nullable LocationFacet location = null;
+		@Nullable PhotoFacet photo = null;
+		@Nullable VideoFacet video = null;
+
+		// FolderItem
+		@Nullable FolderFacet folder = null;
+		@Nullable SpecialFolderFacet specialFolder = null;
+		@Nullable ObjectNode root = null;
+		@Nullable URI nextLink = null;
+		@Nullable AbstractDriveItem[] children = null;
+
+		// PackageItem
+		@Nullable PackageFacet packages = null;
+
+		// RemoteItem
+		@Nullable RemoteItemFacet remoteItem = null;
+
+
+		while (parser.nextToken() != JsonToken.END_OBJECT) {
+			String currentName = parser.getCurrentName();
+			parser.nextToken();
+
+			switch (currentName) {
+				case "id":
+					id = parser.getText();
+					break;
+				case "createdBy":
+					creator = IdentitySet.deserialize(parser);
+					break;
+				case "createdDateTime":
+					createdDateTime = parser.getText();
+					break;
+				case "description":
+					description = parser.getText();
+					break;
+				case "eTag":
+					eTag = parser.getText();
+					break;
+				case "lastModifiedBy":
+					lastModifier = IdentitySet.deserialize(parser);
+					break;
+				case "lastModifiedDateTime":
+					lastModifiedDateTime = parser.getText();
+					break;
+				case "name":
+					name = parser.getText();
+					break;
+				case "webUrl":
+					webUrl = new URI(parser.getText());
+					break;
+
+				case "cTag":
+					cTag = parser.getText();
+					break;
+				case "deleted":
+					deleted = parser.readValueAs(ObjectNode.class);
+					break;
+				case "fileSystemInfo":
+					fileSystemInfo = FileSystemInfoFacet.deserialize(parser);
+					break;
+				case "parentReference":
+					parentReference = ItemReference.deserialize(parser);
+					break;
+				case "searchResult":
+					searchResult = SearchResultFacet.deserialize(parser);
+					break;
+				case "shared":
+					shared = SharedFacet.deserialize(parser);
+					break;
+				case "sharepointIds":
+					sharePointIds = SharePointIdsFacet.deserialize(parser);
+					break;
+				case "size":
+					size = parser.getLongValue();
+					break;
+				case "webDavUrl":
+					webDavUrl = new URI(parser.getText());
+					break;
+
+				case "audio":
+					audio = AudioFacet.deserialize(parser);
+					break;
+				case "file":
+					file = FileFacet.deserialize(parser);
+					break;
+				case "image":
+					image = ImageFacet.deserialize(parser);
+					break;
+				case "location":
+					location = LocationFacet.deserialize(parser);
+					break;
+				case "photo":
+					photo = PhotoFacet.deserialize(parser);
+					break;
+				case "video":
+					video = VideoFacet.deserialize(parser);
+					break;
+
+				case "folder":
+					folder = FolderFacet.deserialize(parser);
+					break;
+				case "specialFolder":
+					specialFolder = SpecialFolderFacet.deserialize(parser);
+					break;
+				case "root":
+					root = parser.readValueAsTree();
+					break;
+				case "children@odata.nextLink":
+					nextLink = new URI(parser.getText());
+					break;
+				case "children":
+					ArrayList<AbstractDriveItem> driveItems = new ArrayList<>();
+					while (parser.nextToken() != JsonToken.END_ARRAY) {
+						driveItems.add(deserialize(client, parser, false));
+					}
+					children = driveItems.toArray(new AbstractDriveItem[0]);
+					break;
+
+				case "package":
+					packages = PackageFacet.deserialize(parser);
+					break;
+
+				case "remoteItem":
+					remoteItem = RemoteItemFacet.deserialize(parser);
+					break;
+
+				case "@odata.context":
+					// TODO
+					break;
+				case "children@odata.context":
+					// TODO
+					break;
+				case "@microsoft.graph.downloadUrl":
+					// TODO
+					break;
+				case "@odata.type":
+					// TODO
+					break;
+
+				default:
+					throw new IllegalStateException(
+							"Unknown attribute detected in AbstractDriveItem : " + currentName);
+			}
+		}
+
+		if (autoClose) parser.close();
+
+		if (file != null) {
+			if (remoteItem != null) {
+				System.out.println("RemoteFileItem " + id);
+				return new RemoteFileItem(id, createdDateTime, description, eTag, lastModifiedDateTime, name, webUrl,
+						client, cTag, deleted, parentReference, searchResult, shared, sharePointIds, webDavUrl,
+						remoteItem);
+			}
+			else if (folder != null || packages != null) {
+				throw new IllegalStateException("FileItem cannot have multiple type");
+			}
+			else {
+				return new DefaultFileItem(id, creator, createdDateTime, description, eTag, lastModifier,
+						lastModifiedDateTime, name, webUrl, client, cTag, deleted, fileSystemInfo, parentReference,
+						searchResult, shared, sharePointIds, size, webDavUrl, audio, file, image, location, photo,
+						video);
+			}
+		}
+		else if (folder != null) {
+			if (remoteItem != null) {
+				System.out.println("remoteFolderItem " + id);
+				return new RemoteFolderItem(id, createdDateTime, description, eTag, lastModifiedDateTime, name, webUrl,
+						client, cTag, deleted, parentReference, searchResult, shared, sharePointIds, webDavUrl,
+						remoteItem);
+			}
+			else if (file != null || packages != null) {
+				throw new IllegalStateException("FolderItem cannot have multiple type");
+			}
+			else {
+				return new DefaultFolderItem(id, creator, createdDateTime, description, eTag, lastModifier,
+						lastModifiedDateTime, name, webUrl, client, cTag, deleted, fileSystemInfo, parentReference,
+						searchResult, shared, sharePointIds, size, webDavUrl, folder, specialFolder, root, nextLink,
+						children);
+			}
+		}
+		else if (packages != null) {
+			if (remoteItem != null) {
+				throw new UnsupportedOperationException("RemotePackageItem isn't yet supported");
+			}
+			else if (file != null || folder != null) {
+				throw new IllegalStateException("PackageItem cannot have multiple type");
+			}
+			else {
+				return new DefaultPackageItem(id, creator, createdDateTime, description, eTag, lastModifier,
+						lastModifiedDateTime, name, webUrl, client, cTag, deleted, fileSystemInfo, parentReference,
+						searchResult, shared, sharePointIds, size, webDavUrl, packages);
+			}
+		}
+		else if (remoteItem != null) {
+			if (remoteItem.getFile() != null) {
+				if (remoteItem.getFolder() != null || remoteItem.getPackages() != null) {
+					throw new IllegalStateException("FileItem cannot have multiple type");
+				}
+				else {
+					return new RemoteFileItem(id, createdDateTime, description, eTag, lastModifiedDateTime, name,
+							webUrl, client, cTag, deleted, parentReference, searchResult, shared, sharePointIds,
+							webDavUrl, remoteItem);
+				}
+			}
+			else if (remoteItem.getFolder() != null) {
+				if (remoteItem.getFile() != null || remoteItem.getPackages() != null) {
+					throw new IllegalStateException("FolderItem cannot have multiple type");
+				}
+				else {
+					return new RemoteFolderItem(id, createdDateTime, description, eTag, lastModifiedDateTime, name,
+							webUrl, client, cTag, deleted, parentReference, searchResult, shared, sharePointIds,
+							webDavUrl, remoteItem);
+				}
+			}
+			else if (remoteItem.getPackages() != null) {
+				throw new UnsupportedOperationException("RemotePackageItem isn't yet supported");
+			}
+			else {
+				throw new UnsupportedOperationException("Unsupported type of item. contact author");
+			}
+		}
+		else {
+			throw new UnsupportedOperationException("Unsupported type of item. contact author");
+		}
+	}
+
+	protected void createPointers() {
+		assert parentReference != null : "`parentReference` is null on AbstractDriveItem";
+		assert parentReference.pathPointer != null : "`parentReference.pathPointer` is null on FileItem";
+		assert parentReference.rawPath != null : "`parentReference.rawPath` is null on FileItem";
+
+		pathPointer = parentReference.pathPointer.resolve(name);
+		idPointer = new IdPointer(id, parentReference.driveId);
+	}
 
 	@Override
 	public String toString() {
@@ -117,19 +390,24 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	 *
 	 * @throws ErrorResponseException if error happens while requesting copying operation. such as invalid login info
 	 */
+	@Override
 	public void refresh() throws ErrorResponseException {
 		this.update("{}".getBytes());
 	}
 
 	private void update(byte[] content) throws ErrorResponseException {
-		ResponseFuture responseFuture = client.requestTool().patchMetadataAsync(Client.ITEM_ID_PREFIX + id, content);
-		responseFuture.syncUninterruptibly();
+		RequestTool requestTool = client.requestTool();
 
-		AbstractDriveItem newItem = client.requestTool()
-				.parseAndHandle(responseFuture.response(),
+		// using async way, because some JDK's HttpConnection doesn't allow PATCH
+		ResponseFuture responseFuture = requestTool
+				.patchMetadataAsync(Client.ITEM_ID_PREFIX + id, content)
+				.syncUninterruptibly();
+
+		AbstractDriveItem newItem = (AbstractDriveItem) requestTool
+				.parseDriveItemAndHandle(responseFuture.response(),
 						responseFuture.getNow(),
-						HttpURLConnection.HTTP_OK,
-						AbstractDriveItem.class);
+						HttpURLConnection.HTTP_OK);
+
 		this.refreshBy(newItem);
 	}
 
@@ -145,6 +423,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	 */
 
 
+	@Override
 	public void delete() throws ErrorResponseException {
 		client.deleteItem(this.id);
 	}
@@ -161,18 +440,18 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	 */
 
 
-	@NotNull
-	public String copyTo(@NotNull FolderItem folder) throws ErrorResponseException {
+	@Override
+	public @NotNull String copyTo(@NotNull FolderItem folder) throws ErrorResponseException {
 		return this.copyTo(folder.getId());
 	}
 
-	@NotNull
-	public String copyTo(@NotNull FolderItem folder, @NotNull String newName) throws ErrorResponseException {
+	@Override
+	public @NotNull String copyTo(@NotNull FolderItem folder, @NotNull String newName) throws ErrorResponseException {
 		return this.copyTo(folder.getId(), newName);
 	}
 
-	@NotNull
-	public String copyTo(@NotNull ItemReference folder) throws ErrorResponseException {
+	@Override
+	public @NotNull String copyTo(@NotNull ItemReference folder) throws ErrorResponseException {
 		if (folder.id != null)
 			return this.copyTo(folder.id);
 		else if (folder.pathPointer != null)
@@ -181,8 +460,9 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 			throw ILLEGAL_REFERENCE;
 	}
 
-	@NotNull
-	public String copyTo(@NotNull ItemReference folder, @NotNull String newName) throws ErrorResponseException {
+	@Override
+	public @NotNull String copyTo(@NotNull ItemReference folder, @NotNull String newName)
+			throws ErrorResponseException {
 		if (folder.id != null)
 			return this.copyTo(folder.id, newName);
 		else if (folder.pathPointer != null)
@@ -191,23 +471,23 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 			throw ILLEGAL_REFERENCE;
 	}
 
-	@NotNull
-	public String copyTo(@NotNull BasePointer dest) throws ErrorResponseException {
+	@Override
+	public @NotNull String copyTo(@NotNull BasePointer dest) throws ErrorResponseException {
 		return client.copyItem(idPointer, dest);
 	}
 
-	@NotNull
-	public String copyTo(@NotNull BasePointer dest, @NotNull String newName) throws ErrorResponseException {
+	@Override
+	public @NotNull String copyTo(@NotNull BasePointer dest, @NotNull String newName) throws ErrorResponseException {
 		return client.copyItem(idPointer, dest, newName);
 	}
 
-	@NotNull
-	public String copyTo(@NotNull String destId) throws ErrorResponseException {
+	@Override
+	public @NotNull String copyTo(@NotNull String destId) throws ErrorResponseException {
 		return client.copyItem(this.id, destId);
 	}
 
-	@NotNull
-	public String copyTo(@NotNull String destId, @NotNull String newName) throws ErrorResponseException {
+	@Override
+	public @NotNull String copyTo(@NotNull String destId, @NotNull String newName) throws ErrorResponseException {
 		return client.copyItem(this.id, destId, newName);
 	}
 
@@ -223,31 +503,33 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	 */
 
 
+	@Override
 	public void moveTo(@NotNull FolderItem folder) throws ErrorResponseException {
 		moveTo(folder.getId());
 	}
 
+	@Override
 	public void moveTo(@NotNull ItemReference reference) throws ErrorResponseException {
 		if (reference.id != null) moveTo(reference.id);
 		else if (reference.pathPointer != null) moveTo(reference.pathPointer);
 		else throw ILLEGAL_REFERENCE;
 	}
 
+	@Override
 	public void moveTo(@NotNull String id) throws ErrorResponseException {
 		AbstractDriveItem item = (AbstractDriveItem) client.moveItem(this.id, id);
 		this.refreshBy(item);
 	}
 
+	@Override
 	public void moveTo(@NotNull BasePointer pointer) throws ErrorResponseException {
 		AbstractDriveItem item = (AbstractDriveItem) client.moveItem(this.idPointer, pointer);
 		this.refreshBy(item);
 	}
 
 
-	@NotNull
-	public final ItemReference newReference() {
-		return new ItemReference(getDriveId(), id, pathPointer);
-	}
+	@Override
+	public final @NotNull ItemReference newReference() {return new ItemReference(getDriveId(), id, pathPointer);}
 
 
 
@@ -261,11 +543,8 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	 */
 
 
-	@NotNull
-	@JsonIgnore
-	public String getDriveId() {
-		return parentReference.driveId;
-	}
+	@Override
+	public final @NotNull String getDriveId() {return parentReference.driveId;}
 
 
 
@@ -279,111 +558,11 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	 */
 
 
-	@JsonIgnore
 	public void updateDescription(String description) throws ErrorResponseException {
 		update(("{\"description\":\"" + description + "\"}").getBytes());
 	}
 
-	@JsonIgnore
 	public void updateName(@NotNull String name) throws ErrorResponseException {
 		update(("{\"name\":\"" + name + "\"}").getBytes());
-	}
-
-
-
-
-	/*
-	*************************************************************
-	*
-	* Custom Jackson Deserializer
-	*
-	*************************************************************
-	 */
-
-
-	// FIXME: https://stackoverflow.com/questions/34406808/deserializing-unwrapped-flattened-json-in-java
-	public static class ItemDeserializer extends JsonDeserializer<DriveItem> {
-		@Override
-		public DriveItem deserialize(JsonParser parser, DeserializationContext context) throws IOException {
-			ObjectMapper codec = (ObjectMapper) parser.getCodec();
-			ObjectNode node = parser.readValueAsTree();
-
-			DriveItem ret;
-			boolean isMultipleType = false;
-
-			// is the object a file??
-			if (node.has("file")) {
-				if (node.has("folder") || node.has("package") || node.has("remoteItem")) {
-					isMultipleType = true;
-				}
-				ret = codec.convertValue(node, DefaultFileItem.class);
-			}
-			// or folder?
-			else if (node.has("folder")) {
-				if (node.has("file") || node.has("package") || node.has("remoteItem")) {
-					isMultipleType = true;
-				}
-				ret = codec.convertValue(node, DefaultFolderItem.class);
-			}
-			// or package?
-			else if (node.has("package")) {
-				if (node.has("folder") || node.has("file") || node.has("remoteItem")) {
-					isMultipleType = true;
-				}
-				ret = codec.convertValue(node, DefaultPackageItem.class);
-			}
-			// or remote item?
-			else if (node.has("remoteItem")) {
-				if (node.has("folder") || node.has("file") || node.has("package")) {
-					isMultipleType = true;
-				}
-
-				JsonNode remoteItem = node.get("remoteItem");
-				if (remoteItem.has("folder")) {
-					ret = codec.convertValue(node, RemoteFolderItem.class);
-				}
-				else if (remoteItem.has("file")) {
-					ret = codec.convertValue(node, RemoteFileItem.class);
-				}
-				else {
-					throw new InvalidJsonException(
-							"Json is remote type but remote item doesn't have any type" +
-									" (file or folder or package etc.). please contact author",
-							HttpURLConnection.HTTP_OK,
-							codec.writeValueAsBytes(node));
-				}
-			}
-			// unrecognizable object!
-			else {
-				throw new InvalidJsonException(
-						"Json doesn't have any type (file or folder or package etc.). please contact author",
-						HttpURLConnection.HTTP_OK,
-						codec.writeValueAsBytes(node));
-			}
-
-			if (isMultipleType)
-				throw new InvalidJsonException(
-						"Multiple item type is contained. please contact author.",
-						HttpURLConnection.HTTP_OK,
-						codec.writeValueAsBytes(node));
-
-			else
-				return ret;
-		}
-	}
-
-
-	static protected class PointerInjector<T extends AbstractDriveItem> extends StdConverter<T, T> {
-		@Override public T convert(T value) {
-			// are they always have `parentReference` except root directory?
-			assert value.parentReference != null : "`parentReference` is null on DriveItem";
-			assert value.parentReference.pathPointer != null : "`parentReference.pathPointer` is null on FileItem";
-			assert value.parentReference.rawPath != null : "`parentReference.rawPath` is null on FileItem";
-
-			value.pathPointer = value.parentReference.pathPointer.resolve(value.name);
-			value.idPointer = new IdPointer(value.id, value.parentReference.driveId);
-
-			return value;
-		}
 	}
 }

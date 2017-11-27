@@ -5,8 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
-// TODO: Enhance javadoc
-
 /**
  * implements of <a href='https://dev.onedrive.com/resources/uploadSession.htm'>detail</a>
  *

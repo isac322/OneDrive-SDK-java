@@ -45,9 +45,6 @@ public interface FileItem extends DriveItem {
 	 */
 	void download(@NotNull Path folderPath) throws IOException, ErrorResponseException;
 
-	// TODO: handling overwriting file
-
-
 	/**
 	 * Download file from OneDrive to {@code folderPath} with {@code newName}.
 	 * It could be relative path (like . or ..).<br>
@@ -71,9 +68,9 @@ public interface FileItem extends DriveItem {
 	void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException;
 
 
-	DownloadFuture downloadAsync(@NotNull Path folderPath) throws IOException;
+	@NotNull DownloadFuture downloadAsync(@NotNull Path folderPath) throws IOException;
 
-	DownloadFuture downloadAsync(@NotNull Path folderPath, String newName) throws IOException;
+	@NotNull DownloadFuture downloadAsync(@NotNull Path folderPath, String newName) throws IOException;
 
 
 	/*
@@ -85,13 +82,13 @@ public interface FileItem extends DriveItem {
 	 */
 
 
-	@JsonIgnore @Nullable String getMimeType();
+	@Nullable String getMimeType();
 
-	@JsonIgnore @Nullable String getCRC32();
+	@Nullable String getCRC32();
 
-	@JsonIgnore @Nullable String getSHA1();
+	@Nullable String getSHA1();
 
-	@JsonIgnore @Nullable String getQuickXorHash();
+	@Nullable String getQuickXorHash();
 
 
 	@Nullable AudioFacet getAudio();

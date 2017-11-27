@@ -2,25 +2,21 @@ package com.bhyoo.onedrive.client;
 
 import com.bhyoo.onedrive.client.auth.AbstractAuthHelper;
 import com.bhyoo.onedrive.client.auth.AuthHelper;
-import com.bhyoo.onedrive.container.Drive;
-import com.bhyoo.onedrive.container.ResponsePage;
 import com.bhyoo.onedrive.container.items.*;
 import com.bhyoo.onedrive.container.items.pointer.BasePointer;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;
 import com.bhyoo.onedrive.container.items.pointer.Operator;
 import com.bhyoo.onedrive.container.items.pointer.PathPointer;
+import com.bhyoo.onedrive.container.pager.DriveItemPager;
+import com.bhyoo.onedrive.container.pager.DriveItemPager.DriveItemPage;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InternalException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.*;
 import com.bhyoo.onedrive.network.sync.SyncResponse;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
+import io.netty.handler.codec.http.HttpMethod;
 import lombok.experimental.Delegate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -31,13 +27,11 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.CountDownLatch;
 
 import static com.bhyoo.onedrive.client.RequestTool.BASE_URL;
 import static com.bhyoo.onedrive.container.items.pointer.Operator.UPLOAD_CREATE_SESSION;
+import static io.netty.handler.codec.http.HttpMethod.GET;
 import static java.net.HttpURLConnection.*;
-
-// TODO: Enhance javadoc
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
@@ -49,7 +43,6 @@ public class Client {
 	 * Only one {@code mapper} per a {@code Client} object.<br>
 	 * It makes possible to multi client usage
 	 */
-	private final ObjectMapper mapper;
 	private @NotNull final RequestTool requestTool;
 
 	@Delegate(types = AbstractAuthHelper.class)
@@ -98,20 +91,7 @@ public class Client {
 	 */
 	public Client(@NotNull String clientId, @NotNull String[] scope, @NotNull String redirectURL,
 				  @NotNull String clientSecret, boolean autoLogin) {
-		mapper = new ObjectMapper();
-
-		InjectableValues.Std clientInjector = new InjectableValues.Std().addValue("OneDriveClient", this);
-		mapper.setInjectableValues(clientInjector);
-
-		mapper.registerModule(new AfterburnerModule());
-
-
-		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-		// in serialization, ignore null values.
-		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-
-		requestTool = new RequestTool(this, mapper);
+		requestTool = new RequestTool(this);
 
 		this.authHelper = new AuthHelper(scope, clientId, clientSecret, redirectURL, this.requestTool);
 
@@ -163,12 +143,11 @@ public class Client {
 	public FolderItem getRootDir() throws ErrorResponseException {
 		authHelper.checkExpired();
 
-		SyncResponse response = requestTool.newRequest("/drive/root/?expand=children").doGet();
+		SyncResponse response = requestTool.newRequest("/me/drive/root/?expand=children").doGet();
 		return requestTool.parseFolderItemAndHandle(response, HTTP_OK);
 	}
 
 
-	// TODO: Enhance javadoc
 	// TODO: handling error if `id`'s item isn't folder item.
 
 	/**
@@ -230,8 +209,6 @@ public class Client {
 	 */
 
 
-	// TODO: Enhance javadoc
-
 	/**
 	 * @param id file id.
 	 *
@@ -289,33 +266,16 @@ public class Client {
 		return requestTool.getItem(pointer.toASCIIApi());
 	}
 
-	// FIXME: read
+	// FIXME: type conversion
 	@NotNull
 	public RemoteItem[] getShared() throws ErrorResponseException {
 		authHelper.checkExpired();
 
-		// FIXME: convert to NONE Tree Model
-		ArrayNode values = (ArrayNode) requestTool.doGetJson("/me/drive/sharedWithMe").get("value");
+		ResponseFuture responseFuture = requestTool.doAsync(GET, "/me/drive/sharedWithMe").syncUninterruptibly();
+		@NotNull DriveItem[] driveItems = requestTool
+				.parseDriveItemRecursiveAndHandle(responseFuture.response(), responseFuture.getNow(), HTTP_OK);
 
-		int size = values.size();
-		final RemoteItem[] items = new RemoteItem[size];
-		DriveItemFuture[] futures = new DriveItemFuture[size];
-
-		for (int i = 0; i < size; i++) {
-			JsonNode id = values.get(i).get("id");
-
-			// if response doesn't have `id` field or `id` isn't text
-			assert !(id == null || !id.isTextual()) : i + "th shared element doesn't have `id` field";
-
-			futures[i] = requestTool.getItemAsync(ITEM_ID_PREFIX + id.asText() + "?expand=children");
-		}
-
-		for (int i = 0; i < size; i++) {
-			futures[i].syncUninterruptibly();
-			items[i] = (RemoteItem) futures[i].getNow();
-		}
-
-		return items;
+		return (RemoteItem[]) driveItems;
 	}
 
 
@@ -468,28 +428,10 @@ public class Client {
 	private DriveItem moveItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
 		authHelper.checkExpired();
 
-		final CountDownLatch latch = new CountDownLatch(1);
-		final DriveItem[] newItem = new DriveItem[1];
-		ResponseFuture responseFuture = requestTool.patchMetadataAsync(api, content, new ResponseFutureListener() {
-			@Override public void operationComplete(ResponseFuture future) throws Exception {
-				newItem[0] = requestTool.parseAndHandle(
-						future.response(),
-						future.get(),
-						HTTP_OK,
-						AbstractDriveItem.class);
-				latch.countDown();
-			}
-		});
+		// using async way, because some JDK's HttpConnection doesn't allow PATCH
+		ResponseFuture future = requestTool.patchMetadataAsync(api, content).syncUninterruptibly();
 
-		// responseFuture.syncUninterruptibly();
-		try {
-			latch.await();
-		}
-		catch (InterruptedException e) {
-			throw new InternalException("Exception occurs while waiting lock in DriveItem#update()", e);
-		}
-
-		return newItem[0];
+		return requestTool.parseDriveItemAndHandle(future.response(), future.getNow(), HTTP_OK);
 	}
 
 
@@ -504,7 +446,6 @@ public class Client {
 	 */
 
 
-	// TODO: Enhance javadoc
 	// TODO: Implement '@name.conflictBehavior'
 
 	/**
@@ -521,10 +462,9 @@ public class Client {
 	@NotNull
 	public FolderItem createFolder(@NotNull String parentId, @NotNull String name) throws ErrorResponseException {
 		byte[] content = ("{\"name\":\"" + name + "\",\"folder\":{}}").getBytes();
-		return createFolder("/drive/items/" + parentId + "/children", content);
+		return createFolder(ITEM_ID_PREFIX + parentId + "/children", content);
 	}
 
-	// TODO: Enhance javadoc
 	// TODO: Implement '@name.conflictBehavior'
 
 	/**
@@ -695,12 +635,29 @@ public class Client {
 	*************************************************************
 	 */
 
-	@NotNull
-	public ResponsePage<DriveItem> searchItem(String query) throws ErrorResponseException, IOException {
+	public @NotNull DriveItemPager searchItem(String query) throws ErrorResponseException, IOException {
 		String rawQuery = URLEncoder.encode(query, "UTF-8");
 		SyncResponse response = requestTool.newRequest("/me/drive/root/search(q='" + rawQuery + "')").doGet();
 
-		return requestTool.parseBaseItemPageAndHandle(response, HTTP_OK);
+		return requestTool.parseDriveItemPagerAndHandle(response, HTTP_OK);
+	}
+
+	public @NotNull DriveItemPage searchItem(String query, String driveId) throws ErrorResponseException,
+			IOException {
+		String rawQuery = URLEncoder.encode(query, "UTF-8");
+		SyncResponse response =
+				requestTool.newRequest("/drives/" + driveId + "/root/search(q='" + rawQuery + "')").doGet();
+
+		return requestTool.parseDriveItemPageAndHandle(response, HTTP_OK);
+	}
+
+	public @NotNull DriveItemPage searchItem(String query, Drive drive) throws ErrorResponseException,
+			IOException {
+		String rawQuery = URLEncoder.encode(query, "UTF-8");
+		SyncResponse response =
+				requestTool.newRequest("/drives/" + drive.getId() + "/root/search(q='" + rawQuery + "')").doGet();
+
+		return requestTool.parseDriveItemPageAndHandle(response, HTTP_OK);
 	}
 
 
@@ -716,6 +673,4 @@ public class Client {
 	 */
 
 	public @NotNull RequestTool requestTool() {return requestTool;}
-
-	public @NotNull ObjectMapper mapper() {return mapper;}
 }

@@ -1,18 +1,16 @@
 package com.bhyoo.onedrive;
 
 import com.bhyoo.onedrive.client.Client;
-import com.bhyoo.onedrive.container.Drive;
-import com.bhyoo.onedrive.container.ResponsePage;
+import com.bhyoo.onedrive.container.items.Drive;
 import com.bhyoo.onedrive.container.items.DriveItem;
 import com.bhyoo.onedrive.container.items.FolderItem;
+import com.bhyoo.onedrive.container.pager.DriveItemPager;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
-
-// TODO: Enhance javadoc
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
@@ -36,12 +34,14 @@ public class ClientTest {
 	static void getClient() {
 		assertNull(client);
 
-		final String clientId = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX";
+		final String clientId = "f21d2eff-49e2-4a10-a515-4a077f23c694";
 		final String[] scope = {"files.readwrite.all", "offline_access"};
 		final String redirectURL = "http://localhost:8080/";
-		final String clientSecret = "XXXXXXXXXXXXXXXXXXXXXXX";
+		final String clientSecret = "1t5UhiBewLrVUoKqWZWYiiS";
 
 		client = new Client(clientId, scope, redirectURL, clientSecret);
+
+		System.out.println(client.getFullToken());
 
 		assertNotNull(client);
 		assertTrue(client.isLogin());
@@ -142,7 +142,7 @@ public class ClientTest {
 		assertEquals(folder.getName(), DIR_MANY_CHILD_NAME);
 		assertEquals(folder.getId(), DIR_MANY_CHILD);
 		// FIXME: microsoft's graph issue : expend query doesn't include nextLink
-		assertEquals(folder.countChildren(), folder.allChildren().length);
+		assertEquals(folder.childCount(), folder.allChildren().length);
 		assertFalse(folder.isRoot());
 		assertTrue(folder.isChildrenFetched());
 
@@ -159,25 +159,25 @@ public class ClientTest {
 		assertFalse(folder.isRoot());
 		assertFalse(folder.isChildrenFetched());
 		folder.allChildren();
+
+		assertEquals(folder.childCount(), folder.allChildren().length);
 	}
 
 	// FIXME
 	@Test void getItem() throws Exception {
 		long before = System.currentTimeMillis();
-		for (int i = 0; i < 100; i++) {
-			long l = System.currentTimeMillis();
-			DriveItem item = client.getItem(MP3_UTF8_BIG);
-			System.out.println(System.currentTimeMillis() - l);
-		}
+		DriveItem item = client.getItem(DIR_MANY_CHILD);
 		System.out.println(System.currentTimeMillis() - before);
 	}
 
 	// FIXME
 	@Test void searchItem() throws Exception {
-		@NotNull ResponsePage<DriveItem> items = client.searchItem("1학기");
+		@NotNull DriveItemPager items = client.searchItem("1학기");
 
-		for (DriveItem item : items.getValue()) {
-			System.out.println(item.getClass().getName() + '\t' + item.getName());
+		for (DriveItem[] items1 : items) {
+			for (DriveItem item : items1) {
+				System.out.println(item.getClass().getName() + '\t' + item.getName());
+			}
 		}
 	}
 

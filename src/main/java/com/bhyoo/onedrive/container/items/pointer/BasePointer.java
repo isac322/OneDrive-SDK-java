@@ -6,8 +6,6 @@ import org.jetbrains.annotations.Nullable;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-// TODO: Enhance javadoc
-
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
@@ -26,5 +24,13 @@ abstract public class BasePointer {
 
 	abstract public @NotNull String toJson();
 
+	/**
+	 * <strong>DO NOT USE</strong></br>
+	 * Internal use only
+	 *
+	 * @param op operator object
+	 *
+	 * @return resolved API
+	 */
 	abstract public @NotNull String resolveOperator(@NotNull Operator op);
 }

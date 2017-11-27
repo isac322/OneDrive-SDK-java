@@ -5,8 +5,6 @@ import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-// TODO: Enhance javadoc
-
 /**
  * Exception type for when SDK encounters invalid JSON from server. That means client's request was valid but
  * OneDrive's server responses with invalid JSON. So if you encounter with this exception, firstly retry. but if it
