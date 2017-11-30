@@ -1,17 +1,13 @@
 package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.container.IdentitySet;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
-
-import static lombok.AccessLevel.PRIVATE;
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>

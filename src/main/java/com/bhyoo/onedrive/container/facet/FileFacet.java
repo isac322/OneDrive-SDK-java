@@ -15,7 +15,7 @@ import java.io.IOException;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class FileFacet {
-	@Getter protected final  @Nullable String mimeType;
+	@Getter protected final @Nullable String mimeType;
 	protected final @Nullable Hashes hashes;
 	@Getter protected final @Nullable Boolean processingMetadata;
 

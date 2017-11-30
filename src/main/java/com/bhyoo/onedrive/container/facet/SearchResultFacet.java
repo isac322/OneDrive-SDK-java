@@ -3,7 +3,6 @@ package com.bhyoo.onedrive.container.facet;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 
@@ -11,11 +10,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import static lombok.AccessLevel.PRIVATE;
-
 /**
  * <a href="https://dev.onedrive.com/facets/searchresult_facet.htm">
- *     https://dev.onedrive.com/facets/searchresult_facet.htm</a>
+ * https://dev.onedrive.com/facets/searchresult_facet.htm</a>
  *
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */

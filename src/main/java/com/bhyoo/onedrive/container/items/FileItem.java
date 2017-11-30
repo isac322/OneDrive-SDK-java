@@ -4,7 +4,6 @@ import com.bhyoo.onedrive.container.facet.*;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.DownloadFuture;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,11 +73,11 @@ public interface FileItem extends DriveItem {
 
 
 	/*
-	*************************************************************
-	*
-	* Custom Getter
-	*
-	*************************************************************
+	 *************************************************************
+	 *
+	 * Custom Getter
+	 *
+	 *************************************************************
 	 */
 
 

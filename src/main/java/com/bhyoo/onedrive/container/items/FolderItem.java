@@ -1,7 +1,6 @@
 package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.jetbrains.annotations.NotNull;
 
 public interface FolderItem extends DriveItem, Iterable<DriveItem> {
@@ -24,11 +23,11 @@ public interface FolderItem extends DriveItem, Iterable<DriveItem> {
 
 
 	/*
-	*************************************************************
-	*
-	* Custom Getter
-	*
-	*************************************************************
+	 *************************************************************
+	 *
+	 * Custom Getter
+	 *
+	 *************************************************************
 	 */
 
 

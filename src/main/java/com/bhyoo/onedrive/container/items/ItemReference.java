@@ -12,7 +12,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.Objects;
 
 // TODO: is there any way to merge with {@link BasePointer}? cause it's conflict in behavior
 

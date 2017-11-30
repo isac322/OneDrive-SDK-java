@@ -34,10 +34,10 @@ public class ClientTest {
 	static void getClient() {
 		assertNull(client);
 
-		final String clientId = "f21d2eff-49e2-4a10-a515-4a077f23c694";
+		final String clientId = "";
 		final String[] scope = {"files.readwrite.all", "offline_access"};
 		final String redirectURL = "http://localhost:8080/";
-		final String clientSecret = "1t5UhiBewLrVUoKqWZWYiiS";
+		final String clientSecret = "";
 
 		client = new Client(clientId, scope, redirectURL, clientSecret);
 
