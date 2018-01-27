@@ -29,8 +29,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -80,8 +78,12 @@ public class RequestTool {
 		EventLoopGroup tmpGroup;
 		Class<? extends SocketChannel> tmpClass;
 		try {
-			tmpGroup = new EpollEventLoopGroup(4);
-			tmpClass = EpollSocketChannel.class;
+			ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+
+			Class<?> loadClass = classLoader.loadClass("io.netty.channel.epoll.EpollEventLoopGroup");
+			tmpGroup = (EventLoopGroup) loadClass.getConstructor(int.class).newInstance(4);
+			tmpClass = (Class<? extends SocketChannel>)
+					classLoader.loadClass("io.netty.channel.epoll.EpollSocketChannel");
 		}
 		catch (Exception e) {
 			tmpGroup = new NioEventLoopGroup(4);
