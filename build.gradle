@@ -4,23 +4,20 @@ version '0.9-beta'
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'com.google.osdetector'
-apply plugin: 'org.junit.platform.gradle.plugin'
 
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
 
+compileJava {
+	sourceCompatibility = 1.7
+	targetCompatibility = 1.7
+}
+
+compileTestJava {
+	sourceCompatibility = 1.8
+	targetCompatibility = 1.8
+}
 
 repositories {
 	mavenCentral()
-}
-
-junitPlatform {
-	platformVersion '1.0.0'
-	logManager 'org.apache.logging.log4j.jul.LogManager'
-	reportsDir file('build/test-results/junit-platform') // this is the default
-	// enableStandardTestTask true
-	// selectors (optional)
-	// filters (optional)
 }
 
 buildscript {
@@ -30,11 +27,8 @@ buildscript {
 
 	dependencies {
 		classpath 'com.google.gradle:osdetector-gradle-plugin:1.+'
-		classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.1'
 	}
 }
-
-
 dependencies {
 	compile 'com.fasterxml.jackson.core:jackson-annotations:+'
 	compile 'com.fasterxml.jackson.core:jackson-core:+'
@@ -49,16 +43,29 @@ dependencies {
 	compile 'io.netty:netty-handler:4.+'
 	compile 'io.netty:netty-resolver:4.+'
 	compile 'io.netty:netty-transport:4.+'
-	compile "io.netty:netty-transport-native-epoll:4.+:${osdetector.classifier}"
+
+
+	if (osdetector.os == 'linux' || osdetector.os == 'osx' || osdetector.os.endsWith('bsd')) {
+		compile "io.netty:netty-transport-native-epoll:4.+:${osdetector.classifier}"
+	}
+
 
 	compile 'org.projectlombok:lombok:+'
 
 	compile 'org.jetbrains:annotations:+'
 
-	testCompile("org.junit.jupiter:junit-jupiter-api:5.0.1")
-	testRuntime("org.junit.jupiter:junit-jupiter-engine:5.0.1")
+	testCompileOnly('org.apiguardian:apiguardian-api:+')
+	testCompile('org.junit.jupiter:junit-jupiter-api:5.+')
+	testRuntime('org.junit.jupiter:junit-jupiter-engine:5.+')
 }
 
+allprojects {
+	gradle.projectsEvaluated {
+		tasks.withType(JavaCompile) {
+			options.compilerArgs << '-Xlint'
+		}
+	}
+}
 
 task sourcesJar(type: Jar, dependsOn: classes) {
 	classifier = 'sources'
