@@ -7,6 +7,8 @@ package com.bhyoo.onedrive.exceptions;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class InternalException extends RuntimeException implements OneDriveSDKException {
+	private static final long serialVersionUID = 3298001219331142089L;
+
 	public InternalException(String message, Throwable cause) {
 		super(message, cause);
 	}
