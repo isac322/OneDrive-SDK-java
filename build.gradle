@@ -1,5 +1,5 @@
 group 'org.onedrive'
-version '0.10-beta'
+version '0.10.0'
 
 apply plugin: 'java'
 apply plugin: 'idea'
@@ -9,11 +9,6 @@ apply plugin: 'com.google.osdetector'
 compileJava {
 	sourceCompatibility = 1.7
 	targetCompatibility = 1.7
-}
-
-compileTestJava {
-	sourceCompatibility = 1.8
-	targetCompatibility = 1.8
 }
 
 repositories {
@@ -29,6 +24,7 @@ buildscript {
 		classpath 'com.google.gradle:osdetector-gradle-plugin:1.+'
 	}
 }
+
 dependencies {
 	compile 'com.fasterxml.jackson.core:jackson-annotations:+'
 	compile 'com.fasterxml.jackson.core:jackson-core:+'

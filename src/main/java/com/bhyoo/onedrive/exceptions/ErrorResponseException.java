@@ -10,6 +10,7 @@ import lombok.Getter;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class ErrorResponseException extends Exception implements OneDriveSDKException {
+	private static final long serialVersionUID = -1799958534485231334L;
 	@Getter private final int expectedResponse, givenResponse;
 	@Getter private final String errorCode, errorMessage;
 

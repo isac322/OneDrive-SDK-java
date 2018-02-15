@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class InvalidJsonException extends RuntimeException implements OneDriveServerException {
+	private static final long serialVersionUID = -5643456357629703015L;
 	@Getter private byte[] content;
 	@Getter private int responseCode;
 

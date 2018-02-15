@@ -77,14 +77,12 @@ public class RequestTool {
 		EventLoopGroup tmpGroup;
 		Class<? extends SocketChannel> tmpClass;
 		try {
-			// Create a new JavaClassLoader
-			ClassLoader classLoader = RequestTool.class.getClassLoader();
+			ClassLoader classLoader = ClassLoader.getSystemClassLoader();
 
-			// Load the target class using its binary name
-			Class loadedMyClass = classLoader.loadClass("io.netty.channel.epoll.EpollEventLoopGroup");
-			tmpGroup = (EventLoopGroup) loadedMyClass.getConstructor(int.class).newInstance(4);
-			tmpClass = (Class<? extends SocketChannel>) classLoader
-					.loadClass("io.netty.channel.epoll.EpollSocketChannel");
+			Class<?> loadClass = classLoader.loadClass("io.netty.channel.epoll.EpollEventLoopGroup");
+			tmpGroup = (EventLoopGroup) loadClass.getConstructor(int.class).newInstance(4);
+			tmpClass = (Class<? extends SocketChannel>)
+					classLoader.loadClass("io.netty.channel.epoll.EpollSocketChannel");
 		}
 		catch (Exception e) {
 			e.printStackTrace();
