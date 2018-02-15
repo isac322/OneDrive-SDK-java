@@ -5,6 +5,8 @@ import com.bhyoo.onedrive.client.RequestTool;
 import com.bhyoo.onedrive.container.items.DriveItem;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.network.async.DriveItemFuture;
+import com.bhyoo.onedrive.network.async.ResponseFuture;
+import io.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -85,5 +87,28 @@ class RequestToolTest {
 		DriveItem item = requestTool.getItem(Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784");
 		System.out.println(item.getName());
 		System.out.println(item.getId());
+	}
+
+	@Test void compareJDKAndNetty() {
+		long netty = 0;
+		long jdk = 0, before;
+
+		for (int i = 0; i < 100; i++) {
+			before = System.currentTimeMillis();
+
+			ResponseFuture responseFuture = requestTool
+					.doAsync(HttpMethod.GET, Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784")
+					.syncUninterruptibly();
+
+			responseFuture.getNow().close();
+
+			netty += System.currentTimeMillis() - before;
+
+			before = System.currentTimeMillis();
+			requestTool.newRequest(Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784").doGet();
+			jdk += System.currentTimeMillis() - before;
+		}
+
+		System.out.println("Netty : " + netty + ", JDK : " + jdk);
 	}
 }

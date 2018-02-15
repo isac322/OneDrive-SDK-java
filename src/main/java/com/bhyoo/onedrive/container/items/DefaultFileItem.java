@@ -30,9 +30,7 @@ public class DefaultFileItem extends AbstractDriveItem implements FileItem {
 	DefaultFileItem(@NotNull String id, @NotNull IdentitySet creator, @NotNull String createdDateTime,
 					@Nullable String description, @NotNull String eTag, @NotNull IdentitySet lastModifier,
 					@NotNull String lastModifiedDateTime, @NotNull String name, @NotNull URI webUrl,
-					// TODO: change @Nullable to @NotNull on cTag
-					// (https://github.com/OneDrive/onedrive-api-docs/issues/742)
-					@NotNull Client client, @Nullable String cTag, @Nullable ObjectNode deleted,
+					@NotNull Client client, @NotNull String cTag, @Nullable ObjectNode deleted,
 					FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
 					@Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
 					@Nullable SharePointIdsFacet sharePointIds, @NotNull Long size, URI webDavUrl,

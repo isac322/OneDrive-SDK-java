@@ -1,8 +1,8 @@
 package com.bhyoo.onedrive.network.async;
 
 import com.bhyoo.onedrive.client.RequestTool;
+import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.utils.ByteBufStream;
-import com.fasterxml.jackson.databind.JsonNode;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
@@ -12,40 +12,36 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
+
+import static java.net.HttpURLConnection.HTTP_MOVED_TEMP;
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class AsyncDownloadClient extends AbstractClient {
-	@NotNull private final EventLoopGroup group;
-	@NotNull private final String accessToken;
-	@NotNull private final DownloadPromise downloadPromise;
-	@NotNull private final ResponseFutureListener listener;
+	private final @NotNull String accessToken;
+	private final @NotNull Path downloadFolder;
+	private final @NotNull RequestTool requestTool;
+	private final @Nullable String newName;
 
 
 	public AsyncDownloadClient(@NotNull RequestTool requestTool, @NotNull URI itemURI, @NotNull Path downloadFolder) {
-		super(HttpMethod.GET, itemURI, null);
-		this.group = RequestTool.group();
-		this.accessToken = requestTool.getClient().getFullToken();
-
-		downloadPromise = new DefaultDownloadPromise(group.next());
-		this.listener = new WithoutNameListener(downloadPromise, downloadFolder, request, requestTool);
+		this(requestTool, itemURI, downloadFolder, null);
 	}
 
-	public AsyncDownloadClient(@NotNull RequestTool requestTool, @NotNull URI uri,
-							   @NotNull Path downloadFolder, @NotNull String newName) {
-		super(HttpMethod.GET, uri, null);
-		this.group = RequestTool.group();
+	public AsyncDownloadClient(@NotNull RequestTool requestTool, @NotNull URI itemURI,
+							   @NotNull Path downloadFolder, @Nullable String newName) {
+		super(HttpMethod.GET, itemURI, null);
+		this.requestTool = requestTool;
 		this.accessToken = requestTool.getClient().getFullToken();
-		downloadFolder = downloadFolder.resolve(newName);
-
-		downloadPromise = new DefaultDownloadPromise(group.next());
-		this.listener = new WithNameListener(downloadPromise, downloadFolder, request, requestTool);
+		this.downloadFolder = downloadFolder;
+		this.newName = newName;
 	}
 
 	@Override public @NotNull AsyncDownloadClient setHeader(AsciiString header, CharSequence value) {
@@ -60,6 +56,13 @@ public class AsyncDownloadClient extends AbstractClient {
 
 	@Override
 	public DownloadFuture execute() {
+		EventLoopGroup group = RequestTool.group();
+
+		DownloadPromise downloadPromise = new DefaultDownloadPromise(group.next())
+				.setPath(downloadFolder);
+
+		DownloadListener listener = new DownloadListener(downloadPromise, request, requestTool, newName);
+
 		new AsyncClient(group, method, uri)
 				.setHeader(HttpHeaderNames.AUTHORIZATION, accessToken)
 				.execute()
@@ -68,32 +71,32 @@ public class AsyncDownloadClient extends AbstractClient {
 		return downloadPromise;
 	}
 
-	static class WithNameListener implements ResponseFutureListener {
-		private final EventLoopGroup group;
+	static class DownloadListener implements ResponseFutureListener {
 		private final DownloadPromise promise;
-		private final Path downloadPath;
 		private final DefaultFullHttpRequest request;
 		private final RequestTool requestTool;
+		private final @Nullable String newName;
 
-		WithNameListener(DownloadPromise promise, Path downloadPath,
-						 DefaultFullHttpRequest request, RequestTool requestTool) {
+		DownloadListener(DownloadPromise promise, DefaultFullHttpRequest request,
+						 RequestTool requestTool, @Nullable String newName) {
 			this.promise = promise;
-			this.downloadPath = downloadPath;
 			this.request = request;
 			this.requestTool = requestTool;
-			this.group = RequestTool.group();
+			this.newName = newName;
 		}
 
-		@Override public void operationComplete(ResponseFuture future) throws Exception {
+		@Override public void operationComplete(ResponseFuture future)
+				throws ExecutionException, InterruptedException, URISyntaxException, ErrorResponseException {
 			HttpResponse response = future.response();
 			ByteBufStream result = future.get();
 
 			// if response is valid
-			if (future.isSuccess() && response.status().code() == HttpURLConnection.HTTP_MOVED_TEMP) {
-				// handling unescaped string in Location, prepare URI.
-				URL u = new URL(response.headers().get(HttpHeaderNames.LOCATION));
-				URI uri = new URI(u.getProtocol(), u.getUserInfo(), u.getHost(), u.getPort(),
-						u.getPath(), u.getQuery(), u.getRef());
+			if (!future.isSuccess()) {
+				// TODO: handle error
+			}
+			else if (response.status().code() == HTTP_MOVED_TEMP) {
+				String uriStr = response.headers().get(HttpHeaderNames.LOCATION);
+				URI uri = new URI(uriStr);
 
 				String host = uri.getHost();
 				int port = 443;
@@ -101,86 +104,26 @@ public class AsyncDownloadClient extends AbstractClient {
 				// set downloadPromise's URI
 				promise.setURI(uri);
 
-				AsyncDownloadHandler downloadHandler = new AsyncDownloadHandler(promise, downloadPath);
+				// change request's url to location of file
+				request.setUri(uriStr);
+
+				AsyncDownloadHandler downloadHandler = new AsyncDownloadHandler(promise, newName);
 
 				// Configure the client.
 				Bootstrap bootstrap = new Bootstrap()
-						.group(group)
+						.group(RequestTool.group())
 						.channel(RequestTool.socketChannelClass())
 						.handler(new AsyncDefaultInitializer(downloadHandler));
 
 				// wait until be connected, and get channel
 				Channel channel = bootstrap.connect(host, port).syncUninterruptibly().channel();
 
-				// change request's url to location of file
-				request.setUri(uri.toASCIIString());
 				// Send the HTTP request.
 				channel.writeAndFlush(request);
 			}
-			else if (future.isSuccess()) {
+			else {
 				try {
-					requestTool.errorHandling(response, result, HttpURLConnection.HTTP_MOVED_TEMP);
-				}
-				catch (Exception e) {
-					promise.setFailure(e);
-					throw e;
-				}
-			}
-		}
-	}
-
-	static class WithoutNameListener implements ResponseFutureListener {
-		private final EventLoopGroup group;
-		private final DownloadPromise promise;
-		private final DefaultFullHttpRequest request;
-		private final RequestTool requestTool;
-		private Path downloadPath;
-
-		WithoutNameListener(DownloadPromise promise, Path downloadPath,
-							DefaultFullHttpRequest request, RequestTool requestTool) {
-			this.promise = promise;
-			this.downloadPath = downloadPath;
-			this.request = request;
-			this.requestTool = requestTool;
-			this.group = RequestTool.group();
-		}
-
-		@Override public void operationComplete(ResponseFuture future) throws Exception {
-			HttpResponse response = future.response();
-			ByteBufStream result = future.get();
-
-			// if response is valid
-			if (future.isSuccess() && response.status().code() == HttpURLConnection.HTTP_OK) {
-				// FIXME: speed up
-				JsonNode jsonNode = RequestTool.getMapper().readTree(result);
-				URI uri = new URI(jsonNode.get("@content.downloadUrl").asText());
-				downloadPath = downloadPath.resolve(jsonNode.get("name").asText());
-
-				String host = uri.getHost();
-				int port = 443;
-
-				// set downloadPromise's URI
-				promise.setURI(uri);
-
-				AsyncDownloadHandler downloadHandler = new AsyncDownloadHandler(promise, downloadPath);
-
-				// Configure the client.
-				Bootstrap bootstrap = new Bootstrap()
-						.group(group)
-						.channel(RequestTool.socketChannelClass())
-						.handler(new AsyncDefaultInitializer(downloadHandler));
-
-				// wait until be connected, and get channel
-				Channel channel = bootstrap.connect(host, port).syncUninterruptibly().channel();
-
-				// change request's url to location of file
-				request.setUri(uri.toASCIIString());
-				// Send the HTTP request.
-				channel.writeAndFlush(request);
-			}
-			else if (future.isSuccess()) {
-				try {
-					requestTool.errorHandling(response, result, HttpURLConnection.HTTP_OK);
+					requestTool.errorHandling(response, result, HTTP_MOVED_TEMP);
 				}
 				catch (Exception e) {
 					promise.setFailure(e);

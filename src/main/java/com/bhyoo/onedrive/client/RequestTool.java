@@ -28,8 +28,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -79,10 +77,17 @@ public class RequestTool {
 		EventLoopGroup tmpGroup;
 		Class<? extends SocketChannel> tmpClass;
 		try {
-			tmpGroup = new EpollEventLoopGroup(4);
-			tmpClass = EpollSocketChannel.class;
+			// Create a new JavaClassLoader
+			ClassLoader classLoader = RequestTool.class.getClassLoader();
+
+			// Load the target class using its binary name
+			Class loadedMyClass = classLoader.loadClass("io.netty.channel.epoll.EpollEventLoopGroup");
+			tmpGroup = (EventLoopGroup) loadedMyClass.getConstructor(int.class).newInstance(4);
+			tmpClass = (Class<? extends SocketChannel>) classLoader
+					.loadClass("io.netty.channel.epoll.EpollSocketChannel");
 		}
 		catch (Exception e) {
+			e.printStackTrace();
 			tmpGroup = new NioEventLoopGroup(4);
 			tmpClass = NioSocketChannel.class;
 		}
@@ -118,6 +123,7 @@ public class RequestTool {
 	public static EventLoopGroup group() {return group;}
 
 	public static Class<? extends SocketChannel> socketChannelClass() {return socketChannelClass;}
+
 
 	private static <T> T parseAndHandle(@NotNull SyncResponse response, int expectedCode, ObjectReader reader)
 			throws ErrorResponseException {
@@ -234,7 +240,7 @@ public class RequestTool {
 		try {
 			return new SyncRequest(new URL(BASE_URL + api))
 					.setHeader(AUTHORIZATION, client.getFullToken())
-					// TODO: GZIP .setHeader(ACCEPT_ENCODING, GZIP)
+					.setHeader(ACCEPT_ENCODING, GZIP)
 					.setHeader(ACCEPT, APPLICATION_JSON);
 		}
 		catch (MalformedURLException e) {
@@ -242,16 +248,6 @@ public class RequestTool {
 					"Wrong URL form. Should check code's String: \"" + BASE_URL + api + "\"", e);
 		}
 	}
-
-
-
-
-
-	/* *******************************************
-	 *
-	 *           Non Blocking Member
-	 *
-	 *********************************************/
 
 	/**
 	 * <h1>Refrain to use this method. you can find API that wants to process in {@link Client}.</h1>
@@ -274,9 +270,19 @@ public class RequestTool {
 	public SyncRequest newRequest(@NotNull URL url) {
 		return new SyncRequest(url)
 				.setHeader(AUTHORIZATION, client.getFullToken())
-				// TODO: GZIP .setHeader(ACCEPT_ENCODING, GZIP)
+				.setHeader(ACCEPT_ENCODING, GZIP)
 				.setHeader(ACCEPT, APPLICATION_JSON);
 	}
+
+
+
+
+
+	/* *******************************************
+	 *
+	 *           Non Blocking Member
+	 *
+	 *********************************************/
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api) {
 		try {
@@ -292,25 +298,6 @@ public class RequestTool {
 		return new AsyncClient(group, method, uri)
 				.setHeader(AUTHORIZATION, client.getFullToken())
 				.execute();
-	}
-
-	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api,
-								  @NotNull ResponseFutureListener onComplete) {
-		try {
-			return doAsync(method, new URI(BASE_URL + api), onComplete);
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException(
-					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
-		}
-	}
-
-	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull URI uri,
-								  @NotNull ResponseFutureListener onComplete) {
-		return new AsyncClient(group, method, uri)
-				.setHeader(AUTHORIZATION, client.getFullToken())
-				.execute()
-				.addListener(onComplete);
 	}
 
 	public DriveItemFuture getItemAsync(@NotNull String asciiApi) {

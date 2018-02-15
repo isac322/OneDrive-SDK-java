@@ -521,7 +521,7 @@ public class Client {
 
 
 	public DownloadFuture downloadAsync(@NotNull String fileId, @NotNull Path downloadFolder) throws IOException {
-		return _downloadAsync(Client.ITEM_ID_PREFIX + fileId, downloadFolder, null);
+		return _downloadAsync(Client.ITEM_ID_PREFIX + fileId + "/content", downloadFolder, null);
 	}
 
 
@@ -532,7 +532,7 @@ public class Client {
 
 	public DownloadFuture downloadAsync(@NotNull BasePointer pointer,
 										@NotNull Path downloadFolder) throws IOException {
-		return _downloadAsync(pointer.toASCIIApi(), downloadFolder, null);
+		return _downloadAsync(pointer.resolveOperator(Operator.CONTENT), downloadFolder, null);
 	}
 
 	public DownloadFuture downloadAsync(@NotNull BasePointer pointer, @NotNull Path downloadFolder,
@@ -552,16 +552,7 @@ public class Client {
 
 		String fullUrl = BASE_URL + url;
 		try {
-			if (newName != null) {
-				return new AsyncDownloadClient(requestTool, new URI(fullUrl), downloadFolder, newName).execute();
-			}
-			else {
-				return new AsyncDownloadClient(
-						requestTool,
-						new URI(fullUrl + "?select=name,@content.downloadUrl"),
-						downloadFolder)
-						.execute();
-			}
+			return new AsyncDownloadClient(requestTool, new URI(fullUrl), downloadFolder, newName).execute();
 		}
 		catch (URISyntaxException e) {
 			throw new IllegalArgumentException("Wrong url (" + url + "), full URL : \"" + fullUrl + "\".", e);

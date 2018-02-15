@@ -23,6 +23,8 @@ public class AsyncDefaultInitializer extends ChannelInitializer<SocketChannel> {
 		}
 		catch (SSLException e) {
 			e.printStackTrace();
+			System.err.println("Fail to initialize SslContext.");
+			System.exit(1);
 			sslContext1 = null;
 		}
 		sslContext = sslContext1;

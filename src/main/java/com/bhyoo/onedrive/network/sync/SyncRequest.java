@@ -16,6 +16,7 @@ import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.zip.GZIPInputStream;
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
@@ -196,7 +197,10 @@ public class SyncRequest {
 
 			// TODO: how about directly pass this steams to jackson for performance
 			if (code < 400)
-				body = httpConnection.getInputStream();
+				if ("gzip".equals(httpConnection.getContentEncoding()))
+					body = new GZIPInputStream(httpConnection.getInputStream());
+				else
+					body = httpConnection.getInputStream();
 			else
 				body = httpConnection.getErrorStream();
 

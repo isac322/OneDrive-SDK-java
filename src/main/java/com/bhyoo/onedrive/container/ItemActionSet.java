@@ -3,7 +3,7 @@ package com.bhyoo.onedrive.container;
 import com.bhyoo.onedrive.container.action.*;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import jdk.nashorn.internal.ir.ObjectNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

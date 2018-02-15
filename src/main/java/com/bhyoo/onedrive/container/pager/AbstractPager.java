@@ -17,7 +17,7 @@ abstract public class AbstractPager<T> implements Iterable<T> {
 	protected final @NotNull RequestTool requestTool;
 	protected @NotNull Page<T> page;
 
-	protected AbstractPager(@NotNull RequestTool requestTool, @NotNull Page page) {
+	protected AbstractPager(@NotNull RequestTool requestTool, @NotNull Page<T> page) {
 		this.requestTool = requestTool;
 		this.page = page;
 	}
