@@ -141,7 +141,7 @@ public class AsyncDownloadHandler extends SimpleChannelInboundHandler<HttpObject
 						else state = STATE_NONE;
 						break;
 					case STATE_ASCII_ONGOING:
-						if (ch == ';') {
+						if (ch == '\"') {
 							state = STATE_ASCII_FINISH;
 							end = i;
 							i = len;
