@@ -225,13 +225,13 @@ public class RequestTool {
 	 * {@code RequestTool.newRequest("/drive/items/485BEF1A80539148!115")},
 	 * {@code RequestTool.newRequest("/drive/root:/Documents")}
 	 *
-	 * @param api API to request. It must starts with <tt>/</tt>, kind of API form. (like <tt>/drives</tt> or
-	 *            <tt>/drive/root:/{item-path}</tt>)
+	 * @param api API to request. It must starts with <code>/</code>, kind of API form. (like <code>/drives</code> or
+	 *            <code>/drive/root:/{item-path}</code>)
 	 *
 	 * @return {@link SyncRequest} object that linked to {@code api} with access token.
 	 *
 	 * @throws InternalException If api form is invalid. It is mainly because of {@code api} that starting with
-	 *                           <tt>"http"</tt> or <tt>"https"</tt>.
+	 *                           <code>"http"</code> or <code>"https"</code>.
 	 * @see RequestTool#newRequest(String)
 	 */
 	@NotNull

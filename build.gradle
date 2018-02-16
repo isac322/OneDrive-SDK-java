@@ -75,6 +75,7 @@ task delombok(dependsOn: compileJava) {
 
 javadoc {
 	dependsOn delombok
+	options.addBooleanOption('html5').setValue(true)
 	source = delombok.srcDelomboked
 }
 

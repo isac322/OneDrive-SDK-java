@@ -7,12 +7,10 @@ import com.bhyoo.onedrive.exceptions.InternalException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.sync.SyncRequest;
 import com.bhyoo.onedrive.network.sync.SyncResponse;
-import io.netty.handler.codec.http.QueryStringDecoder;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
@@ -25,7 +23,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 
 public class AuthHelper implements AbstractAuthHelper {
 	private static final String AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0";
-	private static final IllegalStateException LOGIN_FIRST = new IllegalStateException("Do login first!!");
+	private static final IllegalStateException LOGIN_FIRST = new IllegalStateException("Login first!!");
 
 	@NotNull private final RequestTool requestTool;
 
@@ -121,23 +119,12 @@ public class AuthHelper implements AbstractAuthHelper {
 		}
 	}
 
-	/**
-	 * @throws ErrorResponseException if raises error while logout.
-	 */
-	@Override public void logout() throws ErrorResponseException {
+	@Override public void logout() {
 		String url = AUTH_URL + "/logout"; // AUTH_URL + "/logout?post_logout_redirect_uri=" + redirectURL;
 
 		SyncResponse response = new SyncRequest(url).doGet();
 
-		// FIXME: is it valid codes?
-		if (response.getCode() != HttpsURLConnection.HTTP_OK) {
-			String[] split = response.getUrl().getRef().split("&");
-			throw new ErrorResponseException(
-					HttpsURLConnection.HTTP_OK,
-					response.getCode(),
-					split[0].substring(split[0].indexOf('=') + 1),
-					QueryStringDecoder.decodeComponent(split[1].substring(split[1].indexOf('=') + 1)));
-		}
+		// TODO: error handling
 
 		authCode = null;
 		fullToken = null;
@@ -234,8 +221,6 @@ public class AuthHelper implements AbstractAuthHelper {
 	 * Get token from server with login information that given when {@code Client} object was constructed.<br>
 	 * And save to their own {@code Client} object.
 	 * <a href="https://dev.onedrive.com/auth/msa_oauth.htm#step-3-get-a-new-access-token-or-refresh-token">detail</a>
-	 *
-	 * @return access token {@code String} that given from server.
 	 *
 	 * @throws InvalidJsonException If fail to parse response of login request into json, or even if success to parse,
 	 *                              if there're unexpected value. both caused by server side not by SDK.

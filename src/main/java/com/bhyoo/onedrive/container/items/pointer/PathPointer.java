@@ -15,10 +15,10 @@ import java.util.regex.Pattern;
 
 /**
  * In OneDrive, <a href='https://dev.onedrive.com/README.htm#item-resource'>item</a> referencing can be represented by
- * both <b><tt>ID</tt></b> and <b><tt>path</tt></b>.<br>
- * Unlike <b><tt>ID</tt></b>, usage of <b><tt>path</tt></b> is not quite simple.<br>
- * All <b><tt>path</tt></b> referencing must fallow <tt>/drive/root:/{item-path}</tt> or
- * <tt>/drives/{drive-id}/root:/{item-path}</tt> form.<br>
+ * both <b><code>ID</code></b> and <b><code>path</code></b>.<br>
+ * Unlike <b><code>ID</code></b>, usage of <b><code>path</code></b> is not quite simple.<br>
+ * All <b><code>path</code></b> referencing must fallow <code>/drive/root:/{item-path}</code> or
+ * <code>/drives/{drive-id}/root:/{item-path}</code> form.<br>
  * <br>
  * This class helps programmer to reference file with path notation.
  *
