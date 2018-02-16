@@ -1,28 +1,25 @@
+plugins {
+	id 'java'
+	id 'idea'
+	id "com.google.osdetector" version "1.4.0"
+}
+
 group 'org.onedrive'
 version '0.10.0'
-
-apply plugin: 'java'
-apply plugin: 'idea'
-apply plugin: 'com.google.osdetector'
-
 
 compileJava {
 	sourceCompatibility = 1.7
 	targetCompatibility = 1.7
+
+	options.compilerArgs << "-Xlint:unchecked"
+}
+
+compileTestJava {
+	options.compilerArgs << "-Xlint:unchecked"
 }
 
 repositories {
-	mavenCentral()
-}
-
-buildscript {
-	repositories {
-		mavenCentral()
-	}
-
-	dependencies {
-		classpath 'com.google.gradle:osdetector-gradle-plugin:1.+'
-	}
+	jcenter()
 }
 
 dependencies {
@@ -55,12 +52,30 @@ dependencies {
 	testRuntime('org.junit.jupiter:junit-jupiter-engine:5.+')
 }
 
-allprojects {
-	gradle.projectsEvaluated {
-		tasks.withType(JavaCompile) {
-			options.compilerArgs << '-Xlint'
+
+task delombok(dependsOn: compileJava) {
+	ext.srcDelomboked = file("${buildDir}/delomboked")
+	outputs.dir(ext.srcDelomboked)
+
+	// older version: lombok.delombok.ant.DelombokTask
+	// recent version: lombok.delombok.ant.Tasks$Delombok
+	ant.taskdef(name: 'delombok', classname: 'lombok.delombok.ant.Tasks$Delombok',
+			classpath: configurations.compile.asPath)
+
+	sourceSets.main.java.srcDirs.each {
+		inputs.dir(it)
+	}
+
+	doLast {
+		sourceSets.main.java.srcDirs.each {
+			ant.delombok(from: it, to: ext.srcDelomboked, encoding: 'UTF-8', classpath: configurations.compile.asPath)
 		}
 	}
+}
+
+javadoc {
+	dependsOn delombok
+	source = delombok.srcDelomboked
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
@@ -70,12 +85,11 @@ task sourcesJar(type: Jar, dependsOn: classes) {
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
 	classifier = 'javadoc'
-	from 'build/docs/javadoc'
+	from javadoc.destinationDir
 }
 
 artifacts {
 	archives jar
-
 	archives sourcesJar
 	archives javadocJar
 }

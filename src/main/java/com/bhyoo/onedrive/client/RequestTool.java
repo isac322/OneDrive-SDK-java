@@ -57,6 +57,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
+@SuppressWarnings("unchecked")
 public class RequestTool {
 	public static final String SCHEME = "https";
 	public static final String REAL_HOST = "graph.microsoft.com";

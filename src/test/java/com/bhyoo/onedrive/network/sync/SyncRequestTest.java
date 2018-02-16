@@ -78,7 +78,7 @@ class SyncRequestTest {
 		int postIndex = random.nextInt(testPosts.length);
 
 		HashMap<String, String> aPost = testPosts[postIndex];
-		HashMap<String, String> newPost = ((HashMap<String, String>) aPost.clone());
+		HashMap<String, String> newPost = new HashMap<>(aPost);
 		newPost.put("title", "foo");
 
 		SyncResponse response = new SyncRequest(TEST_SERVER + "/posts/" + (postIndex + 1))

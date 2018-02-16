@@ -25,7 +25,7 @@ abstract public class BasePointer {
 	abstract public @NotNull String toJson();
 
 	/**
-	 * <strong>DO NOT USE</strong></br>
+	 * <strong>DO NOT USE</strong><br>
 	 * Internal use only
 	 *
 	 * @param op operator object
