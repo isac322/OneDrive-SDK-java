@@ -11,6 +11,7 @@ import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InternalException;
 import com.bhyoo.onedrive.network.async.ResponseFuture;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,7 +26,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 	protected @NotNull FolderFacet folder;
 	protected @Nullable SpecialFolderFacet specialFolder;
-	protected @Nullable ObjectNode root;
+	@Getter(onMethod = @__(@Override)) protected boolean root;
 	protected @Nullable URI nextLink;
 	protected @Nullable AbstractDriveItem[] children;
 	protected List<FolderItem> folderChildren;
@@ -40,7 +41,7 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 					  @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
 					  @Nullable SharePointIdsFacet sharePointIds, @NotNull Long size, URI webDavUrl,
 					  @NotNull FolderFacet folder, @Nullable SpecialFolderFacet specialFolder,
-					  @Nullable ObjectNode root, @Nullable URI nextLink, @Nullable AbstractDriveItem[] children) {
+					  boolean root, @Nullable URI nextLink, @Nullable AbstractDriveItem[] children) {
 		super(id, creator, createdDateTime, description, eTag, lastModifier, lastModifiedDateTime, name, webUrl,
 				client, cTag, deleted, fileSystemInfo, parentReference, searchResult, shared, sharePointIds, size,
 				webDavUrl);
@@ -89,7 +90,7 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 		else {
 			assert parentReference.pathPointer != null : "`parentReference.pathPointer` is null on FolderItem";
 			assert parentReference.rawPath != null : "`parentReference.rawPath` is null on FolderItem";
-			assert name != null;
+			assert name != null : "name is null";
 			pathPointer = parentReference.pathPointer.resolve(name);
 		}
 		idPointer = new IdPointer(id, getDriveId());
@@ -193,10 +194,6 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 	 *
 	 *************************************************************
 	 */
-
-
-	@Override
-	public boolean isRoot() {return root != null;}
 
 	@Override
 	public boolean isChildrenFetched() {

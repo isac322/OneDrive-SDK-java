@@ -49,7 +49,7 @@ abstract public class AbstractPager<T> implements Iterable<T> {
 		@Override public T next() {
 			if (isFirst) {
 				isFirst = false;
-				assert currentPage != null;
+				assert currentPage != null : "currentPage is null";
 				return currentPage.value;
 			}
 			else if (currentPage == null || currentPage.nextLink == null) throw new NoSuchElementException();

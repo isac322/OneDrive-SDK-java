@@ -1,6 +1,6 @@
 package com.bhyoo.onedrive.container.items;
 
-import com.bhyoo.onedrive.exceptions.ErrorResponseException;
+import com.bhyoo.onedrive.container.facet.*;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.DownloadFuture;
 import org.jetbrains.annotations.NotNull;
@@ -85,4 +85,15 @@ public interface FileItem extends DriveItem {
 	@Nullable String getSHA1();
 
 	@Nullable String getQuickXorHash();
+
+
+	@Nullable AudioFacet getAudio();
+
+	@Nullable ImageFacet getImage();
+
+	@Nullable LocationFacet getLocation();
+
+	@Nullable PhotoFacet getPhoto();
+
+	@Nullable VideoFacet getVideo();
 }

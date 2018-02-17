@@ -100,7 +100,7 @@ public class ItemReference {
 			}
 		}
 
-		assert driveId != null;
+		assert driveId != null : "driveId is null";
 
 		return new ItemReference(driveId, driveType, id, name, rawPath, shareId, sharepointIds);
 	}

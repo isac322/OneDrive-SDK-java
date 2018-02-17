@@ -41,8 +41,8 @@ public class ImageFacet {
 			}
 		}
 
-		assert width != null;
-		assert height != null;
+		assert width != null : "width is null";
+		assert height != null : "height is null";
 
 		return new ImageFacet(width, height);
 	}

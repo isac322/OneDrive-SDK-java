@@ -48,9 +48,9 @@ public class FolderViewFacet {
 			}
 		}
 
-		assert sortBy != null;
-		assert sortOrder != null;
-		assert viewType != null;
+		assert sortBy != null : "sortBy is null";
+		assert sortOrder != null : "sortOrder is null";
+		assert viewType != null : "viewType is null";
 
 		return new FolderViewFacet(sortBy, sortOrder, viewType);
 	}

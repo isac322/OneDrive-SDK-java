@@ -40,7 +40,7 @@ public class SearchResultFacet {
 			}
 		}
 
-		assert onClickTelemetryUrl != null;
+		assert onClickTelemetryUrl != null : "onClickTelemetryUrl is null";
 
 		return new SearchResultFacet(onClickTelemetryUrl);
 	}

@@ -157,10 +157,10 @@ public class RemoteItemFacet {
 			}
 		}
 
-		assert id != null;
-		assert parentReference != null;
-		assert size != null;
-		assert webUrl != null;
+		assert id != null : "id is null";
+		assert parentReference != null : "parentReference is null";
+		assert size != null : "size is null";
+		assert webUrl != null : "webUrl is null";
 
 		return new RemoteItemFacet(id, creator, createdDateTime, folder, fileSystemInfo, file, lastModifier,
 				lastModifiedDateTime, name, packages, parentReference, shared, sharepointIds, size, webDavUrl, webUrl);

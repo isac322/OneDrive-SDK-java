@@ -77,10 +77,10 @@ public class ErrorResponse {
 
 		if (autoClose) parser.close();
 
-		assert code != null;
-		assert message != null;
-		assert requestId != null;
-		assert date != null;
+		assert code != null : "code is null";
+		assert message != null : "message is null";
+		assert requestId != null : "requestId is null";
+		assert date != null : "date is null";
 
 		return new ErrorResponse(code, message, requestId, date);
 	}

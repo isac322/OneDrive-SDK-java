@@ -68,11 +68,11 @@ public class AuthenticationInfo {
 
 		if (autoClose) parser.close();
 
-		assert tokenType != null;
-		assert expiresIn != null;
-		assert accessToken != null;
-		assert refreshToken != null;
-		assert scope != null;
+		assert tokenType != null : "tokenType is null";
+		assert expiresIn != null : "expiresIn is null";
+		assert accessToken != null : "accessToken is null";
+		assert refreshToken != null : "refreshToken is null";
+		assert scope != null : "scope is null";
 
 		return new AuthenticationInfo(tokenType, expiresIn, accessToken, refreshToken, scope);
 	}

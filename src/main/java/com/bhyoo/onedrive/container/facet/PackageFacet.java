@@ -34,7 +34,7 @@ public class PackageFacet {
 			}
 		}
 
-		assert type != null;
+		assert type != null : "type is null";
 
 		return new PackageFacet(type);
 	}

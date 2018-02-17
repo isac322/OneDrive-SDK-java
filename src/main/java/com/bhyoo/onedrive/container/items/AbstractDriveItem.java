@@ -51,13 +51,13 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	 * The {@code eTag} value is only modified when the folder's properties are changed, except for properties that are
 	 * derived from descendants (like {@code childCount} or {@code lastModifiedDateTime}).
 	 */
-	@Getter(onMethod = @__(@Override)) protected FileSystemInfoFacet fileSystemInfo;
+	@Getter(onMethod = @__(@Override)) protected @Nullable FileSystemInfoFacet fileSystemInfo;
 	@Getter(onMethod = @__(@Override)) protected @NotNull ItemReference parentReference;
 	@Getter(onMethod = @__(@Override)) protected @Nullable SearchResultFacet searchResult;
 	@Getter(onMethod = @__(@Override)) protected @Nullable SharedFacet shared;
 	@Getter(onMethod = @__(@Override)) protected @Nullable SharePointIdsFacet sharePointIds;
-	@Getter(onMethod = @__(@Override)) protected long size;
-	@Getter(onMethod = @__(@Override)) protected URI webDavUrl;
+	@Getter(onMethod = @__(@Override)) protected @Nullable Long size;
+	@Getter(onMethod = @__(@Override)) protected @Nullable URI webDavUrl;
 
 	@Getter(onMethod = @__(@Override)) protected @Nullable PathPointer pathPointer;
 	@Getter(onMethod = @__(@Override)) protected @NotNull IdPointer idPointer;
@@ -67,9 +67,9 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 					  @Nullable String description, @Nullable String eTag, @Nullable IdentitySet lastModifier,
 					  @NotNull String lastModifiedDateTime, @NotNull String name, @NotNull URI webUrl,
 					  @NotNull Client client, @Nullable String cTag, @Nullable ObjectNode deleted,
-					  FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
+					  @Nullable FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
 					  @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
-					  @Nullable SharePointIdsFacet sharePointIds, @NotNull Long size, URI webDavUrl) {
+					  @Nullable SharePointIdsFacet sharePointIds, @Nullable Long size, @Nullable URI webDavUrl) {
 		super(id, creator, createdDateTime, description, eTag, lastModifier, lastModifiedDateTime, name, webUrl);
 
 		this.client = client;
@@ -88,26 +88,26 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	public static @NotNull AbstractDriveItem deserialize(@NotNull Client client, @NotNull JsonParser parser,
 														 boolean autoClose) throws IOException {
 		// BaseItem
-		@NotNull String id = null;
-		@NotNull IdentitySet creator = null;
-		@NotNull String createdDateTime = null;
+		@Nullable String id = null;
+		@Nullable IdentitySet creator = null;
+		@Nullable String createdDateTime = null;
 		@Nullable String description = null;
-		@NotNull String eTag = null;
-		@NotNull IdentitySet lastModifier = null;
-		@NotNull String lastModifiedDateTime = null;
-		@NotNull String name = null;
-		@NotNull URI webUrl = null;
+		@Nullable String eTag = null;
+		@Nullable IdentitySet lastModifier = null;
+		@Nullable String lastModifiedDateTime = null;
+		@Nullable String name = null;
+		@Nullable URI webUrl = null;
 
 		// DriveItem
-		@NotNull String cTag = null;
-		@NotNull ObjectNode deleted = null;
-		@NotNull FileSystemInfoFacet fileSystemInfo = null;
-		@NotNull ItemReference parentReference = null;
-		@NotNull SearchResultFacet searchResult = null;
-		@NotNull SharedFacet shared = null;
-		@NotNull SharePointIdsFacet sharePointIds = null;
-		@NotNull Long size = null;
-		@NotNull URI webDavUrl = null;
+		@Nullable String cTag = null;
+		@Nullable ObjectNode deleted = null;
+		@Nullable FileSystemInfoFacet fileSystemInfo = null;
+		@Nullable ItemReference parentReference = null;
+		@Nullable SearchResultFacet searchResult = null;
+		@Nullable SharedFacet shared = null;
+		@Nullable SharePointIdsFacet sharePointIds = null;
+		@Nullable Long size = null;
+		@Nullable URI webDavUrl = null;
 
 		// FileItem
 		@Nullable AudioFacet audio = null;
@@ -120,7 +120,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 		// FolderItem
 		@Nullable FolderFacet folder = null;
 		@Nullable SpecialFolderFacet specialFolder = null;
-		@Nullable ObjectNode root = null;
+		boolean root = false;
 		@Nullable URI nextLink = null;
 		@Nullable AbstractDriveItem[] children = null;
 
@@ -218,7 +218,10 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 					specialFolder = SpecialFolderFacet.deserialize(parser);
 					break;
 				case "root":
-					root = parser.readValueAsTree();
+					root = true;
+					while (parser.nextToken() != JsonToken.END_OBJECT) {
+						// TODO
+					}
 					break;
 				case "children@odata.nextLink":
 					nextLink = new URI(parser.getText());
@@ -261,25 +264,18 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 		if (autoClose) parser.close();
 
 		// BaseItem
-		assert id != null;
-		assert creator != null;
-		assert createdDateTime != null;
-		assert eTag != null;
-		assert lastModifier != null;
-		assert lastModifiedDateTime != null;
-		assert name != null;
-		assert webUrl != null;
+		assert id != null : "id is null";
+		assert creator != null : "creator is null";
+		assert createdDateTime != null : "createdDateTime is null";
+		assert eTag != null : "eTag is null";
+		assert lastModifier != null : "lastModifier is null";
+		assert lastModifiedDateTime != null : "lastModifiedDateTime is null";
+		assert name != null : "name is null";
+		assert webUrl != null : "webUrl is null";
 
 		// DriveItem
-		assert cTag != null;
-		assert deleted != null;
-		assert fileSystemInfo != null;
-		assert parentReference != null;
-		assert searchResult != null;
-		assert shared != null;
-		assert sharePointIds != null;
-		assert size != null;
-		assert webDavUrl != null;
+		assert cTag != null : "cTag is null";
+		assert parentReference != null : "parentReference is null";
 
 		if (file != null) {
 			if (remoteItem != null) {
@@ -365,7 +361,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 		assert parentReference.pathPointer != null : "`parentReference.pathPointer` is null on FileItem";
 		assert parentReference.rawPath != null : "`parentReference.rawPath` is null on FileItem";
 
-		assert name != null;
+		assert name != null : "name is null";
 		pathPointer = parentReference.pathPointer.resolve(name);
 		idPointer = new IdPointer(id, parentReference.driveId);
 	}
@@ -398,7 +394,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 		this.webUrl = newItem.webUrl;
 
 		if (parentReference.pathPointer != null && parentReference.rawPath != null) {
-			assert name != null;
+			assert name != null : "name is null";
 			this.pathPointer = parentReference.pathPointer.resolve(name);
 		}
 		this.idPointer = new IdPointer(id, parentReference.driveId);

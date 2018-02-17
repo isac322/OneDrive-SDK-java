@@ -93,14 +93,14 @@ public class VideoFacet {
 			}
 		}
 
-		assert audioBitsPerSample != null;
-		assert audioChannels != null;
-		assert audioSamplesPerSecond != null;
-		assert bitrate != null;
-		assert duration != null;
-		assert frameRate != null;
-		assert height != null;
-		assert width != null;
+		assert audioBitsPerSample != null : "audioBitsPerSample is null";
+		assert audioChannels != null : "audioChannels is null";
+		assert audioSamplesPerSecond != null : "audioSamplesPerSecond is null";
+		assert bitrate != null : "bitrate is null";
+		assert duration != null : "duration is null";
+		assert frameRate != null : "frameRate is null";
+		assert height != null : "height is null";
+		assert width != null : "width is null";
 
 		return new VideoFacet(audioBitsPerSample, audioChannels, audioFormat, audioSamplesPerSecond, bitrate, duration,
 				fourCC, frameRate, height, width);

@@ -18,12 +18,12 @@ import java.nio.file.Paths;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class DefaultFileItem extends AbstractDriveItem implements FileItem {
-	@Getter protected @Nullable AudioFacet audio;
+	@Getter(onMethod = @__(@Override)) protected @Nullable AudioFacet audio;
 	protected @NotNull FileFacet file;
-	@Getter protected @Nullable ImageFacet image;
-	@Getter protected @Nullable LocationFacet location;
-	@Getter protected @Nullable PhotoFacet photo;
-	@Getter protected @Nullable VideoFacet video;
+	@Getter(onMethod = @__(@Override)) protected @Nullable ImageFacet image;
+	@Getter(onMethod = @__(@Override)) protected @Nullable LocationFacet location;
+	@Getter(onMethod = @__(@Override)) protected @Nullable PhotoFacet photo;
+	@Getter(onMethod = @__(@Override)) protected @Nullable VideoFacet video;
 
 
 	DefaultFileItem(@NotNull String id, @NotNull IdentitySet creator, @NotNull String createdDateTime,
@@ -50,7 +50,7 @@ public class DefaultFileItem extends AbstractDriveItem implements FileItem {
 
 	@Override
 	public void download(@NotNull String path) throws IOException {
-		assert this.name != null;
+		assert this.name != null : "this.name is null";
 		client.download(idPointer, Paths.get(path), this.name);
 	}
 
@@ -61,7 +61,7 @@ public class DefaultFileItem extends AbstractDriveItem implements FileItem {
 
 	@Override
 	public void download(@NotNull Path folderPath) throws IOException {
-		assert this.name != null;
+		assert this.name != null : "this.name is null";
 		client.download(idPointer, folderPath, this.name);
 	}
 

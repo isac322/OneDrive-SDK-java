@@ -44,8 +44,8 @@ public class FileSystemInfoFacet {
 			}
 		}
 
-		assert createdDateTime != null;
-		assert lastModifiedDateTime != null;
+		assert createdDateTime != null : "createdDateTime is null";
+		assert lastModifiedDateTime != null : "lastModifiedDateTime is null";
 
 		return new FileSystemInfoFacet(createdDateTime, lastModifiedDateTime);
 	}

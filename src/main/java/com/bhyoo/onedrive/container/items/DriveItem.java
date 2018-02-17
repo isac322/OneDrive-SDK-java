@@ -108,7 +108,7 @@ public interface DriveItem extends BaseItem {
 
 	@NotNull String getCTag();
 
-	FileSystemInfoFacet getFileSystemInfo();
+	@Nullable FileSystemInfoFacet getFileSystemInfo();
 
 	@NotNull ItemReference getParentReference();
 
@@ -118,9 +118,9 @@ public interface DriveItem extends BaseItem {
 
 	@Nullable SharePointIdsFacet getSharePointIds();
 
-	long getSize();
+	@Nullable Long getSize();
 
-	URI getWebDavUrl();
+	@Nullable URI getWebDavUrl();
 
 	@Nullable PathPointer getPathPointer();
 

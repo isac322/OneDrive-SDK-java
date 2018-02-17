@@ -16,8 +16,8 @@ import java.nio.file.StandardOpenOption;
  */
 public class AsyncDownloadHandler extends SimpleChannelInboundHandler<HttpObject> {
 	private final DownloadPromise promise;
-	private FileChannel fileChannel;
 	private final @Nullable String newName;
+	private FileChannel fileChannel;
 
 	public AsyncDownloadHandler(DownloadPromise promise, @Nullable String newName) {
 		this.promise = promise;

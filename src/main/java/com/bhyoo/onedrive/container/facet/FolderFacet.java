@@ -44,8 +44,8 @@ public class FolderFacet {
 			}
 		}
 
-		assert childCount != null;
-		assert view != null;
+		assert childCount != null : "childCount is null";
+		assert view != null : "view is null";
 
 		return new FolderFacet(childCount, view);
 	}

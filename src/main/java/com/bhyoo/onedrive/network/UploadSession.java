@@ -59,9 +59,9 @@ public class UploadSession {
 
 		if (autoClose) parser.close();
 
-		assert uploadUrl != null;
-		assert expirationDateTime != null;
-		assert nextExpectedRanges != null;
+		assert uploadUrl != null : "uploadUrl is null";
+		assert expirationDateTime != null : "expirationDateTime is null";
+		assert nextExpectedRanges != null : "nextExpectedRanges is null";
 
 		return new UploadSession(uploadUrl, expirationDateTime, nextExpectedRanges);
 	}
