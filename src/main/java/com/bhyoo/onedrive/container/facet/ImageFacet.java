@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -22,7 +23,7 @@ public class ImageFacet {
 	}
 
 	public static ImageFacet deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull Integer width = null, height = null;
+		@Nullable Integer width = null, height = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -39,6 +40,9 @@ public class ImageFacet {
 					throw new IllegalStateException("Unknown attribute detected in ImageFacet : " + currentName);
 			}
 		}
+
+		assert width != null;
+		assert height != null;
 
 		return new ImageFacet(width, height);
 	}

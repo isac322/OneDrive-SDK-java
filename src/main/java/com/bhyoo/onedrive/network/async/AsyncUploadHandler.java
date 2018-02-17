@@ -18,7 +18,7 @@ import static java.net.HttpURLConnection.*;
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-public class AsyncUploadHandler extends SimpleChannelInboundHandler<HttpObject> {
+class AsyncUploadHandler extends SimpleChannelInboundHandler<HttpObject> {
 	private static final int UPLOAD_FRAGMENT_SIZE_MIN = 320 * 1024;
 	private static final int UPLOAD_FRAGMENT_SIZE_MAX = 320 * 1024 * 32;
 	private final UploadPromise promise;

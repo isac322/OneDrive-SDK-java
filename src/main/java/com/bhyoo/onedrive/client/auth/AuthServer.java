@@ -17,7 +17,7 @@ import java.util.concurrent.Semaphore;
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
-public final class AuthServer {
+final class AuthServer {
 	private final Semaphore authLock;
 	private HttpServer server = null;
 	private String authCode;

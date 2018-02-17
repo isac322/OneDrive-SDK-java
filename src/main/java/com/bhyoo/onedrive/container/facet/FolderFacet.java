@@ -17,15 +17,15 @@ import java.io.IOException;
  */
 public class FolderFacet {
 	@Getter protected final long childCount;
-	@Getter protected final FolderViewFacet view;
+	@Getter protected final @NotNull FolderViewFacet view;
 
-	protected FolderFacet(@NotNull Long childCount, FolderViewFacet view) {
+	protected FolderFacet(@NotNull Long childCount, @NotNull FolderViewFacet view) {
 		this.childCount = childCount;
 		this.view = view;
 	}
 
 	public static FolderFacet deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull Long childCount = null;
+		@Nullable Long childCount = null;
 		@Nullable FolderViewFacet view = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
@@ -43,6 +43,9 @@ public class FolderFacet {
 					throw new IllegalStateException("Unknown attribute detected in FolderFacet : " + currentName);
 			}
 		}
+
+		assert childCount != null;
+		assert view != null;
 
 		return new FolderFacet(childCount, view);
 	}

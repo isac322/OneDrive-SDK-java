@@ -8,22 +8,14 @@ import com.bhyoo.onedrive.container.pager.DrivePager;
 import com.bhyoo.onedrive.container.pager.DrivePager.DrivePage;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InternalException;
-import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.ErrorResponse;
 import com.bhyoo.onedrive.network.UploadSession;
 import com.bhyoo.onedrive.network.async.*;
 import com.bhyoo.onedrive.network.sync.SyncRequest;
 import com.bhyoo.onedrive.network.sync.SyncResponse;
 import com.bhyoo.onedrive.utils.ByteBufStream;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -43,8 +35,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.zip.GZIPInputStream;
 
-import static com.fasterxml.jackson.databind.DeserializationFeature.UNWRAP_ROOT_VALUE;
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
@@ -69,10 +61,6 @@ public class RequestTool {
 	public static final JsonFactory jsonFactory;
 	private static final EventLoopGroup group;
 	private static final Class<? extends SocketChannel> socketChannelClass;
-	@Getter private static final ObjectMapper mapper;
-	private static final ObjectReader errorReader;
-	private static final ObjectReader authReader;
-	private static final ObjectReader uploadSessionReader;
 
 	static {
 		EventLoopGroup tmpGroup;
@@ -95,27 +83,14 @@ public class RequestTool {
 		socketChannelClass = tmpClass;
 
 
-		mapper = new ObjectMapper();
-		mapper.registerModule(new AfterburnerModule());
-		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-		// in serialization, ignore null values.
-		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-
-		errorReader = mapper.readerFor(ErrorResponse.class).with(UNWRAP_ROOT_VALUE);
-		authReader = mapper.readerFor(AuthenticationInfo.class);
-		uploadSessionReader = mapper.readerFor(UploadSession.class);
-
-		jsonFactory = mapper.getFactory();
+		jsonFactory = new JsonFactory();
 	}
 
 	@Getter private final Client client;
-	private final InjectableValues.Std clientInjectValue;
 
 
 	public RequestTool(final @NotNull Client client) {
 		this.client = client;
-
-		clientInjectValue = new InjectableValues.Std().addValue("OneDriveClient", client);
 	}
 
 
@@ -124,70 +99,23 @@ public class RequestTool {
 	public static Class<? extends SocketChannel> socketChannelClass() {return socketChannelClass;}
 
 
-	private static <T> T parseAndHandle(@NotNull SyncResponse response, int expectedCode, ObjectReader reader)
-			throws ErrorResponseException {
-		byte[] content = response.getContent();
-
-		try {
-			if (response.getCode() == expectedCode) {
-				return reader.readValue(content);
-			}
-			else {
-				ErrorResponse err = errorReader.readValue(content);
-				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
-			}
-		}
-		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.getCode(), content);
-		}
-		catch (IOException e) {
-			// FIXME: custom exception
-			throw new RuntimeException("DEV: Unrecognizable json response.", e);
-		}
-	}
-
 	private static @NotNull AbstractDriveItem parseDriveItem(@NotNull SyncResponse response, int expectedCode,
 															 @NotNull Client client) throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(response.getContent());
+			parser.nextToken();
+
 			if (response.getCode() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(response.getContent());
-				parser.nextToken();
 				return AbstractDriveItem.deserialize(client, parser, true);
 			}
 			else {
-				ErrorResponse err = errorReader.readValue(response.getContent());
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
 			}
 		}
 		catch (IOException e) {
 			// FIXME: custom exception
 			throw new RuntimeException("DEV: Unrecognizable json response.", e);
-		}
-	}
-
-	private static <T> T parseAndHandle(@NotNull HttpResponse response, @NotNull ByteBufStream byteBufStream,
-										int expectedCode, ObjectReader reader) throws ErrorResponseException {
-		byteBufStream.getRawBuffer().retain();
-
-		try {
-			if (response.status().code() == expectedCode) {
-				return reader.readValue(byteBufStream);
-			}
-			else {
-				ErrorResponse error = errorReader.readValue(byteBufStream);
-				throw new ErrorResponseException(expectedCode, response.status().code(),
-						error.getCode(), error.getMessage());
-			}
-		}
-		catch (JsonProcessingException e) {
-			throw new InvalidJsonException(e, response.status().code(), byteBufStream.getRawBuffer());
-		}
-		catch (IOException e) {
-			// FIXME: custom exception
-			throw new RuntimeException("DEV: Unrecognizable json response.", e);
-		}
-		finally {
-			byteBufStream.getRawBuffer().release();
 		}
 	}
 
@@ -196,13 +124,14 @@ public class RequestTool {
 															 int expectedCode,
 															 @NotNull Client client) throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(byteBufStream);
+			parser.nextToken();
+
 			if (response.status().code() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(byteBufStream);
-				parser.nextToken();
 				return AbstractDriveItem.deserialize(client, parser, true);
 			}
 			else {
-				ErrorResponse error = errorReader.readValue(byteBufStream);
+				ErrorResponse error = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
 						error.getCode(), error.getMessage());
 			}
@@ -317,7 +246,7 @@ public class RequestTool {
 
 
 		bootstrap.connect(REAL_HOST, 443).addListener(new ChannelFutureListener() {
-			@Override public void operationComplete(ChannelFuture future) throws Exception {
+			@Override public void operationComplete(ChannelFuture future) {
 				if (future.isSuccess()) {
 					future.channel().writeAndFlush(request);
 				}
@@ -350,21 +279,28 @@ public class RequestTool {
 
 		httpsConnection.setRequestProperty(AUTHORIZATION.toString(), client.getFullToken());
 		httpsConnection.setRequestProperty(ACCEPT.toString(), APPLICATION_JSON.toString());
-		// TODO: GZIP httpsConnection.setRequestProperty(ACCEPT_ENCODING.toString(), GZIP.toString());
+		httpsConnection.setRequestProperty(ACCEPT_ENCODING.toString(), GZIP.toString());
 
 		try {
 			int code = httpsConnection.getResponseCode();
 			InputStream body;
 
 			if (code == HTTP_OK) {
-				body = httpsConnection.getInputStream();
+				if ("gzip".equals(httpsConnection.getContentEncoding()))
+					body = new GZIPInputStream(httpsConnection.getInputStream());
+				else
+					body = httpsConnection.getInputStream();
+
 				JsonParser parser = jsonFactory.createParser(body);
 				parser.nextToken();
 				return AbstractDriveItem.deserialize(client, parser, true);
 			}
 			else {
 				body = httpsConnection.getErrorStream();
-				ErrorResponse error = errorReader.readValue(body);
+				JsonParser parser = jsonFactory.createParser(body);
+				parser.nextToken();
+
+				ErrorResponse error = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(HTTP_OK, code, error.getCode(), error.getMessage());
 			}
 		}
@@ -429,7 +365,7 @@ public class RequestTool {
 	 *
 	 *********************************************/
 
-	public UploadFuture upload(@NotNull String api, @NotNull Path filePath) throws IOException {
+	public UploadFuture upload(@NotNull String api, @NotNull Path filePath) {
 		URI uri;
 		try {
 			uri = new URI(BASE_URL + api);
@@ -464,7 +400,7 @@ public class RequestTool {
 
 
 		bootstrap.connect(host, port).addListener(new ChannelFutureListener() {
-			@Override public void operationComplete(ChannelFuture future) throws Exception {
+			@Override public void operationComplete(ChannelFuture future) {
 				if (future.isSuccess()) {
 					future.channel().writeAndFlush(request);
 				}
@@ -493,15 +429,12 @@ public class RequestTool {
 
 	public void errorHandling(@NotNull SyncResponse response, int expectedCode) throws ErrorResponseException {
 		if (response.getCode() != expectedCode) {
-			byte[] content = response.getContent();
-
 			try {
-				ErrorResponse error = errorReader.readValue(content);
+				JsonParser parser = jsonFactory.createParser(response.getContent());
+				parser.nextToken();
+				ErrorResponse error = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.getCode(),
 						error.getCode(), error.getMessage());
-			}
-			catch (JsonProcessingException e) {
-				throw new InvalidJsonException(e, response.getCode(), content);
 			}
 			catch (IOException e) {
 				// FIXME: custom exception
@@ -514,12 +447,11 @@ public class RequestTool {
 							  int expectedCode) throws ErrorResponseException {
 		if (response.status().code() != expectedCode) {
 			try {
-				ErrorResponse error = errorReader.readValue(byteBufStream);
+				JsonParser parser = jsonFactory.createParser(byteBufStream);
+				parser.nextToken();
+				ErrorResponse error = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
 						error.getCode(), error.getMessage());
-			}
-			catch (JsonProcessingException e) {
-				throw new InvalidJsonException(e, response.status().code(), byteBufStream.getRawBuffer());
 			}
 			catch (IOException e) {
 				// FIXME: custom exception
@@ -546,13 +478,14 @@ public class RequestTool {
 	public @NotNull DriveItemPage parseDriveItemPageAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(response.getContent());
+			parser.nextToken();
+
 			if (response.getCode() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(response.getContent());
-				parser.nextToken();
 				return DriveItemPage.deserialize(client, parser, true);
 			}
 			else {
-				ErrorResponse err = errorReader.readValue(response.getContent());
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
 			}
 		}
@@ -565,13 +498,14 @@ public class RequestTool {
 	public @NotNull DriveItemPager parseDriveItemPagerAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(response.getContent());
+			parser.nextToken();
+
 			if (response.getCode() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(response.getContent());
-				parser.nextToken();
 				return DriveItemPager.deserialize(client, parser, true);
 			}
 			else {
-				ErrorResponse err = errorReader.readValue(response.getContent());
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
 			}
 		}
@@ -588,13 +522,14 @@ public class RequestTool {
 	public @NotNull Drive parseDriveAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(response.getContent());
+			parser.nextToken();
+
 			if (response.getCode() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(response.getContent());
-				parser.nextToken();
 				return Drive.deserialize(client, parser);
 			}
 			else {
-				ErrorResponse err = errorReader.readValue(response.getContent());
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
 			}
 		}
@@ -607,13 +542,14 @@ public class RequestTool {
 	public @NotNull DrivePage parseDrivePageAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(response.getContent());
+			parser.nextToken();
+
 			if (response.getCode() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(response.getContent());
-				parser.nextToken();
 				return DrivePage.deserialize(client, parser);
 			}
 			else {
-				ErrorResponse err = errorReader.readValue(response.getContent());
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
 			}
 		}
@@ -626,13 +562,14 @@ public class RequestTool {
 	public @NotNull DrivePager parseDrivePagerAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(response.getContent());
+			parser.nextToken();
+
 			if (response.getCode() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(response.getContent());
-				parser.nextToken();
 				return DrivePager.deserialize(client, parser);
 			}
 			else {
-				ErrorResponse err = errorReader.readValue(response.getContent());
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
 			}
 		}
@@ -644,7 +581,22 @@ public class RequestTool {
 
 	public @NotNull AuthenticationInfo parseAuthAndHandle(@NotNull SyncResponse response, int expectedCode)
 			throws ErrorResponseException {
-		return parseAndHandle(response, expectedCode, authReader.with(clientInjectValue));
+		try {
+			JsonParser parser = jsonFactory.createParser(response.getContent());
+			parser.nextToken();
+
+			if (response.getCode() == expectedCode) {
+				return AuthenticationInfo.deserialize(parser, true);
+			}
+			else {
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
+				throw new ErrorResponseException(expectedCode, response.getCode(), err.getCode(), err.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
 	}
 
 
@@ -658,15 +610,16 @@ public class RequestTool {
 															  @NotNull ByteBufStream byteBufStream, int expectedCode)
 			throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(byteBufStream);
+			parser.nextToken();
+
 			if (response.status().code() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(byteBufStream);
-				parser.nextToken();
 				return DriveItemPage.deserialize(client, parser, true);
 			}
 			else {
-				ErrorResponse error = errorReader.readValue(byteBufStream);
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
-						error.getCode(), error.getMessage());
+						err.getCode(), err.getMessage());
 			}
 		}
 		catch (IOException e) {
@@ -679,15 +632,16 @@ public class RequestTool {
 																@NotNull ByteBufStream byteBufStream, int expectedCode)
 			throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(byteBufStream);
+			parser.nextToken();
+
 			if (response.status().code() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(byteBufStream);
-				parser.nextToken();
 				return DriveItemPager.deserialize(client, parser, true);
 			}
 			else {
-				ErrorResponse error = errorReader.readValue(byteBufStream);
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
-						error.getCode(), error.getMessage());
+						err.getCode(), err.getMessage());
 			}
 		}
 		catch (IOException e) {
@@ -700,15 +654,16 @@ public class RequestTool {
 																 @NotNull ByteBufStream byteBufStream,
 																 int expectedCode) throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(byteBufStream);
+			parser.nextToken();
+
 			if (response.status().code() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(byteBufStream);
-				parser.nextToken();
 				return DriveItemPager.deserializeRecursive(client, parser, true);
 			}
 			else {
-				ErrorResponse error = errorReader.readValue(byteBufStream);
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
-						error.getCode(), error.getMessage());
+						err.getCode(), err.getMessage());
 			}
 		}
 		catch (IOException e) {
@@ -721,15 +676,16 @@ public class RequestTool {
 													  @NotNull ByteBufStream byteBufStream, int expectedCode)
 			throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(byteBufStream);
+			parser.nextToken();
+
 			if (response.status().code() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(byteBufStream);
-				parser.nextToken();
 				return DrivePage.deserialize(client, parser);
 			}
 			else {
-				ErrorResponse error = errorReader.readValue(byteBufStream);
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
-						error.getCode(), error.getMessage());
+						err.getCode(), err.getMessage());
 			}
 		}
 		catch (IOException e) {
@@ -742,15 +698,16 @@ public class RequestTool {
 														@NotNull ByteBufStream byteBufStream, int expectedCode)
 			throws ErrorResponseException {
 		try {
+			JsonParser parser = jsonFactory.createParser(byteBufStream);
+			parser.nextToken();
+
 			if (response.status().code() == expectedCode) {
-				JsonParser parser = jsonFactory.createParser(byteBufStream);
-				parser.nextToken();
 				return DrivePager.deserialize(client, parser);
 			}
 			else {
-				ErrorResponse error = errorReader.readValue(byteBufStream);
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
 				throw new ErrorResponseException(expectedCode, response.status().code(),
-						error.getCode(), error.getMessage());
+						err.getCode(), err.getMessage());
 			}
 		}
 		catch (IOException e) {
@@ -762,6 +719,22 @@ public class RequestTool {
 	public @NotNull UploadSession parseUploadSessionAndHandle(@NotNull HttpResponse response,
 															  @NotNull ByteBufStream byteBufStream,
 															  int expectedCode) throws ErrorResponseException {
-		return parseAndHandle(response, byteBufStream, expectedCode, uploadSessionReader);
+		try {
+			JsonParser parser = jsonFactory.createParser(byteBufStream);
+			parser.nextToken();
+
+			if (response.status().code() == expectedCode) {
+				return UploadSession.deserialize(parser, true);
+			}
+			else {
+				ErrorResponse err = ErrorResponse.deserialize(parser, true);
+				throw new ErrorResponseException(expectedCode, response.status().code(),
+						err.getCode(), err.getMessage());
+			}
+		}
+		catch (IOException e) {
+			// FIXME: custom exception
+			throw new RuntimeException("DEV: Unrecognizable json response.", e);
+		}
 	}
 }

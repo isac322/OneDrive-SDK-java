@@ -5,7 +5,6 @@ import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -16,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ByteBufStreamTest {
 	private static final byte[] first = {0, 1, 2, 3}, second = {4, 5, 6, 7};
 
-	@Test void testCase1() throws InterruptedException, IOException {
+	@Test void testCase1() throws InterruptedException {
 		ByteBuf buffer = Unpooled.buffer();
 		final ByteBufStream inputStream = new ByteBufStream();
 
@@ -63,7 +62,7 @@ class ByteBufStreamTest {
 		inputStream.close();
 	}
 
-	@Test void readEmptyStream() throws InterruptedException, IOException {
+	@Test void readEmptyStream() throws InterruptedException {
 		ByteBuf buffer = Unpooled.buffer();
 		final ByteBufStream inputStream = new ByteBufStream();
 
@@ -99,7 +98,7 @@ class ByteBufStreamTest {
 		stream.close();
 
 		assertThrows(IllegalStateException.class, new Executable() {
-			@Override public void execute() throws Throwable {
+			@Override public void execute() {
 				ByteBuf buf = Unpooled.buffer(100);
 				stream.writeByteBuf(buf);
 			}

@@ -2,9 +2,7 @@ package com.bhyoo.onedrive.container;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.util.StdConverter;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -20,10 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 @EqualsAndHashCode(of = "id")
-@JsonDeserialize(converter = Identity.IdentityConverter.class)
 @ToString(exclude = "thumbnails", doNotUseGetters = true)
 public class Identity {
-	private static ConcurrentHashMap<String, Identity> identitySet = new ConcurrentHashMap<>();
+	private static final ConcurrentHashMap<String, Identity> identitySet = new ConcurrentHashMap<>();
 
 	@Getter final @Nullable String displayName;
 	@Getter final @Nullable String email;
@@ -90,18 +87,5 @@ public class Identity {
 	private int countNull() {
 		return (displayName == null ? 1 : 0) + (email == null ? 1 : 0) +
 				(id == null ? 1 : 0) + (thumbnails == null ? 1 : 0);
-	}
-
-	static class IdentityConverter extends StdConverter<Identity, Identity> {
-		@Override public Identity convert(Identity value) {
-			if (value.id != null) {
-				Identity identity = identitySet.get(value.id);
-
-				if (identity != null && identity.countNull() <= value.countNull()) return identity;
-
-				identitySet.put(value.id, value);
-			}
-			return value;
-		}
 	}
 }

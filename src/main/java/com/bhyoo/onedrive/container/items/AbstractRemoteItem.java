@@ -35,6 +35,7 @@ public abstract class AbstractRemoteItem extends AbstractDriveItem implements Re
 	@Override
 	protected void createPointers() {
 		if (parentReference.pathPointer != null) {
+			assert name != null;
 			this.pathPointer = parentReference.pathPointer.resolve(name);
 		}
 		this.idPointer = new IdPointer(id, parentReference.driveId);

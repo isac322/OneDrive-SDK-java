@@ -16,9 +16,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class ClientTest {
-	public static String DIR_MANY_CHILD = "D4FD82CA6DF96A47!14841";
-	public static String DIR_MANY_CHILD_NAME = "BOJ";
-	public static String MP3_UTF8_BIG = "D4FD82CA6DF96A47!24998";
+	public static final String DIR_MANY_CHILD = "D4FD82CA6DF96A47!14841";
+	public static final String DIR_MANY_CHILD_NAME = "BOJ";
+	public static final String MP3_UTF8_BIG = "D4FD82CA6DF96A47!24998";
 	public static String MP3_UTF8_BIG_NAME = "[수정] vol.5.mp3";
 	public static String MP3_UTF8_SMALL = "D4FD82CA6DF96A47!25997";
 	public static String MP3_UTF8_SMALL_NAME = "Roy Kim 로이킴 - 봄봄봄. -[ mymusicroad.net ].mp3";
@@ -60,7 +60,7 @@ public class ClientTest {
 	}
 
 	@AfterAll
-	static void logout() throws Exception {
+	static void logout() {
 		assertNotNull(client);
 		assertTrue(client.isLogin());
 
@@ -70,13 +70,9 @@ public class ClientTest {
 	}
 
 	private static void testDrive(Drive drive) {
-		assertNotNull(drive.getDeleted());
 		assertNotNull(drive.getDriveType());
 		assertNotNull(drive.getId());
-		assertNotNull(drive.getRemaining());
 		assertNotNull(drive.getState());
-		assertNotNull(drive.getTotalCapacity());
-		assertNotNull(drive.getUsedCapacity());
 
 		System.out.println(drive.getDeleted());
 		System.out.println(drive.getDriveType());
@@ -87,7 +83,7 @@ public class ClientTest {
 		System.out.println(drive.getUsedCapacity());
 	}
 
-	@Test void refreshLogin() throws Exception {
+	@Test void refreshLogin() {
 		String accessToken = client.getAccessToken();
 		String authCode = client.getAuthCode();
 		String clientId = client.getClientId();
@@ -181,7 +177,7 @@ public class ClientTest {
 		}
 	}
 
-	@Test void getFullToken() throws Exception {
+	@Test void getFullToken() {
 		assertEquals(client.getFullToken(), client.getTokenType() + ' ' + client.getAccessToken());
 	}
 

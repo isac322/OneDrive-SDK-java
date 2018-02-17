@@ -53,7 +53,7 @@ class RequestToolTest {
 	}
 
 	@AfterAll
-	static void logout() throws Exception {
+	static void logout() {
 		assertNotNull(client);
 		assertTrue(client.isLogin());
 
@@ -62,7 +62,7 @@ class RequestToolTest {
 		//		assertFalse(client.isLogin());
 	}
 
-	@Test void getItemAsync() throws Exception {
+	@Test void getItemAsync() {
 		DriveItemFuture future2 = requestTool.getItemAsync("/drive/items/D4FD82CA6DF96A47!25786")
 				.syncUninterruptibly();
 /*		DriveItemFuture future = requestTool.getItemAsync(Client.ITEM_ID_PREFIX + "D4FD82CA6DF96A47!25784")

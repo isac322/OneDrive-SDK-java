@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
@@ -25,7 +26,7 @@ public class SearchResultFacet {
 
 	@SneakyThrows(URISyntaxException.class)
 	public static SearchResultFacet deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull URI onClickTelemetryUrl = null;
+		@Nullable URI onClickTelemetryUrl = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -38,6 +39,8 @@ public class SearchResultFacet {
 				throw new IllegalStateException("Unknown attribute detected in SearchResultFacet : " + currentName);
 			}
 		}
+
+		assert onClickTelemetryUrl != null;
 
 		return new SearchResultFacet(onClickTelemetryUrl);
 	}

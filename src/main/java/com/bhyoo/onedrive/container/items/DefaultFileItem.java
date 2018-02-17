@@ -3,7 +3,6 @@ package com.bhyoo.onedrive.container.items;
 import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.container.IdentitySet;
 import com.bhyoo.onedrive.container.facet.*;
-import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.network.async.DownloadFuture;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
@@ -19,12 +18,12 @@ import java.nio.file.Paths;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class DefaultFileItem extends AbstractDriveItem implements FileItem {
-	@Getter(onMethod = @__(@Override)) protected @Nullable AudioFacet audio;
+	@Getter protected @Nullable AudioFacet audio;
 	protected @NotNull FileFacet file;
-	@Getter(onMethod = @__(@Override)) protected @Nullable ImageFacet image;
-	@Getter(onMethod = @__(@Override)) protected @Nullable LocationFacet location;
-	@Getter(onMethod = @__(@Override)) protected @Nullable PhotoFacet photo;
-	@Getter(onMethod = @__(@Override)) protected @Nullable VideoFacet video;
+	@Getter protected @Nullable ImageFacet image;
+	@Getter protected @Nullable LocationFacet location;
+	@Getter protected @Nullable PhotoFacet photo;
+	@Getter protected @Nullable VideoFacet video;
 
 
 	DefaultFileItem(@NotNull String id, @NotNull IdentitySet creator, @NotNull String createdDateTime,
@@ -50,24 +49,26 @@ public class DefaultFileItem extends AbstractDriveItem implements FileItem {
 	}
 
 	@Override
-	public void download(@NotNull String path) throws IOException, ErrorResponseException {
+	public void download(@NotNull String path) throws IOException {
+		assert this.name != null;
 		client.download(idPointer, Paths.get(path), this.name);
 	}
 
 	@Override
-	public void download(@NotNull String path, @NotNull String newName) throws IOException, ErrorResponseException {
+	public void download(@NotNull String path, @NotNull String newName) throws IOException {
 		client.download(idPointer, Paths.get(path), newName);
 	}
 
 	@Override
-	public void download(@NotNull Path folderPath) throws IOException, ErrorResponseException {
+	public void download(@NotNull Path folderPath) throws IOException {
+		assert this.name != null;
 		client.download(idPointer, folderPath, this.name);
 	}
 
 	// TODO: handling overwriting file
 
 	@Override
-	public void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException {
+	public void download(@NotNull Path folderPath, String newName) throws IOException {
 		client.download(idPointer, folderPath, newName);
 	}
 

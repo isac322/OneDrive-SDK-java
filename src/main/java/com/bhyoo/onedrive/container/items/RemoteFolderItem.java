@@ -44,6 +44,7 @@ public class RemoteFolderItem extends AbstractRemoteItem implements FolderItem {
 	@Override public boolean isRoot() {return false;}
 
 	@Override public boolean isChildrenFetched() {
+		assert remoteItem.getFolder() != null;
 		return remoteItem.getFolder().getChildCount() == 0
 				|| allChildren != null && folderChildren != null && fileChildren != null;
 	}
@@ -79,7 +80,10 @@ public class RemoteFolderItem extends AbstractRemoteItem implements FolderItem {
 
 	@Override public boolean isSpecial() {return false;}
 
-	@Override public long childCount() {return remoteItem.getFolder().getChildCount();}
+	@Override public long childCount() {
+		assert remoteItem.getFolder() != null;
+		return remoteItem.getFolder().getChildCount();
+	}
 
 	@Override public @NotNull DriveItem[] allChildren() throws ErrorResponseException {
 		if (!isChildrenFetched()) fetchChildren();

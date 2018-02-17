@@ -129,9 +129,17 @@ public class AsyncDownloadHandler extends SimpleChannelInboundHandler<HttpObject
 						state = ch == 'e' || ch == 'E' ? STATE_FILENAME : STATE_NONE;
 						break;
 					case STATE_FILENAME:
-						if (ch == '*') state = STATE_UTF_STAR;
-						else if (ch == '=') state = STATE_ASCII_EQUAL;
-						else state = STATE_NONE;
+						switch (ch) {
+							case '*':
+								state = STATE_UTF_STAR;
+								break;
+							case '=':
+								state = STATE_ASCII_EQUAL;
+								break;
+							default:
+								state = STATE_NONE;
+								break;
+						}
 						break;
 					case STATE_ASCII_EQUAL:
 						if (ch == '\"') {

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -23,8 +24,8 @@ public class FileSystemInfoFacet {
 	}
 
 	public static FileSystemInfoFacet deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull String createdDateTime = null;
-		@NotNull String lastModifiedDateTime = null;
+		@Nullable String createdDateTime = null;
+		@Nullable String lastModifiedDateTime = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -42,6 +43,9 @@ public class FileSystemInfoFacet {
 							"Unknown attribute detected in FileSystemInfoFacet : " + currentName);
 			}
 		}
+
+		assert createdDateTime != null;
+		assert lastModifiedDateTime != null;
 
 		return new FileSystemInfoFacet(createdDateTime, lastModifiedDateTime);
 	}

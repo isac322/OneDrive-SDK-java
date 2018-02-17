@@ -1,13 +1,12 @@
 package com.bhyoo.onedrive.client.auth;
 
-import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.jetbrains.annotations.NotNull;
 
 public interface AbstractAuthHelper {
 	@NotNull String refreshLogin();
 
-	void logout() throws ErrorResponseException;
+	void logout();
 
 	void login();
 

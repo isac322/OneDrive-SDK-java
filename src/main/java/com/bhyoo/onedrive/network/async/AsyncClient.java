@@ -57,7 +57,7 @@ public class AsyncClient extends AbstractClient {
 
 
 		bootstrap.connect(host, port).addListener(new ChannelFutureListener() {
-			@Override public void operationComplete(ChannelFuture future) throws Exception {
+			@Override public void operationComplete(ChannelFuture future) {
 				future.channel().writeAndFlush(request);
 			}
 		});

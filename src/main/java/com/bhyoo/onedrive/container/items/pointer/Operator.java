@@ -13,7 +13,7 @@ public enum Operator {
 	THUMBNAILS("thumbnails"),
 	UPLOAD_CREATE_SESSION("upload.createSession");
 
-	private String operator;
+	private final String operator;
 
 	Operator(String operator) {this.operator = operator;}
 

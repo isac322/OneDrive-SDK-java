@@ -20,15 +20,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SyncRequestTest {
-	static final TypeReference<HashMap<String, String>[]> ARRAY_TYPE_REF
-			= new TypeReference<HashMap<String, String>[]>() {};
-	static final TypeReference<HashMap<String, String>> TYPE_REFERENCE
-			= new TypeReference<HashMap<String, String>>() {};
-	static final String TEST_SERVER = "https://jsonplaceholder.typicode.com";
-	static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-	static HashMap<String, String>[] testPosts;
+	private static final TypeReference<HashMap<String, String>[]> ARRAY_TYPE_REF =
+			new TypeReference<HashMap<String, String>[]>() {};
+	private static final TypeReference<HashMap<String, String>> TYPE_REFERENCE =
+			new TypeReference<HashMap<String, String>>() {};
+	private static final String TEST_SERVER = "https://jsonplaceholder.typicode.com";
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private static HashMap<String, String>[] testPosts;
 
-	static String convertMapToForm(Map<String, String> map) {
+	private static String convertMapToForm(Map<String, String> map) {
 		QueryStringEncoder encoder = new QueryStringEncoder("");
 
 		for (Map.Entry<String, String> entry : map.entrySet()) {
@@ -136,7 +136,7 @@ class SyncRequestTest {
 		assertEquals(200, response.getCode());
 
 		assertThrows(IllegalStateException.class, new Executable() {
-			@Override public void execute() throws Throwable {
+			@Override public void execute() {
 				request.doDelete();
 			}
 		});

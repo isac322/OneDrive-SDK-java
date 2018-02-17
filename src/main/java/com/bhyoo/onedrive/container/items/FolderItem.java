@@ -35,7 +35,7 @@ public interface FolderItem extends DriveItem, Iterable<DriveItem> {
 
 	boolean isChildrenFetched();
 
-	public void fetchChildren() throws ErrorResponseException;
+	void fetchChildren() throws ErrorResponseException;
 
 	boolean isSpecial();
 

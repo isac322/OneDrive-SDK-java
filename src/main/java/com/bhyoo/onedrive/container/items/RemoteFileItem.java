@@ -1,8 +1,10 @@
 package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.client.Client;
-import com.bhyoo.onedrive.container.facet.*;
-import com.bhyoo.onedrive.exceptions.ErrorResponseException;
+import com.bhyoo.onedrive.container.facet.RemoteItemFacet;
+import com.bhyoo.onedrive.container.facet.SearchResultFacet;
+import com.bhyoo.onedrive.container.facet.SharePointIdsFacet;
+import com.bhyoo.onedrive.container.facet.SharedFacet;
 import com.bhyoo.onedrive.network.async.DownloadFuture;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.NotNull;
@@ -28,24 +30,26 @@ public class RemoteFileItem extends AbstractRemoteItem implements FileItem {
 	}
 
 	@Override
-	public void download(@NotNull String path) throws IOException, ErrorResponseException {
+	public void download(@NotNull String path) throws IOException {
+		assert this.name != null;
 		client.download(idPointer, Paths.get(path), this.name);
 	}
 
 	@Override
-	public void download(@NotNull String path, @NotNull String newName) throws IOException, ErrorResponseException {
+	public void download(@NotNull String path, @NotNull String newName) throws IOException {
 		client.download(idPointer, Paths.get(path), newName);
 	}
 
 	@Override
-	public void download(@NotNull Path folderPath) throws IOException, ErrorResponseException {
+	public void download(@NotNull Path folderPath) throws IOException {
+		assert this.name != null;
 		client.download(idPointer, folderPath, this.name);
 	}
 
 	// TODO: handling overwriting file
 
 	@Override
-	public void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException {
+	public void download(@NotNull Path folderPath, String newName) throws IOException {
 		client.download(idPointer, folderPath, newName);
 	}
 
@@ -61,21 +65,23 @@ public class RemoteFileItem extends AbstractRemoteItem implements FileItem {
 	}
 
 
-	@Override public @Nullable String getMimeType() {return remoteItem.getFile().getMimeType();}
+	@Override public @Nullable String getMimeType() {
+		assert remoteItem.getFile() != null;
+		return remoteItem.getFile().getMimeType();
+	}
 
-	@Override public @Nullable String getCRC32() {return remoteItem.getFile().getCrc32Hash();}
+	@Override public @Nullable String getCRC32() {
+		assert remoteItem.getFile() != null;
+		return remoteItem.getFile().getCrc32Hash();
+	}
 
-	@Override public @Nullable String getSHA1() {return remoteItem.getFile().getSha1Hash();}
+	@Override public @Nullable String getSHA1() {
+		assert remoteItem.getFile() != null;
+		return remoteItem.getFile().getSha1Hash();
+	}
 
-	@Override public @Nullable String getQuickXorHash() {return remoteItem.getFile().getQuickXorHash(); }
-
-	@Override public @Nullable AudioFacet getAudio() {return null;}
-
-	@Override public @Nullable ImageFacet getImage() {return null;}
-
-	@Override public @Nullable LocationFacet getLocation() {return null;}
-
-	@Override public @Nullable PhotoFacet getPhoto() {return null;}
-
-	@Override public @Nullable VideoFacet getVideo() {return null;}
+	@Override public @Nullable String getQuickXorHash() {
+		assert remoteItem.getFile() != null;
+		return remoteItem.getFile().getQuickXorHash();
+	}
 }

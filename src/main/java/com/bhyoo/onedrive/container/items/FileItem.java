@@ -1,6 +1,5 @@
 package com.bhyoo.onedrive.container.items;
 
-import com.bhyoo.onedrive.container.facet.*;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InvalidJsonException;
 import com.bhyoo.onedrive.network.async.DownloadFuture;
@@ -20,7 +19,7 @@ public interface FileItem extends DriveItem {
 	 *
 	 * @see FileItem#download(Path, String)
 	 */
-	void download(@NotNull String path) throws IOException, ErrorResponseException;
+	void download(@NotNull String path) throws IOException;
 
 	/**
 	 * Works just like {@link FileItem#download(Path, String)}}.
@@ -31,7 +30,7 @@ public interface FileItem extends DriveItem {
 	 *
 	 * @see FileItem#download(Path, String)
 	 */
-	void download(@NotNull String path, @NotNull String newName) throws IOException, ErrorResponseException;
+	void download(@NotNull String path, @NotNull String newName) throws IOException;
 
 	/**
 	 * Works just like {@link FileItem#download(Path, String)}} except new name of item will automatically set with
@@ -42,7 +41,7 @@ public interface FileItem extends DriveItem {
 	 *
 	 * @see FileItem#download(Path, String)
 	 */
-	void download(@NotNull Path folderPath) throws IOException, ErrorResponseException;
+	void download(@NotNull Path folderPath) throws IOException;
 
 	/**
 	 * Download file from OneDrive to {@code folderPath} with {@code newName}.
@@ -58,13 +57,11 @@ public interface FileItem extends DriveItem {
 	 *                                  manager exists and its SecurityManager.checkRead method denies read access to
 	 *                                  the file
 	 * @throws IllegalArgumentException If {@code folderPath} is exists and is not directory.
-	 * @throws ErrorResponseException   if error happens while requesting downloading operation. such as trying to
-	 *                                  download already deleted file.
 	 * @throws InvalidJsonException     if fail to parse response of copying request into json. it caused by server
 	 *                                  side not by SDK.
 	 * @throws IOException              if an I/O error occurs
 	 */
-	void download(@NotNull Path folderPath, String newName) throws IOException, ErrorResponseException;
+	void download(@NotNull Path folderPath, String newName) throws IOException;
 
 
 	@NotNull DownloadFuture downloadAsync(@NotNull Path folderPath) throws IOException;
@@ -88,15 +85,4 @@ public interface FileItem extends DriveItem {
 	@Nullable String getSHA1();
 
 	@Nullable String getQuickXorHash();
-
-
-	@Nullable AudioFacet getAudio();
-
-	@Nullable ImageFacet getImage();
-
-	@Nullable LocationFacet getLocation();
-
-	@Nullable PhotoFacet getPhoto();
-
-	@Nullable VideoFacet getVideo();
 }

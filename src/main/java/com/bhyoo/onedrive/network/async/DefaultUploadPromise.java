@@ -8,7 +8,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 
@@ -20,7 +19,7 @@ public class DefaultUploadPromise extends DefaultPromise<DriveItem> implements U
 	@Nullable private URI uploadURI;
 
 
-	public DefaultUploadPromise(EventExecutor executor, @NotNull Path filePath) throws IOException {
+	public DefaultUploadPromise(EventExecutor executor, @NotNull Path filePath) {
 		super(executor);
 		this.filePath = filePath;
 	}

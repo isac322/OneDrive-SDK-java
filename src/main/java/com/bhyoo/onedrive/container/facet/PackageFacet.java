@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -18,7 +19,7 @@ public class PackageFacet {
 	protected PackageFacet(@NotNull PackageType type) {this.type = type;}
 
 	public static PackageFacet deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull PackageType type = null;
+		@Nullable PackageType type = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -32,6 +33,8 @@ public class PackageFacet {
 					throw new IllegalStateException("Unknown attribute detected in PackageFacet : " + currentName);
 			}
 		}
+
+		assert type != null;
 
 		return new PackageFacet(type);
 	}

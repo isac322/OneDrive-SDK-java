@@ -34,7 +34,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	private static final @NotNull IllegalArgumentException ILLEGAL_REFERENCE =
 			new IllegalArgumentException("Can not address destination folder. `folder`'s id and path are both null");
 
-	protected @NotNull Client client;
+	protected @NotNull final Client client;
 
 
 	// TODO: missing attributes : publication, sharepointIds, activities, content, permissions, thumbnails,
@@ -260,6 +260,27 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 
 		if (autoClose) parser.close();
 
+		// BaseItem
+		assert id != null;
+		assert creator != null;
+		assert createdDateTime != null;
+		assert eTag != null;
+		assert lastModifier != null;
+		assert lastModifiedDateTime != null;
+		assert name != null;
+		assert webUrl != null;
+
+		// DriveItem
+		assert cTag != null;
+		assert deleted != null;
+		assert fileSystemInfo != null;
+		assert parentReference != null;
+		assert searchResult != null;
+		assert shared != null;
+		assert sharePointIds != null;
+		assert size != null;
+		assert webDavUrl != null;
+
 		if (file != null) {
 			if (remoteItem != null) {
 				System.out.println("RemoteFileItem " + id);
@@ -341,10 +362,10 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	}
 
 	protected void createPointers() {
-		assert parentReference != null : "`parentReference` is null on AbstractDriveItem";
 		assert parentReference.pathPointer != null : "`parentReference.pathPointer` is null on FileItem";
 		assert parentReference.rawPath != null : "`parentReference.rawPath` is null on FileItem";
 
+		assert name != null;
 		pathPointer = parentReference.pathPointer.resolve(name);
 		idPointer = new IdPointer(id, parentReference.driveId);
 	}
@@ -377,6 +398,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 		this.webUrl = newItem.webUrl;
 
 		if (parentReference.pathPointer != null && parentReference.rawPath != null) {
+			assert name != null;
 			this.pathPointer = parentReference.pathPointer.resolve(name);
 		}
 		this.idPointer = new IdPointer(id, parentReference.driveId);

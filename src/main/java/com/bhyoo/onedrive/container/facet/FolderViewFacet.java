@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -24,9 +25,9 @@ public class FolderViewFacet {
 	}
 
 	public static FolderViewFacet deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull SortType sortBy = null;
-		@NotNull SortOrderType sortOrder = null;
-		@NotNull ViewType viewType = null;
+		@Nullable SortType sortBy = null;
+		@Nullable SortOrderType sortOrder = null;
+		@Nullable ViewType viewType = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -46,6 +47,10 @@ public class FolderViewFacet {
 					throw new IllegalStateException("Unknown attribute detected in FolderViewFacet : " + currentName);
 			}
 		}
+
+		assert sortBy != null;
+		assert sortOrder != null;
+		assert viewType != null;
 
 		return new FolderViewFacet(sortBy, sortOrder, viewType);
 	}

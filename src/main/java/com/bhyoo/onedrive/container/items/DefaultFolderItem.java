@@ -89,6 +89,7 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 		else {
 			assert parentReference.pathPointer != null : "`parentReference.pathPointer` is null on FolderItem";
 			assert parentReference.rawPath != null : "`parentReference.rawPath` is null on FolderItem";
+			assert name != null;
 			pathPointer = parentReference.pathPointer.resolve(name);
 		}
 		idPointer = new IdPointer(id, getDriveId());

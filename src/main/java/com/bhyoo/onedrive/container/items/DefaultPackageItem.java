@@ -18,7 +18,7 @@ import java.net.URI;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class DefaultPackageItem extends AbstractDriveItem implements PackageItem {
-	@NotNull private PackageFacet packages;
+	@NotNull private final PackageFacet packages;
 
 	DefaultPackageItem(@NotNull String id, @NotNull IdentitySet creator, @NotNull String createdDateTime,
 					   @Nullable String description, @NotNull String eTag, @NotNull IdentitySet lastModifier,

@@ -2,6 +2,7 @@ package com.bhyoo.onedrive.container.facet;
 
 import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("SameParameterValue")
 public enum PackageType {
 	ONENOTE("oneNote");
 

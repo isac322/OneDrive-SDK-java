@@ -42,16 +42,16 @@ public class VideoFacet {
 	}
 
 	public static VideoFacet deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull Integer audioBitsPerSample = null;
-		@NotNull Integer audioChannels = null;
+		@Nullable Integer audioBitsPerSample = null;
+		@Nullable Integer audioChannels = null;
 		@Nullable String audioFormat = null;
-		@NotNull Integer audioSamplesPerSecond = null;
-		@NotNull Integer bitrate = null;
-		@NotNull Long duration = null;
+		@Nullable Integer audioSamplesPerSecond = null;
+		@Nullable Integer bitrate = null;
+		@Nullable Long duration = null;
 		@Nullable String fourCC = null;
-		@NotNull Double frameRate = null;
-		@NotNull Long height = null;
-		@NotNull Long width = null;
+		@Nullable Double frameRate = null;
+		@Nullable Long height = null;
+		@Nullable Long width = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -92,6 +92,15 @@ public class VideoFacet {
 					throw new IllegalStateException("Unknown attribute detected in VideoFacet : " + currentName);
 			}
 		}
+
+		assert audioBitsPerSample != null;
+		assert audioChannels != null;
+		assert audioSamplesPerSecond != null;
+		assert bitrate != null;
+		assert duration != null;
+		assert frameRate != null;
+		assert height != null;
+		assert width != null;
 
 		return new VideoFacet(audioBitsPerSample, audioChannels, audioFormat, audioSamplesPerSecond, bitrate, duration,
 				fourCC, frameRate, height, width);

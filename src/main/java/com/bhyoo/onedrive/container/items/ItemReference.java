@@ -61,7 +61,7 @@ public class ItemReference {
 	}
 
 	public static ItemReference deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull String driveId = null;
+		@Nullable String driveId = null;
 		@Nullable DriveType driveType = null;
 		@Nullable String id = null;
 		@Nullable String name = null;
@@ -99,6 +99,8 @@ public class ItemReference {
 					throw new IllegalStateException("Unknown attribute detected in ItemReference : " + currentName);
 			}
 		}
+
+		assert driveId != null;
 
 		return new ItemReference(driveId, driveType, id, name, rawPath, shareId, sharepointIds);
 	}

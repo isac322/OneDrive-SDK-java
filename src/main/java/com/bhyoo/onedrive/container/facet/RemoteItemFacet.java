@@ -76,7 +76,7 @@ public class RemoteItemFacet {
 
 	@SneakyThrows(URISyntaxException.class)
 	public static RemoteItemFacet deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull String id = null;
+		@Nullable String id = null;
 		@Nullable IdentitySet creator = null;
 
 		// TODO: convert datetime to some appreciate object
@@ -92,12 +92,12 @@ public class RemoteItemFacet {
 		@Nullable String name = null;
 
 		@Nullable PackageFacet packages = null;
-		@NotNull ItemReference parentReference = null;
+		@Nullable ItemReference parentReference = null;
 		@Nullable SharedFacet shared = null;
 		@Nullable SharePointIdsFacet sharepointIds = null;
-		@NotNull Long size = null;
+		@Nullable Long size = null;
 		@Nullable URI webDavUrl = null;
-		@NotNull URI webUrl = null;
+		@Nullable URI webUrl = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -156,6 +156,11 @@ public class RemoteItemFacet {
 					throw new IllegalStateException("Unknown attribute detected in RemoteItemFacet : " + currentName);
 			}
 		}
+
+		assert id != null;
+		assert parentReference != null;
+		assert size != null;
+		assert webUrl != null;
 
 		return new RemoteItemFacet(id, creator, createdDateTime, folder, fileSystemInfo, file, lastModifier,
 				lastModifiedDateTime, name, packages, parentReference, shared, sharepointIds, size, webDavUrl, webUrl);
