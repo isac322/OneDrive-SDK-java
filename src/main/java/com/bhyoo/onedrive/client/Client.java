@@ -571,19 +571,17 @@ public class Client {
 	 */
 
 
-	public UploadFuture uploadFile(@NotNull String parentId, @NotNull Path filePath) throws IOException {
-		String rawPath = filePath.toUri().getRawPath();
-		String fileName = rawPath.substring(rawPath.lastIndexOf('/') + 1);
+	public UploadFuture uploadFile(@NotNull String parentId, @NotNull Path filePath) {
+		String fileName = filePath.getFileName().toString();
 		return requestTool.upload(ITEM_ID_PREFIX + parentId + ":/" + fileName + ":/upload.createSession", filePath);
 	}
 
-	public UploadFuture uploadFile(@NotNull IdPointer pointer, @NotNull Path filePath) throws IOException {
-		String rawPath = filePath.toUri().getRawPath();
-		String fileName = rawPath.substring(rawPath.lastIndexOf('/') + 1);
+	public UploadFuture uploadFile(@NotNull IdPointer pointer, @NotNull Path filePath) {
+		String fileName = filePath.getFileName().toString();
 		return requestTool.upload(pointer.toASCIIApi() + ":/" + fileName + ":/upload.createSession", filePath);
 	}
 
-	public UploadFuture uploadFile(@NotNull PathPointer pointer, @NotNull Path filePath) throws IOException {
+	public UploadFuture uploadFile(@NotNull PathPointer pointer, @NotNull Path filePath) {
 		String fileName = filePath.getFileName().toString();
 		return requestTool.upload(pointer.resolve(fileName).resolveOperator(UPLOAD_CREATE_SESSION), filePath);
 	}

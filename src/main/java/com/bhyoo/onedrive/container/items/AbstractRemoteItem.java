@@ -7,7 +7,6 @@ import com.bhyoo.onedrive.container.facet.SharePointIdsFacet;
 import com.bhyoo.onedrive.container.facet.SharedFacet;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,7 +19,7 @@ public abstract class AbstractRemoteItem extends AbstractDriveItem implements Re
 
 	AbstractRemoteItem(@NotNull String id, @NotNull String createdDateTime, @Nullable String description,
 					   @NotNull String eTag, @NotNull String lastModifiedDateTime, @NotNull String name,
-					   @NotNull URI webUrl, @NotNull Client client, @NotNull String cTag, @Nullable ObjectNode deleted,
+					   @NotNull URI webUrl, @NotNull Client client, @NotNull String cTag, @Nullable String deleted,
 					   @NotNull ItemReference parentReference, @Nullable SearchResultFacet searchResult,
 					   @Nullable SharedFacet shared, @Nullable SharePointIdsFacet sharePointIds, URI webDavUrl,
 					   @NotNull RemoteItemFacet remoteItem) {

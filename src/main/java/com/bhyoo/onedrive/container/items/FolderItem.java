@@ -1,7 +1,11 @@
 package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
+import com.bhyoo.onedrive.network.async.UploadFuture;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.nio.file.Path;
 
 public interface FolderItem extends DriveItem, Iterable<DriveItem> {
 	// TODO: Implement '@name.conflictBehavior'
@@ -20,6 +24,8 @@ public interface FolderItem extends DriveItem, Iterable<DriveItem> {
 	 */
 	@NotNull FolderItem createFolder(@NotNull String name) throws ErrorResponseException;
 
+	@NotNull UploadFuture uploadFile(@NotNull Path filePath);
+
 
 
 	/*
@@ -30,6 +36,9 @@ public interface FolderItem extends DriveItem, Iterable<DriveItem> {
 	 *************************************************************
 	 */
 
+	boolean isDeleted();
+
+	@Nullable String deletedState();
 
 	boolean isRoot();
 

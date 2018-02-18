@@ -5,10 +5,15 @@ import com.bhyoo.onedrive.container.items.Drive;
 import com.bhyoo.onedrive.container.items.DriveItem;
 import com.bhyoo.onedrive.container.items.FolderItem;
 import com.bhyoo.onedrive.container.pager.DriveItemPager;
+import com.bhyoo.onedrive.exceptions.ErrorResponseException;
+import com.bhyoo.onedrive.network.async.UploadFuture;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.nio.file.Paths;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,10 +39,10 @@ public class ClientTest {
 	static void getClient() {
 		assertNull(client);
 
-		final String clientId = "";
+		final String clientId = "0c4b69a8-adac-4ec1-b310-6c28ff9fa263";
 		final String[] scope = {"files.readwrite.all", "offline_access"};
 		final String redirectURL = "http://localhost:8080/";
-		final String clientSecret = "";
+		final String clientSecret = "iqggDGYW25$;#$otqVUH024";
 
 		client = new Client(clientId, scope, redirectURL, clientSecret);
 
@@ -181,4 +186,12 @@ public class ClientTest {
 		assertEquals(client.getFullToken(), client.getTokenType() + ' ' + client.getAccessToken());
 	}
 
+	/**
+	 * Create a text file in root directory of default drive, and delete.
+	 */
+	@Test void createTextFileAndDelete() throws ErrorResponseException, ExecutionException, InterruptedException {
+		UploadFuture future = client.getRootDir().uploadFile(Paths.get("gradlew"));
+		future.syncUninterruptibly();
+		System.out.println(future.get());
+	}
 }

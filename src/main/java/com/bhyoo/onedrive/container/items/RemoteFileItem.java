@@ -3,7 +3,6 @@ package com.bhyoo.onedrive.container.items;
 import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.container.facet.*;
 import com.bhyoo.onedrive.network.async.DownloadFuture;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,7 +17,7 @@ import java.nio.file.Paths;
 public class RemoteFileItem extends AbstractRemoteItem implements FileItem {
 	RemoteFileItem(@NotNull String id, @NotNull String createdDateTime, @Nullable String description,
 				   @NotNull String eTag, @NotNull String lastModifiedDateTime, @NotNull String name,
-				   @NotNull URI webUrl, @NotNull Client client, @NotNull String cTag, @Nullable ObjectNode deleted,
+				   @NotNull URI webUrl, @NotNull Client client, @NotNull String cTag, @Nullable String deleted,
 				   @NotNull ItemReference parentReference, @Nullable SearchResultFacet searchResult,
 				   @Nullable SharedFacet shared, @Nullable SharePointIdsFacet sharePointIds, URI webDavUrl,
 				   @NotNull RemoteItemFacet remoteItem) {

@@ -8,12 +8,13 @@ import com.bhyoo.onedrive.container.facet.SharedFacet;
 import com.bhyoo.onedrive.container.items.pointer.Operator;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.network.async.ResponseFuture;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.bhyoo.onedrive.network.async.UploadFuture;
 import io.netty.handler.codec.http.HttpMethod;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -28,7 +29,7 @@ public class RemoteFolderItem extends AbstractRemoteItem implements FolderItem {
 
 	RemoteFolderItem(@NotNull String id, @NotNull String createdDateTime, @Nullable String description,
 					 @NotNull String eTag, @NotNull String lastModifiedDateTime, @NotNull String name,
-					 @NotNull URI webUrl, @NotNull Client client, @NotNull String cTag, @Nullable ObjectNode deleted,
+					 @NotNull URI webUrl, @NotNull Client client, @NotNull String cTag, @Nullable String deleted,
 					 @NotNull ItemReference parentReference, @Nullable SearchResultFacet searchResult,
 					 @Nullable SharedFacet shared, @Nullable SharePointIdsFacet sharePointIds, URI webDavUrl,
 					 @NotNull RemoteItemFacet remoteItem) {
@@ -40,6 +41,14 @@ public class RemoteFolderItem extends AbstractRemoteItem implements FolderItem {
 	public @NotNull FolderItem createFolder(@NotNull String name) throws ErrorResponseException {
 		return client.createFolder(remotePointer, name);
 	}
+
+	@Override public @NotNull UploadFuture uploadFile(@NotNull Path filePath) {
+		return client.uploadFile(this.remoteItem.getId(), filePath);
+	}
+
+	@Override public boolean isDeleted() {return deleted != null;}
+
+	@Override public @Nullable String deletedState() {return deleted;}
 
 	@Override public boolean isRoot() {return false;}
 

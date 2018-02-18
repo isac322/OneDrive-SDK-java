@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -17,10 +18,9 @@ public class MoveAction {
 		this.to = to;
 	}
 
-	@SuppressWarnings("ConstantConditions")
 	public static @NotNull MoveAction deserialize(@NotNull JsonParser parser) throws IOException {
-		@NotNull String from = null;
-		@NotNull String to = null;
+		@Nullable String from = null;
+		@Nullable String to = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -37,6 +37,9 @@ public class MoveAction {
 					throw new IllegalStateException("Unknown attribute detected in MoveAction : " + currentName);
 			}
 		}
+
+		assert from != null : "from is null";
+		assert to != null : "to is null";
 
 		return new MoveAction(from, to);
 	}

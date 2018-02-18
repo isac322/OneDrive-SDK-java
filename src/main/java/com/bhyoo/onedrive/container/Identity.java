@@ -1,8 +1,8 @@
 package com.bhyoo.onedrive.container;
 
+import com.bhyoo.onedrive.container.facet.ThumbnailSet;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -22,15 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Identity {
 	private static final ConcurrentHashMap<String, Identity> identitySet = new ConcurrentHashMap<>();
 
-	@Getter final @Nullable String displayName;
-	@Getter final @Nullable String email;
-	@Getter final @Nullable String id;
-	// TODO: custom class for this variable
-	@Getter final @Nullable ObjectNode thumbnails;
+	@Getter protected final @Nullable String displayName;
+	@Getter protected final @Nullable String email;
+	@Getter protected final @Nullable String id;
+	@Getter protected final @Nullable ThumbnailSet thumbnails;
 
 
 	protected Identity(@Nullable String displayName, @Nullable String email,
-					   @Nullable String id, @Nullable ObjectNode thumbnails) {
+					   @Nullable String id, @Nullable ThumbnailSet thumbnails) {
 		this.displayName = displayName;
 		this.email = email;
 		this.id = id;
@@ -41,8 +40,7 @@ public class Identity {
 		@Nullable String displayName = null;
 		@Nullable String email = null;
 		@Nullable String id = null;
-		// TODO: custom class for this variable
-		@Nullable ObjectNode thumbnails = null;
+		@Nullable ThumbnailSet thumbnails = null;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -59,7 +57,7 @@ public class Identity {
 					id = parser.getText();
 					break;
 				case "thumbnails":
-					thumbnails = parser.readValueAs(ObjectNode.class);
+					thumbnails = ThumbnailSet.deserialize(parser);
 					break;
 				case "@odata.type":
 					// TODO

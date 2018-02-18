@@ -3,7 +3,6 @@ package com.bhyoo.onedrive.container;
 import com.bhyoo.onedrive.container.action.*;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -12,20 +11,20 @@ import java.io.IOException;
 
 public class ItemActionSet {
 	@Getter protected final @Nullable CommentAction comment;
-	@Getter protected final @Nullable ObjectNode create;
+	@Getter protected final boolean create;
 	@Getter protected final @Nullable DeleteAction delete;
-	@Getter protected final @Nullable Object edit;
+	@Getter protected final boolean edit;
 	@Getter protected final @Nullable MentionAction mention;
 	@Getter protected final @Nullable MoveAction move;
 	@Getter protected final @Nullable RenameAction rename;
-	@Getter protected final @Nullable Object restore;
+	@Getter protected final boolean restore;
 	@Getter protected final @Nullable ShareAction share;
 	@Getter protected final @Nullable VersionAction version;
 
-	protected ItemActionSet(@Nullable CommentAction comment, @Nullable ObjectNode create,
-							@Nullable DeleteAction delete, @Nullable ObjectNode edit, @Nullable MentionAction mention,
-							@Nullable MoveAction move, @Nullable RenameAction rename, @Nullable ObjectNode restore,
-							@Nullable ShareAction share, @Nullable VersionAction version) {
+	protected ItemActionSet(@Nullable CommentAction comment, boolean create, @Nullable DeleteAction delete,
+							boolean edit, @Nullable MentionAction mention, @Nullable MoveAction move,
+							@Nullable RenameAction rename, boolean restore, @Nullable ShareAction share,
+							@Nullable VersionAction version) {
 		this.comment = comment;
 		this.create = create;
 		this.delete = delete;
@@ -41,13 +40,13 @@ public class ItemActionSet {
 
 	public static ItemActionSet deserialize(@NotNull JsonParser parser) throws IOException {
 		@Nullable CommentAction comment = null;
-		@Nullable ObjectNode create = null;
+		boolean create = false;
 		@Nullable DeleteAction delete = null;
-		@Nullable ObjectNode edit = null;
+		boolean edit = false;
 		@Nullable MentionAction mention = null;
 		@Nullable MoveAction move = null;
 		@Nullable RenameAction rename = null;
-		@Nullable ObjectNode restore = null;
+		boolean restore = false;
 		@Nullable ShareAction share = null;
 		@Nullable VersionAction version = null;
 
@@ -60,13 +59,19 @@ public class ItemActionSet {
 					comment = CommentAction.deserialize(parser);
 					break;
 				case "create":
-					create = parser.readValueAs(ObjectNode.class);
+					create = true;
+					while (parser.nextToken() != JsonToken.END_OBJECT) {
+						// TODO
+					}
 					break;
 				case "delete":
 					delete = DeleteAction.deserialize(parser);
 					break;
 				case "edit":
-					edit = parser.readValueAs(ObjectNode.class);
+					edit = true;
+					while (parser.nextToken() != JsonToken.END_OBJECT) {
+						// TODO
+					}
 					break;
 				case "mention":
 					mention = MentionAction.deserialize(parser);
@@ -78,7 +83,10 @@ public class ItemActionSet {
 					rename = RenameAction.deserialize(parser);
 					break;
 				case "restore":
-					restore = parser.readValueAs(ObjectNode.class);
+					restore = true;
+					while (parser.nextToken() != JsonToken.END_OBJECT) {
+						// TODO
+					}
 					break;
 				case "share":
 					share = ShareAction.deserialize(parser);

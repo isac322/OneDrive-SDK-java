@@ -10,12 +10,13 @@ import com.bhyoo.onedrive.container.pager.DriveItemPager.DriveItemPage;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InternalException;
 import com.bhyoo.onedrive.network.async.ResponseFuture;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.bhyoo.onedrive.network.async.UploadFuture;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -36,7 +37,7 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 	DefaultFolderItem(@NotNull String id, @Nullable IdentitySet creator, @NotNull String createdDateTime,
 					  @Nullable String description, @Nullable String eTag, @Nullable IdentitySet lastModifier,
 					  @NotNull String lastModifiedDateTime, @NotNull String name, @NotNull URI webUrl,
-					  @NotNull Client client, @Nullable String cTag, @Nullable ObjectNode deleted,
+					  @NotNull Client client, @Nullable String cTag, @Nullable String deleted,
 					  FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
 					  @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
 					  @Nullable SharePointIdsFacet sharePointIds, @NotNull Long size, URI webDavUrl,
@@ -155,6 +156,9 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 		return client.createFolder(this.id, name);
 	}
 
+	@Override public @NotNull UploadFuture uploadFile(@NotNull Path filePath) {
+		return client.uploadFile(this.id, filePath);
+	}
 
 	/**
 	 * Update data itself with {@code newItem}.<br>
@@ -199,6 +203,10 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 	public boolean isChildrenFetched() {
 		return folder.getChildCount() == 0 || allChildren != null && folderChildren != null && fileChildren != null;
 	}
+
+	@Override public boolean isDeleted() {return deleted != null;}
+
+	@Override public @Nullable String deletedState() {return deleted;}
 
 	@Override
 	public boolean isSpecial() {return specialFolder != null;}

@@ -4,7 +4,6 @@ import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.container.IdentitySet;
 import com.bhyoo.onedrive.container.facet.*;
 import com.bhyoo.onedrive.network.async.DownloadFuture;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,7 +28,7 @@ public class DefaultFileItem extends AbstractDriveItem implements FileItem {
 	DefaultFileItem(@NotNull String id, @NotNull IdentitySet creator, @NotNull String createdDateTime,
 					@Nullable String description, @NotNull String eTag, @NotNull IdentitySet lastModifier,
 					@NotNull String lastModifiedDateTime, @NotNull String name, @NotNull URI webUrl,
-					@NotNull Client client, @NotNull String cTag, @Nullable ObjectNode deleted,
+					@NotNull Client client, @NotNull String cTag, @Nullable String deleted,
 					FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
 					@Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
 					@Nullable SharePointIdsFacet sharePointIds, @NotNull Long size, URI webDavUrl,

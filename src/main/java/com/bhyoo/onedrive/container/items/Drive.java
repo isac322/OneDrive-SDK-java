@@ -7,7 +7,6 @@ import com.bhyoo.onedrive.container.ItemActivity;
 import com.bhyoo.onedrive.container.facet.DriveState;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.ToString;
@@ -31,8 +30,7 @@ public class Drive extends AbstractBaseItem {
 	protected @NotNull Quota quota;
 	@Getter protected @Nullable AbstractDriveItem root;
 	@Getter protected @Nullable AbstractDriveItem[] special;
-	// TODO: custom class for this variable
-	@Getter protected @Nullable ObjectNode system;
+	@Getter protected boolean system;
 
 
 	protected Drive(@NotNull String id, @Nullable IdentitySet creator, @Nullable String createdDateTime,
@@ -41,7 +39,7 @@ public class Drive extends AbstractBaseItem {
 					@Nullable ItemActivity[] activities, @NotNull DriveType driveType,
 					@Nullable AbstractDriveItem[] items, @NotNull IdentitySet owner, @NotNull Quota quota,
 					@Nullable AbstractDriveItem root, @Nullable AbstractDriveItem[] special,
-					@Nullable ObjectNode system) {
+					boolean system) {
 		super(id, creator, createdDateTime, description, eTag, lastModifier, lastModifiedDateTime, name, webUrl);
 
 		this.activities = activities;
@@ -72,7 +70,7 @@ public class Drive extends AbstractBaseItem {
 		@NotNull Quota quota = null;
 		@Nullable AbstractDriveItem root = null;
 		@Nullable AbstractDriveItem[] special = null;
-		@Nullable ObjectNode system = null;
+		boolean system = false;
 
 		while (parser.nextToken() != JsonToken.END_OBJECT) {
 			String currentName = parser.getCurrentName();
@@ -140,13 +138,16 @@ public class Drive extends AbstractBaseItem {
 					special = specials.toArray(new AbstractDriveItem[0]);
 					break;
 				case "system":
-					system = parser.readValueAs(ObjectNode.class);
+					system = true;
+					if (parser.nextToken() != JsonToken.END_OBJECT) {
+						throw new IllegalStateException("Unknown attribute in Drive : " + parser.getText());
+					}
 					break;
 				case "@odata.context":
 					// TODO
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in Drive : " + currentName);
+					throw new IllegalStateException("Unknown attribute in Drive : " + currentName);
 			}
 		}
 

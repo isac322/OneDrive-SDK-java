@@ -44,7 +44,6 @@ import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static java.net.HttpURLConnection.HTTP_OK;
 
-// TODO: Support OneDrive for Business
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
@@ -415,16 +414,28 @@ public class RequestTool {
 		responsePromise.addListener(new ResponseFutureListener() {
 			@Override public void operationComplete(ResponseFuture future) throws Exception {
 				if (future.isSuccess()) {
-					UploadSession session = parseUploadSessionAndHandle(future.response(), future.get(), HTTP_OK);
-					uploadPromise.setUploadURI(new URI(session.getUploadUrl()));
+					try {
+						UploadSession session = parseUploadSessionAndHandle(future.response(), future.get(), HTTP_OK);
+						uploadPromise.setUploadURI(new URI(session.getUploadUrl()));
 
-					AsyncUploadClient uploadClient = new AsyncUploadClient(group, uploadPromise);
-					uploadClient.execute();
+						AsyncUploadClient uploadClient = new AsyncUploadClient(group, uploadPromise);
+						uploadClient.execute();
+					}
+					catch (ErrorResponseException err) {
+						uploadPromise.setFailure(err);
+					}
+				}
+				else {
+					uploadPromise.setFailure(future.cause());
 				}
 			}
 		});
 
 		return uploadPromise;
+	}
+
+	private void uploadSession(@NotNull String api, @NotNull Path filePath) {
+
 	}
 
 	public void errorHandling(@NotNull SyncResponse response, int expectedCode) throws ErrorResponseException {

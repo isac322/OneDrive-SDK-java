@@ -28,7 +28,6 @@ repositories {
 dependencies {
 	compile 'com.fasterxml.jackson.core:jackson-annotations:+'
 	compile 'com.fasterxml.jackson.core:jackson-core:+'
-	compile 'com.fasterxml.jackson.core:jackson-databind:+'
 
 	compile 'io.netty:netty-buffer:4.+'
 	compile 'io.netty:netty-codec:4.+'
@@ -48,9 +47,10 @@ dependencies {
 
 	compile 'org.jetbrains:annotations:+'
 
-	testCompileOnly('org.apiguardian:apiguardian-api:+')
-	testCompile('org.junit.jupiter:junit-jupiter-api:5.+')
-	testRuntime('org.junit.jupiter:junit-jupiter-engine:5.+')
+	testCompile 'com.fasterxml.jackson.core:jackson-databind:+'
+	testCompileOnly 'org.apiguardian:apiguardian-api:+'
+	testCompile 'org.junit.jupiter:junit-jupiter-api:5.+'
+	testRuntime 'org.junit.jupiter:junit-jupiter-engine:5.+'
 }
 
 

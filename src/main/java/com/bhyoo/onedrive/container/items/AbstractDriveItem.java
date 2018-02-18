@@ -11,7 +11,6 @@ import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.network.async.ResponseFuture;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -45,8 +44,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	 */
 	@Getter(onMethod = @__(@Override)) protected @Nullable String cTag;
 
-	// TODO: custom class for this variable
-	protected @Nullable ObjectNode deleted;
+	protected @Nullable String deleted;
 	/**
 	 * The {@code eTag} value is only modified when the folder's properties are changed, except for properties that are
 	 * derived from descendants (like {@code childCount} or {@code lastModifiedDateTime}).
@@ -66,7 +64,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	AbstractDriveItem(@NotNull String id, @Nullable IdentitySet creator, @NotNull String createdDateTime,
 					  @Nullable String description, @Nullable String eTag, @Nullable IdentitySet lastModifier,
 					  @NotNull String lastModifiedDateTime, @NotNull String name, @NotNull URI webUrl,
-					  @NotNull Client client, @Nullable String cTag, @Nullable ObjectNode deleted,
+					  @NotNull Client client, @Nullable String cTag, @Nullable String deleted,
 					  @Nullable FileSystemInfoFacet fileSystemInfo, @NotNull ItemReference parentReference,
 					  @Nullable SearchResultFacet searchResult, @Nullable SharedFacet shared,
 					  @Nullable SharePointIdsFacet sharePointIds, @Nullable Long size, @Nullable URI webDavUrl) {
@@ -100,7 +98,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 
 		// DriveItem
 		@Nullable String cTag = null;
-		@Nullable ObjectNode deleted = null;
+		@Nullable String deleted = null;
 		@Nullable FileSystemInfoFacet fileSystemInfo = null;
 		@Nullable ItemReference parentReference = null;
 		@Nullable SearchResultFacet searchResult = null;
@@ -168,7 +166,19 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 					cTag = parser.getText();
 					break;
 				case "deleted":
-					deleted = parser.readValueAs(ObjectNode.class);
+					while (parser.nextToken() != JsonToken.END_OBJECT) {
+						String fieldName = parser.currentName();
+						parser.nextToken();
+
+						switch (fieldName) {
+							case "state":
+								deleted = parser.getText();
+								break;
+							default:
+								throw new IllegalStateException(
+										"Unknown attribute detected in AbstractDriveItem : " + fieldName);
+						}
+					}
 					break;
 				case "fileSystemInfo":
 					fileSystemInfo = FileSystemInfoFacet.deserialize(parser);
@@ -219,8 +229,9 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 					break;
 				case "root":
 					root = true;
-					while (parser.nextToken() != JsonToken.END_OBJECT) {
-						// TODO
+					if (parser.nextToken() != JsonToken.END_OBJECT) {
+						throw new IllegalStateException(
+								"Unknown attribute detected in AbstractDriveItem : " + parser.getText());
 					}
 					break;
 				case "children@odata.nextLink":
