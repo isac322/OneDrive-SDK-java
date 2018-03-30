@@ -1,7 +1,7 @@
 plugins {
 	id 'java'
 	id 'idea'
-	id "com.google.osdetector" version "1.4.0"
+	id 'com.google.osdetector' version '1.4.0'
 }
 
 group 'org.onedrive'
