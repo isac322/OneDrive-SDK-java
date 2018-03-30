@@ -32,6 +32,11 @@ public class PathPointer extends BasePointer {
 	@NotNull private final String path;
 	@NotNull private final String rawPath;
 
+	/**
+	 * Root directory of default drive of current account
+	 */
+	public static final PathPointer root = new PathPointer("/");
+
 
 	/*
 	string escaping issue. (example : %fe%f2.txt)
@@ -80,9 +85,9 @@ public class PathPointer extends BasePointer {
 			}
 
 			this.readablePath = anyPath;
-			this.path = "/drive/root:" + anyPath;
+			this.path = "/me/drive/root:" + anyPath;
 			this.driveId = null;
-			this.rawPath = "/drive/root:" + rawPath;
+			this.rawPath = "/me/drive/root:" + rawPath;
 		}
 	}
 
