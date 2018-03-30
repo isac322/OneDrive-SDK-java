@@ -11,7 +11,7 @@ public enum Operator {
 	SEARCH("search"),
 	DELTA("delta"),
 	THUMBNAILS("thumbnails"),
-	UPLOAD_CREATE_SESSION("upload.createSession");
+	UPLOAD_CREATE_SESSION("createUploadSession");
 
 	private final String operator;
 

@@ -52,6 +52,10 @@ public class UploadSession {
 					nextExpectedRanges = ranges.toArray(new String[0]);
 					break;
 
+				case "@odata.context":
+					// TODO
+					break;
+
 				default:
 					throw new IllegalStateException("Unknown attribute detected in UploadSession : " + currentName);
 			}

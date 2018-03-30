@@ -573,17 +573,19 @@ public class Client {
 
 	public UploadFuture uploadFile(@NotNull String parentId, @NotNull Path filePath) {
 		String fileName = filePath.getFileName().toString();
-		return requestTool.upload(ITEM_ID_PREFIX + parentId + ":/" + fileName + ":/upload.createSession", filePath);
+		return requestTool.upload(
+				ITEM_ID_PREFIX + parentId + ":/" + fileName + ":/" + UPLOAD_CREATE_SESSION, filePath);
 	}
 
-	public UploadFuture uploadFile(@NotNull IdPointer pointer, @NotNull Path filePath) {
+	public UploadFuture uploadFile(@NotNull IdPointer parentId, @NotNull Path filePath) {
 		String fileName = filePath.getFileName().toString();
-		return requestTool.upload(pointer.toASCIIApi() + ":/" + fileName + ":/upload.createSession", filePath);
+		return requestTool.upload(
+				parentId.toASCIIApi() + ":/" + fileName + ":/" + UPLOAD_CREATE_SESSION, filePath);
 	}
 
-	public UploadFuture uploadFile(@NotNull PathPointer pointer, @NotNull Path filePath) {
+	public UploadFuture uploadFile(@NotNull PathPointer parentPath, @NotNull Path filePath) {
 		String fileName = filePath.getFileName().toString();
-		return requestTool.upload(pointer.resolve(fileName).resolveOperator(UPLOAD_CREATE_SESSION), filePath);
+		return requestTool.upload(parentPath.resolve(fileName).resolveOperator(UPLOAD_CREATE_SESSION), filePath);
 	}
 
 
