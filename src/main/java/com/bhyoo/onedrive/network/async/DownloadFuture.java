@@ -5,7 +5,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 import java.io.File;
-import java.net.URI;
+import java.net.URL;
 import java.nio.file.Path;
 
 /**
@@ -14,7 +14,7 @@ import java.nio.file.Path;
 public interface DownloadFuture extends Future<File> {
 	Path downloadPath();
 
-	URI remoteURI();
+	URL remoteURI();
 
 	HttpResponse response();
 

@@ -14,8 +14,9 @@ import io.netty.util.AsciiString;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 
@@ -86,7 +87,7 @@ public class AsyncDownloadClient extends AbstractClient {
 		}
 
 		@Override public void operationComplete(ResponseFuture future)
-				throws ExecutionException, InterruptedException, URISyntaxException, ErrorResponseException {
+				throws ExecutionException, InterruptedException, ErrorResponseException, MalformedURLException {
 			HttpResponse response = future.response();
 			ByteBufStream result = future.get();
 
@@ -96,13 +97,13 @@ public class AsyncDownloadClient extends AbstractClient {
 			}
 			else if (response.status().code() == HTTP_MOVED_TEMP) {
 				String uriStr = response.headers().get(HttpHeaderNames.LOCATION);
-				URI uri = new URI(uriStr);
+				URL url = new URL(uriStr);
 
-				String host = uri.getHost();
+				String host = url.getHost();
 				int port = 443;
 
 				// set downloadPromise's URI
-				promise.setURI(uri);
+				promise.setURI(url);
 
 				// change request's url to location of file
 				request.setUri(uriStr);

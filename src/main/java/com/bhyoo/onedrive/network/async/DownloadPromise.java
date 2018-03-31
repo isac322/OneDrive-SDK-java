@@ -6,7 +6,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 
 import java.io.File;
-import java.net.URI;
+import java.net.URL;
 import java.nio.file.Path;
 
 /**
@@ -15,7 +15,7 @@ import java.nio.file.Path;
 public interface DownloadPromise extends DownloadFuture, Promise<File> {
 	DownloadPromise setResponse(HttpResponse response);
 
-	DownloadPromise setURI(URI remoteUri);
+	DownloadPromise setURI(URL remoteUri);
 
 	DownloadPromise setPath(Path downloadPath);
 

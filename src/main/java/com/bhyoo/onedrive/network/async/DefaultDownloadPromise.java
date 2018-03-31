@@ -7,7 +7,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 import java.io.File;
-import java.net.URI;
+import java.net.URL;
 import java.nio.file.Path;
 
 /**
@@ -15,7 +15,7 @@ import java.nio.file.Path;
  */
 public class DefaultDownloadPromise extends DefaultPromise<File> implements DownloadPromise {
 	protected Path downloadPath;
-	protected URI remoteUri;
+	protected URL remoteUri;
 	protected HttpResponse response;
 
 	public DefaultDownloadPromise(EventExecutor executor) {
@@ -26,7 +26,7 @@ public class DefaultDownloadPromise extends DefaultPromise<File> implements Down
 		return downloadPath;
 	}
 
-	@Override public URI remoteURI() {
+	@Override public URL remoteURI() {
 		return remoteUri;
 	}
 
@@ -39,7 +39,7 @@ public class DefaultDownloadPromise extends DefaultPromise<File> implements Down
 		return this;
 	}
 
-	@Override public DefaultDownloadPromise setURI(URI remoteUri) {
+	@Override public DefaultDownloadPromise setURI(URL remoteUri) {
 		this.remoteUri = remoteUri;
 		return this;
 	}
