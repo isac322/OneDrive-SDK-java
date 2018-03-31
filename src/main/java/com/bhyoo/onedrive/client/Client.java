@@ -20,12 +20,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static com.bhyoo.onedrive.client.RequestTool.BASE_URL;
 import static com.bhyoo.onedrive.container.items.pointer.Operator.UPLOAD_CREATE_SESSION;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static java.net.HttpURLConnection.*;
@@ -540,7 +538,7 @@ public class Client {
 		return _downloadAsync(pointer.resolveOperator(Operator.CONTENT), downloadFolder, newName);
 	}
 
-	private DownloadFuture _downloadAsync(@NotNull String url, @NotNull Path downloadFolder,
+	private DownloadFuture _downloadAsync(@NotNull String api, @NotNull Path downloadFolder,
 										  @Nullable String newName) throws IOException {
 		downloadFolder = downloadFolder.toAbsolutePath().normalize();
 
@@ -550,13 +548,7 @@ public class Client {
 
 		Files.createDirectories(downloadFolder);
 
-		String fullUrl = BASE_URL + url;
-		try {
-			return new AsyncDownloadClient(requestTool, new URI(fullUrl), downloadFolder, newName).execute();
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException("Wrong url (" + url + "), full URL : \"" + fullUrl + "\".", e);
-		}
+		return new AsyncDownloadClient(requestTool, RequestTool.api2Uri(api), downloadFolder, newName).execute();
 	}
 
 

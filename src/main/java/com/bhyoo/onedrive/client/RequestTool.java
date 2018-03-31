@@ -97,6 +97,16 @@ public class RequestTool {
 
 	public static Class<? extends SocketChannel> socketChannelClass() {return socketChannelClass;}
 
+	public static URI api2Uri(@NotNull String api) {
+		try {
+			return new URI(BASE_URL + api);
+		}
+		catch (URISyntaxException e) {
+			throw new IllegalArgumentException(
+					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
+		}
+	}
+
 
 	private static @NotNull AbstractDriveItem parseDriveItem(@NotNull SyncResponse response, int expectedCode,
 															 @NotNull Client client) throws ErrorResponseException {
@@ -212,13 +222,7 @@ public class RequestTool {
 	 *********************************************/
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull String api) {
-		try {
-			return doAsync(method, new URI(BASE_URL + api));
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException(
-					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
-		}
+		return doAsync(method, api2Uri(api));
 	}
 
 	public ResponseFuture doAsync(@NotNull HttpMethod method, @NotNull URI uri) {
@@ -321,13 +325,7 @@ public class RequestTool {
 	}
 
 	public ResponseFuture patchMetadataAsync(@NotNull String api, byte[] content) {
-		AsyncClient asyncClient;
-		try {
-			asyncClient = new AsyncClient(group, PATCH, new URI(BASE_URL + api), content);
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException("Wrong character in `api` at " + e.getIndex(), e);
-		}
+		AsyncClient asyncClient = new AsyncClient(group, PATCH, api2Uri(api), content);
 
 		asyncClient.setHeader(AUTHORIZATION, client.getFullToken());
 		asyncClient.setHeader(CONTENT_TYPE, APPLICATION_JSON);
@@ -339,13 +337,7 @@ public class RequestTool {
 
 	public ResponseFuture patchMetadataAsync(@NotNull String api, byte[] content,
 											 @NotNull ResponseFutureListener handler) {
-		AsyncClient asyncClient;
-		try {
-			asyncClient = new AsyncClient(group, PATCH, new URI(BASE_URL + api), content);
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException("Wrong character in `api` at " + e.getIndex(), e);
-		}
+		AsyncClient asyncClient = new AsyncClient(group, PATCH, api2Uri(api), content);
 
 		asyncClient.setHeader(AUTHORIZATION, client.getFullToken());
 		asyncClient.setHeader(CONTENT_TYPE, APPLICATION_JSON);
@@ -365,18 +357,7 @@ public class RequestTool {
 	 *********************************************/
 
 	public UploadFuture upload(@NotNull String api, @NotNull Path filePath) {
-		URI uri;
-		try {
-			uri = new URI(BASE_URL + api);
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException(
-					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
-		}
-
-		if (!RequestTool.SCHEME.equalsIgnoreCase(uri.getScheme())) {
-			throw new IllegalArgumentException("Wrong network scheme : \"" + uri.getScheme() + "\".");
-		}
+		URI uri = api2Uri(api);
 
 		final DefaultHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, uri.toASCIIString());
 
