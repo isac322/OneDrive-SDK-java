@@ -12,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 // TODO: this class can be static factory!. consider this later (if path is same, give caller same object to save memory
+// TODO: go up (parent dir)
 
 /**
  * In OneDrive, <a href='https://dev.onedrive.com/README.htm#item-resource'>item</a> referencing can be represented by
@@ -25,17 +26,19 @@ import java.util.regex.Pattern;
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
  */
 public class PathPointer extends BasePointer {
+	/**
+	 * Root directory of default drive of current account
+	 */
+	public static final PathPointer root = new PathPointer(null, "/", "/me/drive/root", "/me/drive/root", true);
+
 	private final static Pattern pathMatcher = Pattern.compile("^(/me)?/drive/root:(.*)$");
 	private final static Pattern drivePathMatcher = Pattern.compile("^/drives/([a-fA-F0-9]+)/root:(.*)$");
+
 	@Getter @Nullable private final String driveId;
 	@Getter @NotNull private final String readablePath;
 	@NotNull private final String path;
 	@NotNull private final String rawPath;
-
-	/**
-	 * Root directory of default drive of current account
-	 */
-	public static final PathPointer root = new PathPointer("/");
+	@Getter private boolean isRoot = false;
 
 
 	/*
@@ -51,6 +54,8 @@ public class PathPointer extends BasePointer {
 	public PathPointer(@NotNull String anyPath) {
 		String rawPath;
 		Matcher matcher;
+
+		anyPath = anyPath.trim();
 
 		if ((matcher = drivePathMatcher.matcher(anyPath)).matches()) {
 			// decode `anyPath`
@@ -74,6 +79,13 @@ public class PathPointer extends BasePointer {
 		}
 		else if (anyPath.charAt(0) != '/') {
 			throw new IllegalArgumentException("`path` doesn't start with '/'. given : " + anyPath);
+		}
+		else if (anyPath.equals("/")) {
+			this.readablePath = anyPath;
+			this.path = "/me/drive/root";
+			this.rawPath = "/me/drive/root";
+			this.driveId = null;
+			this.isRoot = true;
 		}
 		else {
 			// encode `anyPath`
@@ -103,6 +115,7 @@ public class PathPointer extends BasePointer {
 	and otherwise user invoked.
 	 */
 	public PathPointer(@NotNull String anyPath, @Nullable String driveId) {
+		anyPath = anyPath.trim();
 		String rawPath = anyPath;
 		// decode `anyPath`
 		anyPath = QueryStringDecoder.decodeComponent(anyPath);
@@ -147,6 +160,20 @@ public class PathPointer extends BasePointer {
 		else if (anyPath.charAt(0) != '/') {
 			throw new IllegalArgumentException("`path` doesn't start with '/'. given : " + anyPath);
 		}
+		else if (anyPath.equals("/")) {
+			this.isRoot = true;
+			this.readablePath = anyPath;
+			this.driveId = null;
+
+			if (driveId == null) {
+				this.path = "/me/drive/root";
+				this.rawPath = "/me/drive/root";
+			}
+			else {
+				this.path = "/drives/" + driveId + "/root";
+				this.rawPath = "/drives/" + driveId + "/root";
+			}
+		}
 		// if anyPath is pure absolute path
 		else {
 			String t;
@@ -182,6 +209,12 @@ public class PathPointer extends BasePointer {
 		this.rawPath = rawPath;
 	}
 
+	private PathPointer(@Nullable String driveId, @NotNull String readablePath,
+						@NotNull String path, @NotNull String rawPath, boolean isRoot) {
+		this(driveId, readablePath, path, rawPath);
+		this.isRoot = isRoot;
+	}
+
 	@Override
 	public @NotNull URI toURI() throws URISyntaxException {
 		return new URI(RequestTool.SCHEME, RequestTool.HOST, path, null);
@@ -204,7 +237,8 @@ public class PathPointer extends BasePointer {
 
 	@Override
 	public @NotNull String resolveOperator(@NotNull Operator op) {
-		return rawPath + ":/" + op;
+		if (isRoot) return rawPath + '/' + op;
+		else return rawPath + ":/" + op;
 	}
 
 
@@ -225,9 +259,22 @@ public class PathPointer extends BasePointer {
 		}
 
 		// if `path` end with '/'
-		if (path.charAt(path.length() - 1) == '/')
-			return new PathPointer(driveId, readablePath + name, path + name, rawPath + rawName);
-		else
-			return new PathPointer(driveId, readablePath + '/' + name, path + '/' + name, rawPath + '/' + rawName);
+		if (path.charAt(path.length() - 1) == '/') {
+			if (isRoot) {
+				return new PathPointer(driveId, readablePath + name, path + ':' + name, rawPath + ':' + rawName);
+			}
+			else {
+				return new PathPointer(driveId, readablePath + name, path + name, rawPath + rawName);
+			}
+		}
+		else {
+			if (isRoot) {
+				return new PathPointer(driveId, readablePath + '/' + name,
+						path + ":/" + name, rawPath + ":/" + rawName);
+			}
+			else {
+				return new PathPointer(driveId, readablePath + '/' + name, path + '/' + name, rawPath + '/' + rawName);
+			}
+		}
 	}
 }

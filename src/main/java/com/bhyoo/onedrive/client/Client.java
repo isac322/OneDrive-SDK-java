@@ -25,8 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static com.bhyoo.onedrive.container.items.pointer.Operator.CONTENT;
-import static com.bhyoo.onedrive.container.items.pointer.Operator.UPLOAD_CREATE_SESSION;
+import static com.bhyoo.onedrive.container.items.pointer.Operator.*;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static java.net.HttpURLConnection.*;
 
@@ -478,7 +477,7 @@ public class Client {
 	@NotNull
 	public FolderItem createFolder(@NotNull BasePointer parent, @NotNull String name) throws ErrorResponseException {
 		byte[] content = ("{\"name\":\"" + name + "\",\"folder\":{}}").getBytes();
-		return createFolder(parent.resolveOperator(Operator.CHILDREN), content);
+		return createFolder(parent.resolveOperator(CHILDREN), content);
 	}
 
 	@NotNull
