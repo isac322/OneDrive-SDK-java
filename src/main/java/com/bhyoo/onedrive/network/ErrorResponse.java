@@ -63,14 +63,14 @@ public class ErrorResponse {
 								break;
 							default:
 								throw new IllegalStateException(String.format(
-										"Unknown attribute detected in inner AuthenticationInfo : %s(%s)",
+										"Unknown attribute detected in inner ErrorResponse : %s(%s)",
 										fieldName, parser.getText()));
 						}
 					}
 					break;
 				default:
 					throw new IllegalStateException(String.format(
-							"Unknown attribute detected in AuthenticationInfo : %s(%s)",
+							"Unknown attribute detected in ErrorResponse : %s(%s)",
 							currentName, parser.getText()));
 			}
 		}

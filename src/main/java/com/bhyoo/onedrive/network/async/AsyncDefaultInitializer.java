@@ -42,6 +42,7 @@ public class AsyncDefaultInitializer extends ChannelInitializer<SocketChannel> {
 
 		// Enable HTTPS.
 		pipeline.addLast("ssl", sslContext.newHandler(ch.alloc()));
+		//		pipeline.addLast(new LoggingHandler(LogLevel.INFO));
 
 		pipeline.addLast("codec", new HttpClientCodec());
 

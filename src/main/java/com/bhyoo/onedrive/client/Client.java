@@ -23,7 +23,9 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
+import static com.bhyoo.onedrive.container.items.pointer.Operator.CONTENT;
 import static com.bhyoo.onedrive.container.items.pointer.Operator.UPLOAD_CREATE_SESSION;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static java.net.HttpURLConnection.*;
@@ -579,6 +581,102 @@ public class Client {
 		String fileName = filePath.getFileName().toString();
 		return requestTool.upload(parentPath.resolve(fileName).resolveOperator(UPLOAD_CREATE_SESSION), filePath);
 	}
+
+
+	/**
+	 * Upload file {@code filePath} to {@code parentId}. This method only supports files up to 4MB in size.
+	 *
+	 * @param parentId The ID of the directory where the file to be uploaded is stored.
+	 * @param filePath local file path to upload
+	 *
+	 * @return {@link FileItem} object of created item
+	 *
+	 * @throws IOException            when can not read from {@code filePath}
+	 * @throws ErrorResponseException somethings wrong with response of MS
+	 */
+	public FileItem simpleUploadFile(@NotNull String parentId, @NotNull Path filePath)
+			throws IOException, ErrorResponseException {
+		String fileName = filePath.getFileName().toString();
+		return requestTool.simpleUpload(ITEM_ID_PREFIX + parentId + ":/" + fileName + ":/" + CONTENT, filePath);
+	}
+
+	/**
+	 * Upload file {@code filePath} to {@code parentId}. This method only supports files up to 4MB in size.
+	 *
+	 * @param parentId The ID of the directory where the file to be uploaded is stored.
+	 * @param filePath local file path to upload
+	 *
+	 * @return {@link FileItem} object of created item
+	 *
+	 * @throws IOException            when can not read from {@code filePath}
+	 * @throws ErrorResponseException somethings wrong with response of MS
+	 */
+	public FileItem simpleUploadFile(@NotNull IdPointer parentId, @NotNull Path filePath)
+			throws IOException, ErrorResponseException {
+		String fileName = filePath.getFileName().toString();
+		return requestTool.simpleUpload(parentId.toASCIIApi() + ":/" + fileName + ":/" + CONTENT, filePath);
+	}
+
+	/**
+	 * Upload file {@code filePath} to {@code parentPath}. This method only supports files up to 4MB in size.
+	 *
+	 * @param parentPath The path of the directory where the file to be uploaded is stored.
+	 * @param filePath   local file path to upload
+	 *
+	 * @return {@link FileItem} object of created item
+	 *
+	 * @throws IOException            when can not read from {@code filePath}
+	 * @throws ErrorResponseException somethings wrong with response of MS
+	 */
+	public FileItem simpleUploadFile(@NotNull PathPointer parentPath, @NotNull Path filePath)
+			throws IOException, ErrorResponseException {
+		String fileName = filePath.getFileName().toString();
+		return requestTool.simpleUpload(parentPath.resolve(fileName).resolveOperator(CONTENT), filePath);
+	}
+
+
+	/**
+	 * Upload file {@code filePath} to {@code parentId}. This method only supports files up to 4MB in size.
+	 *
+	 * @param parentId The ID of the directory where the file to be uploaded is stored.
+	 * @param filePath local file path to upload
+	 *
+	 * @return {@link FileItem} object of created item
+	 *
+	 */
+	public DefaultDriveItemPromise simpleUploadFileAsync(@NotNull String parentId, @NotNull Path filePath) {
+		String fileName = Paths.get(filePath.getFileName().toUri().toASCIIString()).getFileName().toString();
+		return requestTool.simpleUploadAsync(ITEM_ID_PREFIX + parentId + ":/" + fileName + ":/" + CONTENT, filePath);
+	}
+
+	/**
+	 * Upload file {@code filePath} to {@code parentId}. This method only supports files up to 4MB in size.
+	 *
+	 * @param parentId The ID of the directory where the file to be uploaded is stored.
+	 * @param filePath local file path to upload
+	 *
+	 * @return {@link FileItem} object of created item
+	 *
+	 */
+	public DefaultDriveItemPromise simpleUploadFileAsync(@NotNull IdPointer parentId, @NotNull Path filePath) {
+		String fileName = Paths.get(filePath.getFileName().toUri().toASCIIString()).getFileName().toString();
+		return requestTool.simpleUploadAsync(parentId.toASCIIApi() + ":/" + fileName + ":/" + CONTENT, filePath);
+	}
+
+	/**
+	 * Upload file {@code filePath} to {@code parentPath}. This method only supports files up to 4MB in size.
+	 *
+	 * @param parentPath The path of the directory where the file to be uploaded is stored.
+	 * @param filePath   local file path to upload
+	 *
+	 * @return {@link FileItem} object of created item
+	 *
+	 */
+	public DefaultDriveItemPromise simpleUploadFileAsync(@NotNull PathPointer parentPath, @NotNull Path filePath) {
+		String fileName = Paths.get(filePath.getFileName().toUri().toASCIIString()).getFileName().toString();
+		return requestTool.simpleUploadAsync(parentPath.resolve(fileName).resolveOperator(CONTENT), filePath);
+	}
+
 
 
 	/*

@@ -17,6 +17,7 @@ import com.bhyoo.onedrive.utils.ByteBufStream;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
@@ -34,6 +35,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.zip.GZIPInputStream;
 
@@ -42,6 +44,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
 
 
@@ -102,6 +105,16 @@ public class RequestTool {
 			return new URI(BASE_URL + api);
 		}
 		catch (URISyntaxException e) {
+			throw new IllegalArgumentException(
+					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
+		}
+	}
+
+	public static URL api2Url(@NotNull String api) {
+		try {
+			return new URL(BASE_URL + api);
+		}
+		catch (MalformedURLException e) {
 			throw new IllegalArgumentException(
 					"Wrong api : \"" + api + "\", full URL : \"" + BASE_URL + api + "\".", e);
 		}
@@ -413,6 +426,73 @@ public class RequestTool {
 		});
 
 		return uploadPromise;
+	}
+
+	/**
+	 * Upload file ({@code filePath}). This method only supports files up to 4MB in size.
+	 *
+	 * @param api      indicate location and file name to upload
+	 * @param filePath filesystem path to upload
+	 *
+	 * @return {@link FileItem} object of created item
+	 *
+	 * @throws IOException            when can not read from {@code filePath}
+	 * @throws ErrorResponseException somethings wrong with response of MS
+	 */
+	public @NotNull FileItem simpleUpload(@NotNull String api, @NotNull Path filePath)
+			throws IOException, ErrorResponseException {
+		SyncResponse response = newRequest(api)
+				.doPut(Files.readAllBytes(filePath));
+
+		return parseFileItemAndHandle(response, HTTP_CREATED);
+	}
+
+	/**
+	 * Upload file ({@code filePath}). This method only supports files up to 4MB in size.
+	 *
+	 * @param api      indicate location and file name to upload
+	 * @param filePath filesystem path to upload
+	 *
+	 * @return {@link FileItem} object of created item
+	 */
+	public DefaultDriveItemPromise simpleUploadAsync(@NotNull String api, @NotNull final Path filePath) {
+		final URI uri = api2Uri(api);
+
+		String host = uri.getHost();
+		int port = 443;
+
+		DefaultDriveItemPromise promise = new DefaultDriveItemPromise(group.next());
+
+		// Configure the client.
+		Bootstrap bootstrap = new Bootstrap()
+				.group(group)
+				.channel(socketChannelClass)
+				.handler(new AsyncDefaultInitializer(new DriveItemHandler(promise, this, HTTP_CREATED)));
+
+		bootstrap.connect(host, port).addListener(new ChannelFutureListener() {
+			@Override public void operationComplete(ChannelFuture future) throws IOException {
+				if (future.isSuccess()) {
+					DefaultHttpRequest request = new DefaultFullHttpRequest(
+							HTTP_1_1,
+							PUT,
+							uri.toASCIIString(),
+							Unpooled.wrappedBuffer(Files.readAllBytes(filePath)));
+
+					request.headers()
+							.set(HttpHeaderNames.HOST, uri.getHost())
+							.set(ACCEPT_ENCODING, GZIP)
+							.set(CONTENT_LENGTH, Files.size(filePath))
+							.set(AUTHORIZATION, client.getFullToken());
+
+					future.channel().writeAndFlush(request);
+				}
+				else {
+					future.channel().close();
+				}
+			}
+		});
+
+		return promise;
 	}
 
 	private void uploadSession(@NotNull String api, @NotNull Path filePath) {

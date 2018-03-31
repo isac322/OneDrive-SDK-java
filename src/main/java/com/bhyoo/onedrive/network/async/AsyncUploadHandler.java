@@ -6,10 +6,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpHeaderValues.CLOSE;
@@ -44,7 +44,7 @@ class AsyncUploadHandler extends SimpleChannelInboundHandler<HttpObject> {
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		super.channelActive(ctx);
-		fileChannel = new FileInputStream(promise.filePath().toFile()).getChannel();
+		fileChannel = FileChannel.open(promise.filePath(), StandardOpenOption.READ);
 		ctx.writeAndFlush(nextRequest());
 	}
 
@@ -76,7 +76,7 @@ class AsyncUploadHandler extends SimpleChannelInboundHandler<HttpObject> {
 
 		// update request with new range
 		request.headers()
-				.set(CONTENT_LENGTH, String.valueOf(readBytes))
+				.set(CONTENT_LENGTH, readBytes)
 				.set(CONTENT_RANGE,
 						"bytes " + oldPosition + '-' + (currentFilePosition - 1) + '/' + fileChannel.size());
 

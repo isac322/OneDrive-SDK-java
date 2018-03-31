@@ -26,10 +26,22 @@ public class DriveItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 	private Thread workerThread;
 	private @Nullable Exception workerException;
 
+	private final int expectedCode;
+
 	public DriveItemHandler(@NotNull DefaultDriveItemPromise promise, @NotNull RequestTool requestTool) {
 		this.promise = promise;
 		this.requestTool = requestTool;
 		this.stream = new ByteBufStream();
+		this.expectedCode = HTTP_OK;
+	}
+
+	public DriveItemHandler(@NotNull DefaultDriveItemPromise promise,
+							@NotNull RequestTool requestTool,
+							int expectedCode) {
+		this.promise = promise;
+		this.requestTool = requestTool;
+		this.stream = new ByteBufStream();
+		this.expectedCode = expectedCode;
 	}
 
 	@Override public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
@@ -46,7 +58,7 @@ public class DriveItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 			workerThread = new Thread() {
 				@Override public void run() {
 					try {
-						driveItem = requestTool.parseDriveItemAndHandle(response, stream, HTTP_OK);
+						driveItem = requestTool.parseDriveItemAndHandle(response, stream, expectedCode);
 					}
 					catch (Exception e) {
 						workerException = e;
@@ -66,12 +78,12 @@ public class DriveItemHandler extends SimpleChannelInboundHandler<HttpObject> {
 				if (workerException != null) {
 					promise.setFailure(workerException);
 				}
-				else if (response.status().code() == HTTP_OK) {
+				else if (response.status().code() == expectedCode) {
 					promise.setSuccess(driveItem);
 				}
 				else {
 					throw new IllegalStateException(
-							"HTTP response code is not " + HTTP_OK + " and not occurs any exception");
+							"HTTP response code is not " + expectedCode + " and not occurs any exception");
 				}
 			}
 			else {
