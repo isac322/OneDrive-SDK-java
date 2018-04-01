@@ -74,7 +74,7 @@ public class Client {
 	 * @param redirectURL  Redirect URL that programmer already set in Application setting. It must matches with set
 	 *                     one!
 	 * @param clientSecret Client secret key that MS gave to programmer.
-	 * @param autoLogin    if {@code true} construct with auto login.
+	 * @param withLogin    if {@code true} construct with login.
 	 *
 	 * @throws InternalException             If fail to create {@link URI} object in auth process.
 	 *                                       if it happens it's probably bug, so please report to
@@ -86,12 +86,12 @@ public class Client {
 	 * @throws RuntimeException              if login is unsuccessful.
 	 */
 	public Client(@NotNull String clientId, @NotNull String[] scope, @NotNull String redirectURL,
-				  @NotNull String clientSecret, boolean autoLogin) {
+				  @NotNull String clientSecret, boolean withLogin) {
 		requestTool = new RequestTool(this);
 
 		this.authHelper = new AuthHelper(scope, clientId, clientSecret, redirectURL, this.requestTool);
 
-		if (autoLogin) login();
+		if (withLogin) login();
 	}
 
 
@@ -641,7 +641,6 @@ public class Client {
 	 * @param filePath local file path to upload
 	 *
 	 * @return {@link FileItem} object of created item
-	 *
 	 */
 	public DefaultDriveItemPromise simpleUploadFileAsync(@NotNull String parentId, @NotNull Path filePath) {
 		String fileName = Paths.get(filePath.getFileName().toUri().toASCIIString()).getFileName().toString();
@@ -655,7 +654,6 @@ public class Client {
 	 * @param filePath local file path to upload
 	 *
 	 * @return {@link FileItem} object of created item
-	 *
 	 */
 	public DefaultDriveItemPromise simpleUploadFileAsync(@NotNull IdPointer parentId, @NotNull Path filePath) {
 		String fileName = Paths.get(filePath.getFileName().toUri().toASCIIString()).getFileName().toString();
@@ -669,7 +667,6 @@ public class Client {
 	 * @param filePath   local file path to upload
 	 *
 	 * @return {@link FileItem} object of created item
-	 *
 	 */
 	public DefaultDriveItemPromise simpleUploadFileAsync(@NotNull PathPointer parentPath, @NotNull Path filePath) {
 		String fileName = Paths.get(filePath.getFileName().toUri().toASCIIString()).getFileName().toString();
