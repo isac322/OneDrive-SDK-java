@@ -316,46 +316,46 @@ public class Client {
 	public String copyItem(@NotNull String srcId, @NotNull String destId, @NotNull String newName)
 			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"},\"name\":\"" + newName + "\"}").getBytes();
-		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
+		return copyItem(ITEM_ID_PREFIX + srcId + "/" + COPY, content);
 	}
 
 	@NotNull
 	public String copyItem(@NotNull String srcId, @NotNull PathPointer destPath) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + destPath.toJson() + "}").getBytes();
-		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
+		return copyItem(ITEM_ID_PREFIX + srcId + "/" + COPY, content);
 	}
 
 	@NotNull
 	public String copyItem(@NotNull String srcId, @NotNull PathPointer dest, @NotNull String newName)
 			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + ",\"name\":\"" + newName + "\"}").getBytes();
-		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
+		return copyItem(ITEM_ID_PREFIX + srcId + "/" + COPY, content);
 	}
 
 	@NotNull
 	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
-		return copyItem(srcPath.resolveOperator(Operator.ACTION_COPY), content);
+		return copyItem(srcPath.resolveOperator(COPY), content);
 	}
 
 	@NotNull
 	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId, @NotNull String newName)
 			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"},\"name\":\"" + newName + "\"}").getBytes();
-		return copyItem(srcPath.resolveOperator(Operator.ACTION_COPY), content);
+		return copyItem(srcPath.resolveOperator(COPY), content);
 	}
 
 	@NotNull
 	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + "}").getBytes();
-		return copyItem(src.resolveOperator(Operator.ACTION_COPY), content);
+		return copyItem(src.resolveOperator(COPY), content);
 	}
 
 	@NotNull
 	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest, @NotNull String newName)
 			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + ",\"name\":\"" + newName + "\"}").getBytes();
-		return copyItem(src.resolveOperator(Operator.ACTION_COPY), content);
+		return copyItem(src.resolveOperator(COPY), content);
 	}
 
 
@@ -567,18 +567,18 @@ public class Client {
 	public UploadFuture uploadFile(@NotNull String parentId, @NotNull Path filePath) {
 		String fileName = filePath.getFileName().toString();
 		return requestTool.upload(
-				ITEM_ID_PREFIX + parentId + ":/" + fileName + ":/" + UPLOAD_CREATE_SESSION, filePath);
+				ITEM_ID_PREFIX + parentId + ":/" + fileName + ":/" + CREATE_UPLOAD_SESSION, filePath);
 	}
 
 	public UploadFuture uploadFile(@NotNull IdPointer parentId, @NotNull Path filePath) {
 		String fileName = filePath.getFileName().toString();
 		return requestTool.upload(
-				parentId.toASCIIApi() + ":/" + fileName + ":/" + UPLOAD_CREATE_SESSION, filePath);
+				parentId.toASCIIApi() + ":/" + fileName + ":/" + CREATE_UPLOAD_SESSION, filePath);
 	}
 
 	public UploadFuture uploadFile(@NotNull PathPointer parentPath, @NotNull Path filePath) {
 		String fileName = filePath.getFileName().toString();
-		return requestTool.upload(parentPath.resolve(fileName).resolveOperator(UPLOAD_CREATE_SESSION), filePath);
+		return requestTool.upload(parentPath.resolve(fileName).resolveOperator(CREATE_UPLOAD_SESSION), filePath);
 	}
 
 
