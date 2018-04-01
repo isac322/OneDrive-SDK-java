@@ -1,10 +1,12 @@
 package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
+import com.bhyoo.onedrive.network.async.DriveItemFuture;
 import com.bhyoo.onedrive.network.async.UploadFuture;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 public interface FolderItem extends DriveItem, Iterable<DriveItem> {
@@ -25,6 +27,10 @@ public interface FolderItem extends DriveItem, Iterable<DriveItem> {
 	@NotNull FolderItem createFolder(@NotNull String name) throws ErrorResponseException;
 
 	@NotNull UploadFuture uploadFile(@NotNull Path filePath);
+
+	@NotNull FileItem simpleUploadFile(@NotNull Path filePath) throws IOException, ErrorResponseException;
+
+	@NotNull DriveItemFuture simpleUploadFileAsync(@NotNull Path filePath);
 
 
 

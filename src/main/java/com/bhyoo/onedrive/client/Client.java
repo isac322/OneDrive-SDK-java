@@ -593,7 +593,7 @@ public class Client {
 	 * @throws IOException            when can not read from {@code filePath}
 	 * @throws ErrorResponseException somethings wrong with response of MS
 	 */
-	public FileItem simpleUploadFile(@NotNull String parentId, @NotNull Path filePath)
+	public @NotNull FileItem simpleUploadFile(@NotNull String parentId, @NotNull Path filePath)
 			throws IOException, ErrorResponseException {
 		String fileName = filePath.getFileName().toString();
 		return requestTool.simpleUpload(ITEM_ID_PREFIX + parentId + ":/" + fileName + ":/" + CONTENT, filePath);

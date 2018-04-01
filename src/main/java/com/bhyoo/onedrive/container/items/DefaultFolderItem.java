@@ -9,12 +9,14 @@ import com.bhyoo.onedrive.container.items.pointer.PathPointer;
 import com.bhyoo.onedrive.container.pager.DriveItemPager.DriveItemPage;
 import com.bhyoo.onedrive.exceptions.ErrorResponseException;
 import com.bhyoo.onedrive.exceptions.InternalException;
+import com.bhyoo.onedrive.network.async.DriveItemFuture;
 import com.bhyoo.onedrive.network.async.ResponseFuture;
 import com.bhyoo.onedrive.network.async.UploadFuture;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -158,6 +160,15 @@ public class DefaultFolderItem extends AbstractDriveItem implements FolderItem {
 
 	@Override public @NotNull UploadFuture uploadFile(@NotNull Path filePath) {
 		return client.uploadFile(this.id, filePath);
+	}
+
+	@Override public @NotNull FileItem simpleUploadFile(@NotNull Path filePath)
+			throws IOException, ErrorResponseException {
+		return client.simpleUploadFile(this.id, filePath);
+	}
+
+	@Override public @NotNull DriveItemFuture simpleUploadFileAsync(@NotNull Path filePath) {
+		return client.simpleUploadFileAsync(this.id, filePath);
 	}
 
 	/**
