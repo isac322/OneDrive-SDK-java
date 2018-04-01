@@ -591,7 +591,8 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 		update(("{\"description\":\"" + description + "\"}").getBytes());
 	}
 
-	public void updateName(@NotNull String name) throws ErrorResponseException {
+	// FIXME: make async version
+	public void rename(@NotNull String name) throws ErrorResponseException {
 		update(("{\"name\":\"" + name + "\"}").getBytes());
 	}
 }

@@ -140,5 +140,5 @@ public interface DriveItem extends BaseItem {
 
 	void updateDescription(String description) throws ErrorResponseException;
 
-	void updateName(@NotNull String name) throws ErrorResponseException;
+	void rename(@NotNull String name) throws ErrorResponseException;
 }
