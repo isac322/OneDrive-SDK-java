@@ -2,6 +2,7 @@ package com.bhyoo.onedrive.client;
 
 import com.bhyoo.onedrive.client.auth.AbstractAuthHelper;
 import com.bhyoo.onedrive.client.auth.AuthHelper;
+import com.bhyoo.onedrive.container.AsyncJobMonitor;
 import com.bhyoo.onedrive.container.items.*;
 import com.bhyoo.onedrive.container.items.pointer.BasePointer;
 import com.bhyoo.onedrive.container.items.pointer.IdPointer;
@@ -292,15 +293,15 @@ public class Client {
 	 * @param srcId  item's id that wants to be copied
 	 * @param destId location's id that wants to be placed the copied item
 	 *
-	 * @return URL {@code String} that can monitor status of copying process
+	 * @return monitor {@link AsyncJobMonitor} that can monitor status of copying process
 	 *
 	 * @throws ErrorResponseException if error happens while requesting copying operation. such as invalid copying
 	 *                                request
 	 * @throws InvalidJsonException   if fail to parse response of copying request into json. it caused by server side
 	 *                                not by SDK.
 	 */
-	@NotNull
-	public String copyItem(@NotNull String srcId, @NotNull String destId) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyItem(@NotNull String srcId, @NotNull String destId)
+			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
 		return copyItem(ITEM_ID_PREFIX + srcId + "/action.copy", content);
 	}
@@ -312,48 +313,46 @@ public class Client {
 	 *
 	 * @see Client#copyItem(String, String)
 	 */
-	@NotNull
-	public String copyItem(@NotNull String srcId, @NotNull String destId, @NotNull String newName)
+	public @NotNull AsyncJobMonitor copyItem(@NotNull String srcId, @NotNull String destId, @NotNull String newName)
 			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"},\"name\":\"" + newName + "\"}").getBytes();
 		return copyItem(ITEM_ID_PREFIX + srcId + "/" + COPY, content);
 	}
 
-	@NotNull
-	public String copyItem(@NotNull String srcId, @NotNull PathPointer destPath) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyItem(@NotNull String srcId, @NotNull PathPointer destPath)
+			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + destPath.toJson() + "}").getBytes();
 		return copyItem(ITEM_ID_PREFIX + srcId + "/" + COPY, content);
 	}
 
-	@NotNull
-	public String copyItem(@NotNull String srcId, @NotNull PathPointer dest, @NotNull String newName)
+	public @NotNull AsyncJobMonitor copyItem(@NotNull String srcId, @NotNull PathPointer dest, @NotNull String newName)
 			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + ",\"name\":\"" + newName + "\"}").getBytes();
 		return copyItem(ITEM_ID_PREFIX + srcId + "/" + COPY, content);
 	}
 
-	@NotNull
-	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyItem(@NotNull PathPointer srcPath, @NotNull String destId)
+			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"}}").getBytes();
 		return copyItem(srcPath.resolveOperator(COPY), content);
 	}
 
-	@NotNull
-	public String copyItem(@NotNull PathPointer srcPath, @NotNull String destId, @NotNull String newName)
-			throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyItem(@NotNull PathPointer srcPath,
+											 @NotNull String destId,
+											 @NotNull String newName) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":{\"id\":\"" + destId + "\"},\"name\":\"" + newName + "\"}").getBytes();
 		return copyItem(srcPath.resolveOperator(COPY), content);
 	}
 
-	@NotNull
-	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyItem(@NotNull BasePointer src, @NotNull BasePointer dest)
+			throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + "}").getBytes();
 		return copyItem(src.resolveOperator(COPY), content);
 	}
 
-	@NotNull
-	public String copyItem(@NotNull BasePointer src, @NotNull BasePointer dest, @NotNull String newName)
-			throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyItem(@NotNull BasePointer src,
+											 @NotNull BasePointer dest,
+											 @NotNull String newName) throws ErrorResponseException {
 		byte[] content = ("{\"parentReference\":" + dest.toJson() + ",\"name\":\"" + newName + "\"}").getBytes();
 		return copyItem(src.resolveOperator(COPY), content);
 	}
@@ -366,15 +365,15 @@ public class Client {
 	 *                {@code api} is a escaped {@code String}
 	 * @param content HTTP body
 	 *
-	 * @return URL {@code String} that can monitor status of copying process
+	 * @return monitor {@link AsyncJobMonitor} that can monitor status of copying process
 	 *
 	 * @throws ErrorResponseException if error happens while requesting copying operation. such as invalid copying
 	 *                                request
 	 * @throws InvalidJsonException   if fail to parse response of copying request into json. it caused by server side
 	 *                                not by SDK.
 	 */
-	@NotNull
-	private String copyItem(@NotNull String api, @NotNull byte[] content) throws ErrorResponseException {
+	private @NotNull AsyncJobMonitor copyItem(@NotNull String api, @NotNull byte[] content)
+			throws ErrorResponseException {
 		authHelper.checkExpired();
 
 		SyncResponse response = requestTool.postMetadata(api, content);
@@ -382,7 +381,7 @@ public class Client {
 		// if not 202 Accepted raise ErrorResponseException
 		requestTool.errorHandling(response, HTTP_ACCEPTED);
 
-		return response.getHeader().get("Location").get(0);
+		return new AsyncJobMonitor(response.getHeader().get("Location").get(0));
 	}
 
 

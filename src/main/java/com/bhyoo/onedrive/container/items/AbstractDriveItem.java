@@ -2,6 +2,7 @@ package com.bhyoo.onedrive.container.items;
 
 import com.bhyoo.onedrive.client.Client;
 import com.bhyoo.onedrive.client.RequestTool;
+import com.bhyoo.onedrive.container.AsyncJobMonitor;
 import com.bhyoo.onedrive.container.IdentitySet;
 import com.bhyoo.onedrive.container.facet.*;
 import com.bhyoo.onedrive.container.items.pointer.BasePointer;
@@ -470,17 +471,18 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 
 
 	@Override
-	public @NotNull String copyTo(@NotNull FolderItem folder) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyTo(@NotNull FolderItem folder) throws ErrorResponseException {
 		return this.copyTo(folder.getId());
 	}
 
 	@Override
-	public @NotNull String copyTo(@NotNull FolderItem folder, @NotNull String newName) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyTo(@NotNull FolderItem folder, @NotNull String newName)
+			throws ErrorResponseException {
 		return this.copyTo(folder.getId(), newName);
 	}
 
 	@Override
-	public @NotNull String copyTo(@NotNull ItemReference folder) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyTo(@NotNull ItemReference folder) throws ErrorResponseException {
 		if (folder.id != null)
 			return this.copyTo(folder.id);
 		else if (folder.pathPointer != null)
@@ -490,7 +492,7 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	}
 
 	@Override
-	public @NotNull String copyTo(@NotNull ItemReference folder, @NotNull String newName)
+	public @NotNull AsyncJobMonitor copyTo(@NotNull ItemReference folder, @NotNull String newName)
 			throws ErrorResponseException {
 		if (folder.id != null)
 			return this.copyTo(folder.id, newName);
@@ -501,22 +503,22 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	}
 
 	@Override
-	public @NotNull String copyTo(@NotNull BasePointer dest) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyTo(@NotNull BasePointer dest) throws ErrorResponseException {
 		return client.copyItem(idPointer, dest);
 	}
 
 	@Override
-	public @NotNull String copyTo(@NotNull BasePointer dest, @NotNull String newName) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyTo(@NotNull BasePointer dest, @NotNull String newName) throws ErrorResponseException {
 		return client.copyItem(idPointer, dest, newName);
 	}
 
 	@Override
-	public @NotNull String copyTo(@NotNull String destId) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyTo(@NotNull String destId) throws ErrorResponseException {
 		return client.copyItem(this.id, destId);
 	}
 
 	@Override
-	public @NotNull String copyTo(@NotNull String destId, @NotNull String newName) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyTo(@NotNull String destId, @NotNull String newName) throws ErrorResponseException {
 		return client.copyItem(this.id, destId, newName);
 	}
 

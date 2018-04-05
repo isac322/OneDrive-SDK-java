@@ -1,5 +1,6 @@
 package com.bhyoo.onedrive.container.items;
 
+import com.bhyoo.onedrive.container.AsyncJobMonitor;
 import com.bhyoo.onedrive.container.facet.FileSystemInfoFacet;
 import com.bhyoo.onedrive.container.facet.SearchResultFacet;
 import com.bhyoo.onedrive.container.facet.SharePointIdsFacet;
@@ -53,21 +54,21 @@ public interface DriveItem extends BaseItem {
 	 */
 
 
-	@NotNull String copyTo(@NotNull FolderItem folder) throws ErrorResponseException;
+	@NotNull AsyncJobMonitor copyTo(@NotNull FolderItem folder) throws ErrorResponseException;
 
-	@NotNull String copyTo(@NotNull FolderItem folder, @NotNull String newName) throws ErrorResponseException;
+	@NotNull AsyncJobMonitor copyTo(@NotNull FolderItem folder, @NotNull String newName) throws ErrorResponseException;
 
-	@NotNull String copyTo(@NotNull ItemReference folder) throws ErrorResponseException;
+	@NotNull AsyncJobMonitor copyTo(@NotNull ItemReference folder) throws ErrorResponseException;
 
-	@NotNull String copyTo(@NotNull ItemReference folder, @NotNull String newName) throws ErrorResponseException;
+	@NotNull AsyncJobMonitor copyTo(@NotNull ItemReference folder, @NotNull String newName) throws ErrorResponseException;
 
-	@NotNull String copyTo(@NotNull BasePointer dest) throws ErrorResponseException;
+	@NotNull AsyncJobMonitor copyTo(@NotNull BasePointer dest) throws ErrorResponseException;
 
-	@NotNull String copyTo(@NotNull BasePointer dest, @NotNull String newName) throws ErrorResponseException;
+	@NotNull AsyncJobMonitor copyTo(@NotNull BasePointer dest, @NotNull String newName) throws ErrorResponseException;
 
-	@NotNull String copyTo(@NotNull String destId) throws ErrorResponseException;
+	@NotNull AsyncJobMonitor copyTo(@NotNull String destId) throws ErrorResponseException;
 
-	@NotNull String copyTo(@NotNull String destId, @NotNull String newName) throws ErrorResponseException;
+	@NotNull AsyncJobMonitor copyTo(@NotNull String destId, @NotNull String newName) throws ErrorResponseException;
 
 
 
