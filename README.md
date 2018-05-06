@@ -8,26 +8,28 @@ purse fast, easy to use, intuitive API.
 
 ### Supported Operation
 
-- auto login authorization check and refresh
-- fetching metadata of folder, file (by id and path)
-- folder or file's metadata (size, name, path, children list and etc.)
-- downloading file (sync and async)
-- delete, copy, move, change metadata(name, description) of folder or file
-- creating folder
-- [Facets](https://dev.onedrive.com/facets/facets.htm) that OneDrive support like image, video..
-- inquiring shared folder
-- basic [RemoteItem](https://dev.onedrive.com/misc/working-with-links.htm) handling
-- inquiring [Drives](https://dev.onedrive.com/resources/drive.htm)
-- creating file and upload it (async)
+- Auto login authorization check and refresh
+- Fetching metadata of folder, file (by id and path)
+- Folder or file's metadata (size, name, path, children list and etc.)
+- Downloading file (sync and async)
+- Delete, copy, move, change metadata(name, description) of folder or file
+- Creating folder
+- [Resources](https://docs.microsoft.com/en-us/onedrive/developer/rest-api/resources/) that OneDrive support like image, video..
+- Inquiring shared folder
+- Basic [RemoteItem](https://dev.onedrive.com/misc/working-with-links.htm) handling
+- Inquiring [Drives](https://docs.microsoft.com/en-us/onedrive/developer/rest-api/resources/drive)
+- Creating file and upload it (async)
+- Support Microsoft Graph 1.0
+- Support OneDrive for Business (not fully tested)
 
 
 
 ### TODO
 
-- searching file or folder (by name or content)
-- sharing folder or file
-- documentation
-- support custom redirect url when login
+- Searching file or folder (by name or content)
+- Sharing folder or file
+- Documentation
+- Support custom redirect url when login
 - REST-api response error handling
 - JRE6 version
 - HTTPS GZIP support for synchronized operation
@@ -48,6 +50,10 @@ purse fast, easy to use, intuitive API.
 
 
 ### Build
+
+`jar` files will be located on `build/libs` after build
+
+## __because of Lombok, Compile error can occurs on Oracle JDK 10. JDK 9 is recommended__
 
 #### Windows
 
@@ -73,16 +79,17 @@ gradle build
 
 ## Simple example
 
+You can see little bit more complicated examples in [TestCode.java](https://github.com/isac322/OneDrive-SDK-java/blob/master/src/test/java/com/bhyoo/onedrive/TestCases.java)
 
 ### 1. Construct `Client` object
 
 - All OneDrive jobs are performed via `Client` object.
 - A program can contain multiple different `Client` object.
 - Basically `Client` object check expiration and refresh authorization automatically. but it can be done manually.
-- All parameters that pass to `Client`'s constructor can obtain if you fallow [OneDrive app instruction of authentication](https://dev.onedrive.com/app-registration.htm). 
+- All parameters that pass to `Client`'s constructor can obtain if you fallow [OneDrive app instruction of authentication](https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/app-registration). 
 
 ```java
-import com.bhyoo.Client;
+import com.bhyoo.onedrive.client.Client;
 
 String clientId = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
 String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
@@ -101,12 +108,12 @@ client.login();
 
 - It can conduct via either ID or path.
 - `FolderItem` and `FileItem` are represent folder and file respectively.
-- `FolderItem` and `FileItem` are child class of `BaseItem`.
+- `FolderItem` and `FileItem` are child class of `DriveItem`.
 
 ```java
-import com.bhyoo.container.items.FolderItem;
-import com.bhyoo.container.items.BaseItem;
-import com.bhyoo.container.items.pointer.PathPointer;
+import com.bhyoo.onedrive.container.items.DriveItem;
+import com.bhyoo.onedrive.container.items.FileItem;
+import com.bhyoo.onedrive.container.items.FolderItem;
 
 // assume that Client object is already constructed
 
@@ -128,29 +135,31 @@ FileItem file = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
 FileItem file1 = client.getFile(new PathPointer("/{item-path}/{file-name}"));
 
 // or if you don't know whether ID is file or folder
-BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
+DriveItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 
 // or if you don't know whether path is file or folder
-BaseItem item1 = client.getItem(new PathPointer("/{item-path}"));
+DriveItem item1 = client.getItem(new PathPointer("/{item-path}"));
 ```
 
 
 ### 3. get children of a folder
 
-- `FolderItem` are `Iterable`. (it will returns child as `BaseItem`)
+- `FolderItem` are `Iterable`. (it will returns child as `DriveItem`)
 - Basically if `FolderItem` object is fetched by `Client`'s method `getFolder` or `getRootDir`, the object automatically fetchs children too. **(If children list is very long, it could take long time)**
 - If you call `FolderItem`'s method `getAllChildren` or `getFolderChildren` or `getFileChildren`, you can get `List` of all children, only folder children, only file children respectively.
 - if you call above methods, it will load children data and cache it. so **First call of those methods can take long time.**
 
 ```java
-import com.bhyoo.container.items.*;
+import com.bhyoo.onedrive.container.items.DriveItem;
+import com.bhyoo.onedrive.container.items.FileItem;
+import com.bhyoo.onedrive.container.items.FolderItem;
 
 // assume that Client object is already constructed
 FolderItem root = client.getRootDir();
 
-List<BaseItem> children = root.getAllChildren();
-List<FolderItem> folderChildren = root.getFolderChildren();
-List<FileItem> fileChildren = root.getFileChildren();
+DriveItem[] children = root.allChildren();
+FolderItem[] folderChildren = root.folderChildren();
+FileItem[] fileChildren = root.fileChildren();
 ```
 
 
@@ -160,8 +169,8 @@ List<FileItem> fileChildren = root.getFileChildren();
 - It will return created folder's `FolderItem` object.
 
 ```java
-import com.bhyoo.container.items.FolderItem;
-import com.bhyoo.container.items.pointer.PathPointer;
+import com.bhyoo.onedrive.container.items.FolderItem;
+import com.bhyoo.onedrive.container.items.pointer.PathPointer;
 
 // assume that Client object is already constructed
 
@@ -184,12 +193,12 @@ FolderItem newFolder2 = client.createFolder(new PathPointer("/"), "test2");
 - It can copy via either source item's object or `Client` object.
 
 ```java
-import com.bhyoo.container.items.*;
-import com.bhyoo.container.items.pointer.*;
+import com.bhyoo.onedrive.container.items.*;
+import com.bhyoo.onedrive.container.items.pointer.*;
 
 // assume that Client object is already constructed
 
-BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
+FileItem item = (FileItem) client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 FolderItem destination = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
 
 // direct copy
@@ -222,7 +231,7 @@ client.copyItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 
 ```java
 import java.nio.file.Paths;
-import com.bhyoo.container.items.FileItem;
+import com.bhyoo.onedrive.container.items.FileItem;
 
 // assume that Client object is already constructed
 FileItem file = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
@@ -280,12 +289,13 @@ future.sync();
 - It can move via either source item's object or `Client` object.
 
 ```java
-import com.bhyoo.container.items.BaseItem;
-import com.bhyoo.container.items.pointer.*;
+import com.bhyoo.onedrive.container.items.FileItem;
+import com.bhyoo.onedrive.container.items.FolderItem;
+import com.bhyoo.onedrive.container.items.pointer.*;
 
 // assume that Client object is already constructed
 
-BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
+FileItem item = client.getFile("XXXXXXXXXXXXXXXX!XXXX");
 FolderItem destination = client.getFolder("XXXXXXXXXXXXXXXX!XXXX");
 
 // direct move
@@ -311,17 +321,17 @@ client.moveItem(new PathPointer("/{item-path}"), new IdPointer("XXXXXXXXXXXXXXXX
 - That is, if `refresh` is invoked, all variable can be changed, even if the current program did not modify the variables.
 
 ```java
-import com.bhyoo.container.items.BaseItem;
+import com.bhyoo.onedrive.container.items.DriveItem;
 
 // assume that Client object is already constructed
-BaseItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
+DriveItem item = client.getItem("XXXXXXXXXXXXXXXX!XXXX");
 
 // change item's name and flush to server.
-item.setName("new name");
+item.rename("new name");
 
 
 // change item's description and flush to server.
-item.setDescription("blah blah");
+item.updateDescription("blah blah");
 
 
 // refresh item's all variable to latest value
@@ -335,7 +345,7 @@ item.refresh();
 
 ```java
 import java.nio.file.Path;
-import com.bhyoo.network.async.UploadFuture;
+import com.bhyoo.onedrive.network.async.UploadFuture;
 
 // assume that Client object is already constructed
 
@@ -347,3 +357,7 @@ future = client.uploadFile("{remote-folder-id}", Paths.get("local-file-path"));
 future.syncUninterruptibly();
 
 ```
+
+## `*Item` diagram
+
+![diagram](https://raw.githubusercontent.com/isac322/OneDrive-SDK-java/master/item_diagram.png)
