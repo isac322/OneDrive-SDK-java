@@ -14,7 +14,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT_ENCODING;
+import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 
 /**
@@ -37,9 +39,12 @@ public class AsyncJobMonitor {
 
 	@SneakyThrows(MalformedURLException.class)
 	public AsyncJobMonitor update() {
-		SyncResponse response = new SyncRequest(new URL(this.url)).setHeader(ACCEPT_ENCODING, GZIP).doGet();
+		SyncResponse response = new SyncRequest(new URL(this.url))
+				.setHeader(ACCEPT, APPLICATION_JSON)
+				.setHeader(ACCEPT_ENCODING, GZIP)
+				.doGet();
 
-		// TODO: handle error response
+		// TODO: error handling
 
 		try {
 			JsonParser parser = RequestTool.jsonFactory.createParser(response.getContent());
@@ -64,6 +69,9 @@ public class AsyncJobMonitor {
 						break;
 					case "statusDescription":
 						statusDescription = parser.getText();
+						break;
+					case "@odata.context":
+						// TODO
 						break;
 					default:
 						throw new IllegalStateException(
