@@ -277,4 +277,10 @@ public class PathPointer extends BasePointer {
 			}
 		}
 	}
+
+	public @NotNull String getName() {
+		if (this.isRoot) throw new IllegalStateException("root directory can not have name");
+
+		return this.readablePath.substring(this.readablePath.lastIndexOf('/') + 1);
+	}
 }
