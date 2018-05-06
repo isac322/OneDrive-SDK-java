@@ -508,7 +508,8 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	}
 
 	@Override
-	public @NotNull AsyncJobMonitor copyTo(@NotNull BasePointer dest, @NotNull String newName) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyTo(@NotNull BasePointer dest, @NotNull String newName)
+			throws ErrorResponseException {
 		return client.copyItem(idPointer, dest, newName);
 	}
 
@@ -518,7 +519,8 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 	}
 
 	@Override
-	public @NotNull AsyncJobMonitor copyTo(@NotNull String destId, @NotNull String newName) throws ErrorResponseException {
+	public @NotNull AsyncJobMonitor copyTo(@NotNull String destId, @NotNull String newName)
+			throws ErrorResponseException {
 		return client.copyItem(this.id, destId, newName);
 	}
 
@@ -560,7 +562,9 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 
 
 	@Override
-	public final @NotNull ItemReference newReference() {return new ItemReference(getDriveId(), id, pathPointer);}
+	public final @NotNull ItemReference newReference() {
+		return new ItemReference(getDriveId(), parentReference.driveType, id, pathPointer);
+	}
 
 
 

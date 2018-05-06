@@ -25,15 +25,27 @@ import java.io.IOException;
 @EqualsAndHashCode(of = {"id", "driveId"})
 public class ItemReference {
 	@Getter protected @NotNull String driveId;
-	@Getter protected @Nullable DriveType driveType;
+	@Getter protected @NotNull DriveType driveType;
+	/**
+	 * only null when root directory
+ 	 */
 	@Getter protected @Nullable String id;
+	/**
+	 * only null on Business version
+	 */
 	@Getter protected @Nullable String name;
+	/**
+	 * only null when root directory
+	 */
 	@Getter protected @Nullable PathPointer pathPointer;
+	/**
+	 * only null when root directory
+	 */
 	@Getter protected @Nullable String rawPath;
 	@Getter protected @Nullable String shareId;
 	@Getter protected @Nullable SharePointIdsFacet sharepointIds;
 
-	protected ItemReference(@NotNull String driveId, @Nullable DriveType driveType, @Nullable String id,
+	protected ItemReference(@NotNull String driveId, @NotNull DriveType driveType, @Nullable String id,
 							@Nullable String name, @Nullable String rawPath, @Nullable String shareId,
 							@Nullable SharePointIdsFacet sharepointIds) {
 		this.driveId = driveId;
@@ -49,8 +61,10 @@ public class ItemReference {
 		}
 	}
 
-	ItemReference(@NotNull String driveId, @Nullable String id, @Nullable PathPointer pathPointer) {
+	ItemReference(@NotNull String driveId, @NotNull DriveType driveType,
+				  @Nullable String id, @Nullable PathPointer pathPointer) {
 		this.driveId = driveId;
+		this.driveType = driveType;
 		this.id = id;
 		this.pathPointer = pathPointer;
 
@@ -101,6 +115,7 @@ public class ItemReference {
 		}
 
 		assert driveId != null : "driveId is null";
+		assert driveType != null : "driveType is null";
 
 		return new ItemReference(driveId, driveType, id, name, rawPath, shareId, sharepointIds);
 	}

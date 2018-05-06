@@ -17,9 +17,10 @@ import java.io.IOException;
  */
 public class FolderFacet {
 	@Getter protected final long childCount;
-	@Getter protected final @NotNull FolderViewFacet view;
+	// Nullable on onedrive for business
+	@Getter protected final @Nullable FolderViewFacet view;
 
-	protected FolderFacet(@NotNull Long childCount, @NotNull FolderViewFacet view) {
+	protected FolderFacet(@NotNull Long childCount, @Nullable FolderViewFacet view) {
 		this.childCount = childCount;
 		this.view = view;
 	}
@@ -45,7 +46,6 @@ public class FolderFacet {
 		}
 
 		assert childCount != null : "childCount is null";
-		assert view != null : "view is null";
 
 		return new FolderFacet(childCount, view);
 	}
