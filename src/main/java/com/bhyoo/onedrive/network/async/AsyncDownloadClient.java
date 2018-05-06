@@ -28,19 +28,17 @@ import static java.net.HttpURLConnection.HTTP_MOVED_TEMP;
 public class AsyncDownloadClient extends AbstractClient {
 	private final @NotNull String accessToken;
 	private final @NotNull Path downloadFolder;
-	private final @NotNull RequestTool requestTool;
 	private final @Nullable String newName;
 
 
-	public AsyncDownloadClient(@NotNull RequestTool requestTool, @NotNull URI itemURI, @NotNull Path downloadFolder) {
-		this(requestTool, itemURI, downloadFolder, null);
+	public AsyncDownloadClient(@NotNull String accessToken, @NotNull URI itemURI, @NotNull Path downloadFolder) {
+		this(accessToken, itemURI, downloadFolder, null);
 	}
 
-	public AsyncDownloadClient(@NotNull RequestTool requestTool, @NotNull URI itemURI,
+	public AsyncDownloadClient(@NotNull String accessToken, @NotNull URI itemURI,
 							   @NotNull Path downloadFolder, @Nullable String newName) {
 		super(HttpMethod.GET, itemURI, null);
-		this.requestTool = requestTool;
-		this.accessToken = requestTool.getClient().getFullToken();
+		this.accessToken = accessToken;
 		this.downloadFolder = downloadFolder;
 		this.newName = newName;
 	}
@@ -62,7 +60,7 @@ public class AsyncDownloadClient extends AbstractClient {
 		DownloadPromise downloadPromise = new DefaultDownloadPromise(group.next())
 				.setPath(downloadFolder);
 
-		DownloadListener listener = new DownloadListener(downloadPromise, request, requestTool, newName);
+		DownloadListener listener = new DownloadListener(downloadPromise, request, newName);
 
 		new AsyncClient(group, method, uri)
 				.setHeader(HttpHeaderNames.AUTHORIZATION, accessToken)
@@ -75,14 +73,12 @@ public class AsyncDownloadClient extends AbstractClient {
 	static class DownloadListener implements ResponseFutureListener {
 		private final DownloadPromise promise;
 		private final DefaultFullHttpRequest request;
-		private final RequestTool requestTool;
 		private final @Nullable String newName;
 
 		DownloadListener(DownloadPromise promise, DefaultFullHttpRequest request,
-						 RequestTool requestTool, @Nullable String newName) {
+						 @Nullable String newName) {
 			this.promise = promise;
 			this.request = request;
-			this.requestTool = requestTool;
 			this.newName = newName;
 		}
 
@@ -124,7 +120,7 @@ public class AsyncDownloadClient extends AbstractClient {
 			}
 			else {
 				try {
-					requestTool.errorHandling(response, result, HTTP_MOVED_TEMP);
+					RequestTool.errorHandling(response, result, HTTP_MOVED_TEMP);
 				}
 				catch (Exception e) {
 					promise.setFailure(e);

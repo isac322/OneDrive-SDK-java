@@ -379,7 +379,7 @@ public class Client {
 		SyncResponse response = requestTool.postMetadata(api, content);
 
 		// if not 202 Accepted raise ErrorResponseException
-		requestTool.errorHandling(response, HTTP_ACCEPTED);
+		RequestTool.errorHandling(response, HTTP_ACCEPTED);
 
 		return new AsyncJobMonitor(response.getHeader().get("Location").get(0));
 	}
@@ -548,7 +548,7 @@ public class Client {
 
 		Files.createDirectories(downloadFolder);
 
-		return new AsyncDownloadClient(requestTool, RequestTool.api2Uri(api), downloadFolder, newName).execute();
+		return new AsyncDownloadClient(getFullToken(), RequestTool.api2Uri(api), downloadFolder, newName).execute();
 	}
 
 
@@ -687,14 +687,14 @@ public class Client {
 		SyncResponse response = requestTool.newRequest(Client.ITEM_ID_PREFIX + id).doDelete();
 
 		// if response isn't 204 No Content
-		requestTool.errorHandling(response, HTTP_NO_CONTENT);
+		RequestTool.errorHandling(response, HTTP_NO_CONTENT);
 	}
 
 	public void deleteItem(@NotNull BasePointer pointer) throws ErrorResponseException {
 		SyncResponse response = requestTool.newRequest(pointer.toASCIIApi()).doDelete();
 
 		// if response isn't 204 No Content
-		requestTool.errorHandling(response, HTTP_NO_CONTENT);
+		RequestTool.errorHandling(response, HTTP_NO_CONTENT);
 	}
 
 

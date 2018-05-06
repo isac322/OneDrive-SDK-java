@@ -164,6 +164,39 @@ public class RequestTool {
 		}
 	}
 
+	public static void errorHandling(@NotNull SyncResponse response, int expectedCode) throws ErrorResponseException {
+		if (response.getCode() != expectedCode) {
+			try {
+				JsonParser parser = jsonFactory.createParser(response.getContent());
+				parser.nextToken();
+				ErrorResponse error = ErrorResponse.deserialize(parser, true);
+				throw new ErrorResponseException(expectedCode, response.getCode(),
+						error.getCode(), error.getMessage());
+			}
+			catch (IOException e) {
+				// FIXME: custom exception
+				throw new RuntimeException("DEV: Unrecognizable json response.", e);
+			}
+		}
+	}
+
+	public static void errorHandling(@NotNull HttpResponse response, @NotNull ByteBufStream byteBufStream,
+									 int expectedCode) throws ErrorResponseException {
+		if (response.status().code() != expectedCode) {
+			try {
+				JsonParser parser = jsonFactory.createParser(byteBufStream);
+				parser.nextToken();
+				ErrorResponse error = ErrorResponse.deserialize(parser, true);
+				throw new ErrorResponseException(expectedCode, response.status().code(),
+						error.getCode(), error.getMessage());
+			}
+			catch (IOException e) {
+				// FIXME: custom exception
+				throw new RuntimeException("DEV: Unrecognizable json response.", e);
+			}
+		}
+	}
+
 
 	/**
 	 * <h1>Refrain to use this method. you can find API that wants to process in {@link Client}.</h1>
@@ -497,39 +530,6 @@ public class RequestTool {
 
 	private void uploadSession(@NotNull String api, @NotNull Path filePath) {
 
-	}
-
-	public void errorHandling(@NotNull SyncResponse response, int expectedCode) throws ErrorResponseException {
-		if (response.getCode() != expectedCode) {
-			try {
-				JsonParser parser = jsonFactory.createParser(response.getContent());
-				parser.nextToken();
-				ErrorResponse error = ErrorResponse.deserialize(parser, true);
-				throw new ErrorResponseException(expectedCode, response.getCode(),
-						error.getCode(), error.getMessage());
-			}
-			catch (IOException e) {
-				// FIXME: custom exception
-				throw new RuntimeException("DEV: Unrecognizable json response.", e);
-			}
-		}
-	}
-
-	public void errorHandling(@NotNull HttpResponse response, @NotNull ByteBufStream byteBufStream,
-							  int expectedCode) throws ErrorResponseException {
-		if (response.status().code() != expectedCode) {
-			try {
-				JsonParser parser = jsonFactory.createParser(byteBufStream);
-				parser.nextToken();
-				ErrorResponse error = ErrorResponse.deserialize(parser, true);
-				throw new ErrorResponseException(expectedCode, response.status().code(),
-						error.getCode(), error.getMessage());
-			}
-			catch (IOException e) {
-				// FIXME: custom exception
-				throw new RuntimeException("DEV: Unrecognizable json response.", e);
-			}
-		}
 	}
 
 	public @NotNull DriveItem parseDriveItemAndHandle(@NotNull SyncResponse response, int expectedCode)
