@@ -92,7 +92,7 @@ You can see little bit more complicated examples in [TestCode.java](https://gith
 import com.bhyoo.onedrive.client.Client;
 
 String clientId = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
-String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
+String[] scope = {"files.readwrite.all", "offline_access"};
 String redirectURL = "http://localhost:8080/";
 String clientSecret = "xxxxxxxxxxxxxxxxxxxxxxx";
 

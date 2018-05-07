@@ -93,7 +93,7 @@ gradle build
 import com.bhyoo.onedrive.client.Client;
 
 String clientId = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
-String[] scope = {"onedrive.readwrite", "offline_access", "onedrive.appfolder"};
+String[] scope = {"files.readwrite.all", "offline_access"};
 String redirectURL = "http://localhost:8080/";
 String clientSecret = "xxxxxxxxxxxxxxxxxxxxxxx";
 
