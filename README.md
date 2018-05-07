@@ -96,9 +96,9 @@ String[] scope = {"files.readwrite.all", "offline_access"};
 String redirectURL = "http://localhost:8080/";
 String clientSecret = "xxxxxxxxxxxxxxxxxxxxxxx";
 
-// auto login
+// with login
 Client client = new Client(clientId, scope, redirectURL, clientSecret);
-// self login
+// without login
 Client client = new Client(clientId, scope, redirectURL, clientSecret, false);
 client.login();
 ```
