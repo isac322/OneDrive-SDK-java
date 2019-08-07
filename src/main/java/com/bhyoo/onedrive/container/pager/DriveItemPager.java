@@ -116,6 +116,9 @@ public class DriveItemPager extends AbstractPager<DriveItem[]> {
 					case "@odata.context":
 						// TODO
 						break;
+					case "@odata.count":
+						// TODO
+						break;
 					default:
 						throw new IllegalStateException(
 								"Unknown attribute detected in DriveItemPager : " + currentName);
