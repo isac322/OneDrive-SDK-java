@@ -1,7 +1,9 @@
 plugins {
-	id 'java'
+	id 'java-library'
 	id 'idea'
-	id 'com.google.osdetector' version '1.4.0'
+	id 'com.google.osdetector' version '1.6.2'
+	id 'io.freefair.lombok' version '3.8.4'
+	id 'maven-publish'
 }
 
 group 'org.onedrive'
@@ -10,83 +12,62 @@ version '0.10.0'
 compileJava {
 	sourceCompatibility = 1.7
 	targetCompatibility = 1.7
-
-	options.compilerArgs << "-Xlint:unchecked"
 }
 
 compileTestJava {
 	sourceCompatibility = 1.8
 	targetCompatibility = 1.8
-
-	options.compilerArgs << "-Xlint:unchecked"
 }
 
 repositories {
 	jcenter()
 }
 
+ext {
+	nettyVer = '4.1.38.Final'
+	jacksonVer = '2.10.0.pr1'
+}
+
 dependencies {
-	compile 'com.fasterxml.jackson.core:jackson-annotations:+'
-	compile 'com.fasterxml.jackson.core:jackson-core:+'
+	implementation "com.fasterxml.jackson.core:jackson-annotations:$jacksonVer"
+	implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVer"
 
-	compile 'io.netty:netty-buffer:4.+'
-	compile 'io.netty:netty-codec:4.+'
-	compile 'io.netty:netty-codec-http:4.+'
-	compile 'io.netty:netty-common:4.+'
-	compile 'io.netty:netty-handler:4.+'
-	compile 'io.netty:netty-resolver:4.+'
-	compile 'io.netty:netty-transport:4.+'
+	api "io.netty:netty-buffer:$nettyVer"
+	api "io.netty:netty-codec:$nettyVer"
+	api "io.netty:netty-codec-http:$nettyVer"
+	api "io.netty:netty-common:$nettyVer"
+	api "io.netty:netty-handler:$nettyVer"
+	api "io.netty:netty-resolver:$nettyVer"
+	api "io.netty:netty-transport:$nettyVer"
 
 
-	if (osdetector.os == 'linux' || osdetector.os == 'osx' || osdetector.os.endsWith('bsd')) {
-		compile "io.netty:netty-transport-native-epoll:4.+:${osdetector.classifier}"
+	if (osdetector.os == 'linux') {
+		implementation "io.netty:netty-transport-native-epoll:4.+:${osdetector.classifier}"
+	}
+	else if (osdetector.os == 'osx' || osdetector.os.endsWith('bsd')) {
+		implementation "io.netty:netty-transport-native-kqueue:4.+:${osdetector.classifier}"
 	}
 
+	api 'org.jetbrains:annotations:+'
 
-	compile 'org.projectlombok:lombok:+'
-
-	compile 'org.jetbrains:annotations:+'
-
-	testCompile 'com.fasterxml.jackson.core:jackson-databind:+'
-	testCompileOnly 'org.apiguardian:apiguardian-api:+'
+	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonVer"
 	testCompile 'org.junit.jupiter:junit-jupiter-api:5.+'
 	testRuntime 'org.junit.jupiter:junit-jupiter-engine:5.+'
 }
 
-
-task delombok(dependsOn: compileJava) {
-	ext.srcDelomboked = file("${buildDir}/delomboked")
-	outputs.dir(ext.srcDelomboked)
-
-	// older version: lombok.delombok.ant.DelombokTask
-	// recent version: lombok.delombok.ant.Tasks$Delombok
-	ant.taskdef(name: 'delombok', classname: 'lombok.delombok.ant.Tasks$Delombok',
-			classpath: configurations.compile.asPath)
-
-	sourceSets.main.java.srcDirs.each {
-		inputs.dir(it)
-	}
-
-	doLast {
-		sourceSets.main.java.srcDirs.each {
-			ant.delombok(from: it, to: ext.srcDelomboked, encoding: 'UTF-8', classpath: configurations.compile.asPath)
-		}
-	}
-}
-
 javadoc {
-	dependsOn delombok
-	options.addBooleanOption('html5').setValue(true)
-	source = delombok.srcDelomboked
+	if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
+		options.addBooleanOption('html5').setValue(true)
+	}
 }
 
-task sourcesJar(type: Jar, dependsOn: classes) {
-	classifier = 'sources'
-	from sourceSets.main.allSource
+task sourcesJar(type: Jar) {
+	archiveClassifier = 'sources'
+	from sourceSets.main.allJava
 }
 
-task javadocJar(type: Jar, dependsOn: javadoc) {
-	classifier = 'javadoc'
+task javadocJar(type: Jar) {
+	archiveClassifier = 'javadoc'
 	from javadoc.destinationDir
 }
 
@@ -94,4 +75,22 @@ artifacts {
 	archives jar
 	archives sourcesJar
 	archives javadocJar
+}
+
+publishing {
+	publications {
+		myLibrary(MavenPublication) {
+			from components.java
+
+			artifact sourcesJar
+			artifact javadocJar
+		}
+	}
+
+	repositories {
+		maven {
+			name = 'myRepo'
+			url = "file://${buildDir}/repo"
+		}
+	}
 }
