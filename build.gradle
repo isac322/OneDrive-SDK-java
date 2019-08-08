@@ -55,6 +55,10 @@ dependencies {
 	testRuntime 'org.junit.jupiter:junit-jupiter-engine:5.+'
 }
 
+test {
+	useJUnitPlatform()
+}
+
 javadoc {
 	if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
 		options.addBooleanOption('html5').setValue(true)
