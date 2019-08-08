@@ -12,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 // TODO: is there any way to merge with {@link BasePointer}? cause it's conflict in behavior
 
@@ -110,7 +111,7 @@ public class ItemReference {
 					sharepointIds = SharePointIdsFacet.deserialize(parser);
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in ItemReference : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in ItemReference : " + currentName);
 			}
 		}
 

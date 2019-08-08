@@ -16,6 +16,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.logging.Logger;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 
@@ -64,8 +65,7 @@ public class DrivePager extends AbstractPager<Drive[]> {
 						// TODO
 						break;
 					default:
-						throw new IllegalStateException(
-								"Unknown attribute detected in DriveItemPager : " + currentName);
+						Logger.getGlobal().info("Unknown attribute detected in DriveItemPager : " + currentName);
 				}
 			}
 

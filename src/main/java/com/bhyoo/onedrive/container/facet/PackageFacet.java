@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/facets/package_facet.htm">https://dev.onedrive.com/facets/package_facet.htm</a>
@@ -30,7 +31,7 @@ public class PackageFacet {
 					type = PackageType.deserialize(parser.getText());
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in PackageFacet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in PackageFacet : " + currentName);
 			}
 		}
 

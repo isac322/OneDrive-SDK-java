@@ -6,6 +6,7 @@ import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class RenameAction {
 	@Getter protected final @NotNull String oldName;
@@ -25,7 +26,7 @@ public class RenameAction {
 					oldName = parser.getText();
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in RenameAction : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in RenameAction : " + currentName);
 			}
 		}
 

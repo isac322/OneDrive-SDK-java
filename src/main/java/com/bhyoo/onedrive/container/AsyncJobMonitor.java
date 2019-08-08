@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.logging.Logger;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT;
 import static io.netty.handler.codec.http.HttpHeaderNames.ACCEPT_ENCODING;
@@ -74,8 +75,7 @@ public class AsyncJobMonitor {
 						// TODO
 						break;
 					default:
-						throw new IllegalStateException(
-								"Unknown attribute detected in AsyncJobMonitor : " + currentName);
+						Logger.getGlobal().info("Unknown attribute detected in AsyncJobMonitor : " + currentName);
 				}
 			}
 

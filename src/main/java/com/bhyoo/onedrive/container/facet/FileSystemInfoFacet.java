@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/facets/filesysteminfo_facet.htm">https://dev.onedrive
@@ -39,8 +40,7 @@ public class FileSystemInfoFacet {
 					lastModifiedDateTime = parser.getText();
 					break;
 				default:
-					throw new IllegalStateException(
-							"Unknown attribute detected in FileSystemInfoFacet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in FileSystemInfoFacet : " + currentName);
 			}
 		}
 

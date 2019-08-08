@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/facets/photo_facet.htm">https://dev.onedrive.com/facets/photo_facet.htm</a>
@@ -77,7 +78,7 @@ public class PhotoFacet {
 					takenDateTime = parser.getText();
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in PhotoFacet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in PhotoFacet : " + currentName);
 			}
 		}
 

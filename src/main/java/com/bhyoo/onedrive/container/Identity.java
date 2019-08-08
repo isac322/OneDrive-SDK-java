@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 /**
  * https://dev.onedrive.com/resources/identitySet.htm
@@ -59,11 +60,8 @@ public class Identity {
 				case "thumbnails":
 					thumbnails = ThumbnailSet.deserialize(parser);
 					break;
-				case "@odata.type":
-					// TODO
-					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in Identity : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in Identity : " + currentName);
 			}
 		}
 

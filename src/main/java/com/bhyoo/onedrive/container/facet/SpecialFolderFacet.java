@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 // TODO: merge with AbstractDriveItem if possible
 
@@ -32,8 +33,9 @@ public class SpecialFolderFacet {
 					name = parser.getText();
 					break;
 				default:
-					throw new IllegalStateException(
-							"Unknown attribute detected in SpecialFolderFacet : " + currentName);
+					Logger.getGlobal().info(
+							"Unknown attribute detected in SpecialFolderFacet : " + currentName
+					);
 			}
 		}
 

@@ -6,6 +6,7 @@ import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class VersionAction {
 	@Getter protected final @NotNull String newVersion;
@@ -25,7 +26,7 @@ public class VersionAction {
 					newVersion = parser.getText();
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in VersionAction : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in VersionAction : " + currentName);
 			}
 		}
 

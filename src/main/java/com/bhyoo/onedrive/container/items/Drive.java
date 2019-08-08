@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 
 /**
  * @author <a href="mailto:bh322yoo@gmail.com" target="_top">isac322</a>
@@ -147,7 +148,7 @@ public class Drive extends AbstractBaseItem {
 					// TODO
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute in Drive : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in Drive : " + currentName);
 			}
 		}
 
@@ -200,7 +201,7 @@ public class Drive extends AbstractBaseItem {
 						quota.remaining = parser.getLongValue();
 						break;
 					default:
-						throw new IllegalStateException("Unknown attribute detected in Quota : " + currentName);
+						Logger.getGlobal().info("Unknown attribute detected in Quota : " + currentName);
 				}
 			}
 

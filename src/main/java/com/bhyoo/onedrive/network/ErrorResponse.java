@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/misc/errors.htm">explain of error types</a>
@@ -62,14 +63,14 @@ public class ErrorResponse {
 								date = parser.getText();
 								break;
 							default:
-								throw new IllegalStateException(String.format(
+								Logger.getGlobal().info(String.format(
 										"Unknown attribute detected in inner ErrorResponse : %s(%s)",
 										fieldName, parser.getText()));
 						}
 					}
 					break;
 				default:
-					throw new IllegalStateException(String.format(
+					Logger.getGlobal().info(String.format(
 							"Unknown attribute detected in ErrorResponse : %s(%s)",
 							currentName, parser.getText()));
 			}

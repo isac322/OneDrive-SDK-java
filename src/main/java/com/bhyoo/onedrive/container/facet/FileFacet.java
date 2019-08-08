@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/facets/file_facet.htm">https://dev.onedrive.com/facets/file_facet.htm</a>
@@ -45,7 +46,7 @@ public class FileFacet {
 					processingMetadata = parser.getBooleanValue();
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in FileFacet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in FileFacet : " + currentName);
 			}
 		}
 
@@ -80,7 +81,7 @@ public class FileFacet {
 						ret.quickXorHash = parser.getText();
 						break;
 					default:
-						throw new IllegalStateException("Unknown attribute detected in Hashes : " + currentName);
+						Logger.getGlobal().info("Unknown attribute detected in Hashes : " + currentName);
 				}
 			}
 

@@ -7,6 +7,7 @@ import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class MentionAction {
 	@Getter protected final @NotNull IdentitySet mentionees;
@@ -26,7 +27,7 @@ public class MentionAction {
 					mentionees = IdentitySet.deserialize(parser);
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in MentionAction : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in MentionAction : " + currentName);
 			}
 		}
 

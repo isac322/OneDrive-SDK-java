@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/facets/video_facet.htm">https://dev.onedrive.com/facets/video_facet.htm</a>
@@ -89,7 +90,7 @@ public class VideoFacet {
 					width = parser.getLongValue();
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in VideoFacet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in VideoFacet : " + currentName);
 			}
 		}
 

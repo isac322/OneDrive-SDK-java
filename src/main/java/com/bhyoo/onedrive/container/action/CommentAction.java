@@ -7,6 +7,7 @@ import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class CommentAction {
 	@Getter protected final boolean isReply;
@@ -41,7 +42,7 @@ public class CommentAction {
 					participants = IdentitySet.deserialize(parser);
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in CommentAction : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in CommentAction : " + currentName);
 			}
 		}
 
