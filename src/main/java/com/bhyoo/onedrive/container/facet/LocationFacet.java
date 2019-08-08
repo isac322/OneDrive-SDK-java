@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/facets/location_facet.htm">https://dev.onedrive.com/facets/location_facet.htm</a>
@@ -44,7 +45,7 @@ public class LocationFacet {
 					longitude = parser.getDoubleValue();
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in LocationFacet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in LocationFacet : " + currentName);
 			}
 		}
 

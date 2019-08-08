@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 
 /**
  * implements of <a href='https://dev.onedrive.com/resources/uploadSession.htm'>detail</a>
@@ -52,12 +53,8 @@ public class UploadSession {
 					nextExpectedRanges = ranges.toArray(new String[0]);
 					break;
 
-				case "@odata.context":
-					// TODO
-					break;
-
 				default:
-					throw new IllegalStateException("Unknown attribute detected in UploadSession : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in UploadSession : " + currentName);
 			}
 		}
 

@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class Thumbnail {
 	@Getter protected final int height;
@@ -45,7 +46,7 @@ public class Thumbnail {
 					width = parser.getIntValue();
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in Thumbnail : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in Thumbnail : " + currentName);
 			}
 		}
 

@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class ThumbnailSet {
 	@Getter protected final @NotNull String id;
@@ -52,7 +53,7 @@ public class ThumbnailSet {
 					small = Thumbnail.deserialize(parser);
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in ThumbnailSet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in ThumbnailSet : " + currentName);
 			}
 		}
 

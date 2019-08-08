@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class ItemActionSet {
 	@Getter protected final @Nullable CommentAction comment;
@@ -95,7 +96,7 @@ public class ItemActionSet {
 					version = VersionAction.deserialize(parser);
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in ItemActionSet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in ItemActionSet : " + currentName);
 			}
 		}
 

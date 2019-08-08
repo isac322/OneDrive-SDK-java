@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/facets/audio_facet.htm">https://dev.onedrive.com/facets/audio_facet.htm</a>
@@ -128,7 +129,7 @@ public class AudioFacet {
 					year = parser.getIntValue();
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in AudioFacet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in AudioFacet : " + currentName);
 			}
 		}
 

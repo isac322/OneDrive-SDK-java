@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://docs.microsoft.com/ko-kr/onedrive/developer/rest-api/resources/folderview">
@@ -41,7 +42,7 @@ public class FolderFacet {
 					view = FolderViewFacet.deserialize(parser);
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in FolderFacet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in FolderFacet : " + currentName);
 			}
 		}
 

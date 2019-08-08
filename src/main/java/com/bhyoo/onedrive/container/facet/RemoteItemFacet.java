@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/facets/remoteitem_facet.htm">https://dev.onedrive.com/facets/remoteitem_facet
@@ -153,7 +154,7 @@ public class RemoteItemFacet {
 					webUrl = new URI(parser.getText());
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in RemoteItemFacet : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in RemoteItemFacet : " + currentName);
 			}
 		}
 

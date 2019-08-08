@@ -8,6 +8,7 @@ import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class ItemActivity {
 	@Getter protected final @NotNull String id;
@@ -56,7 +57,7 @@ public class ItemActivity {
 					times = ItemActivityTimeSet.deserialize(parser);
 					break;
 				default:
-					throw new IllegalStateException("Unknown attribute detected in ItemActivity : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in ItemActivity : " + currentName);
 			}
 		}
 
@@ -88,8 +89,9 @@ public class ItemActivity {
 						recordedDateTime = parser.getText();
 						break;
 					default:
-						throw new IllegalStateException(
-								"Unknown attribute detected in ItemActivityTimeSet : " + currentName);
+						Logger.getGlobal().info(
+								"Unknown attribute detected in ItemActivityTimeSet : " + currentName
+						);
 				}
 			}
 

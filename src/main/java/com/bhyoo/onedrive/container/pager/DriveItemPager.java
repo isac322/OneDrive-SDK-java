@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.logging.Logger;
 
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -63,8 +64,7 @@ public class DriveItemPager extends AbstractPager<DriveItem[]> {
 						// TODO
 						break;
 					default:
-						throw new IllegalStateException(
-								"Unknown attribute detected in DriveItemPager : " + currentName);
+						Logger.getGlobal().info("Unknown attribute detected in DriveItemPager : " + currentName);
 				}
 			}
 
@@ -113,15 +113,8 @@ public class DriveItemPager extends AbstractPager<DriveItem[]> {
 							values.add(AbstractDriveItem.deserialize(client, parser, false));
 						}
 						break;
-					case "@odata.context":
-						// TODO
-						break;
-					case "@odata.count":
-						// TODO
-						break;
 					default:
-						throw new IllegalStateException(
-								"Unknown attribute detected in DriveItemPager : " + currentName);
+						Logger.getGlobal().info("Unknown attribute detected in DriveItemPager : " + currentName);
 				}
 			}
 

@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.logging.Logger;
 
 /**
  * <a href="https://dev.onedrive.com/facets/searchresult_facet.htm">
@@ -36,7 +37,7 @@ public class SearchResultFacet {
 				onClickTelemetryUrl = new URI(parser.getText());
 			}
 			else {
-				throw new IllegalStateException("Unknown attribute detected in SearchResultFacet : " + currentName);
+				Logger.getGlobal().info("Unknown attribute detected in SearchResultFacet : " + currentName);
 			}
 		}
 

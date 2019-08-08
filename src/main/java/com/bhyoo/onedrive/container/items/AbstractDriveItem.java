@@ -23,6 +23,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 
 /**
  * https://dev.onedrive.com/resources/item.htm
@@ -176,8 +177,9 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 								deleted = parser.getText();
 								break;
 							default:
-								throw new IllegalStateException(
-										"Unknown attribute detected in AbstractDriveItem : " + fieldName);
+								Logger.getGlobal().info(
+										"Unknown attribute detected in AbstractDriveItem : " + fieldName
+								);
 						}
 					}
 					break;
@@ -254,22 +256,8 @@ abstract public class AbstractDriveItem extends AbstractBaseItem implements Driv
 					remoteItem = RemoteItemFacet.deserialize(parser);
 					break;
 
-				case "@odata.context":
-					// TODO
-					break;
-				case "children@odata.context":
-					// TODO
-					break;
-				case "@microsoft.graph.downloadUrl":
-					// TODO
-					break;
-				case "@odata.type":
-					// TODO
-					break;
-
 				default:
-					throw new IllegalStateException(
-							"Unknown attribute detected in AbstractDriveItem : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in AbstractDriveItem : " + currentName);
 			}
 		}
 

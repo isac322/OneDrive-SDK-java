@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 
 /**
@@ -61,8 +62,7 @@ public class AuthenticationInfo {
 					// TODO
 					break;
 				default:
-					throw new IllegalStateException(
-							"Unknown attribute detected in AuthenticationInfo : " + currentName);
+					Logger.getGlobal().info("Unknown attribute detected in AuthenticationInfo : " + currentName);
 			}
 		}
 
