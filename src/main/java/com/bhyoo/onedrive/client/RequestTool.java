@@ -67,18 +67,25 @@ public class RequestTool {
 	static {
 		EventLoopGroup tmpGroup;
 		Class<? extends SocketChannel> tmpClass;
-		try {
-			ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+		ClassLoader classLoader = ClassLoader.getSystemClassLoader();
 
+		try {
 			Class<?> loadClass = classLoader.loadClass("io.netty.channel.epoll.EpollEventLoopGroup");
 			tmpGroup = (EventLoopGroup) loadClass.getConstructor(int.class).newInstance(4);
 			tmpClass = (Class<? extends SocketChannel>)
 					classLoader.loadClass("io.netty.channel.epoll.EpollSocketChannel");
 		}
 		catch (Exception e) {
-			e.printStackTrace();
-			tmpGroup = new NioEventLoopGroup(4);
-			tmpClass = NioSocketChannel.class;
+			try {
+				Class<?> loadClass = classLoader.loadClass("io.netty.channel.kqueue.KQueueEventLoopGroup");
+				tmpGroup = (EventLoopGroup) loadClass.getConstructor(int.class).newInstance(4);
+				tmpClass = (Class<? extends SocketChannel>)
+						classLoader.loadClass("io.netty.channel.kqueue.KQueueSocketChannel");
+			}
+			catch (Exception e1) {
+				tmpGroup = new NioEventLoopGroup(4);
+				tmpClass = NioSocketChannel.class;
+			}
 		}
 
 		group = tmpGroup;
