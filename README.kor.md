@@ -53,7 +53,6 @@
 
 `build/libs`에 `jar`파일들 존재
 
-## __Oracle JDK 10에서 Lombok과의 문제 때문에 컴파일 에러 발생. JDK 9권장__
 
 #### Windows
 

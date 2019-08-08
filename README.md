@@ -53,7 +53,6 @@ purse fast, easy to use, intuitive API.
 
 `jar` files will be located on `build/libs` after build
 
-## __because of Lombok, Compile error can occurs on Oracle JDK 10. JDK 9 is recommended__
 
 #### Windows
 
