@@ -108,8 +108,6 @@ String tokenType = "bearer";
 long expiresIn = 0;
 
 Client client = new Client(clientId, scope, redirectURL, clientSecret, accessToken, refreshToken, tokenType, expiresIn);
-
-
 ```
 
 
