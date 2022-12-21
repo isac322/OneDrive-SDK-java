@@ -21,7 +21,7 @@ public class AuthenticationInfo {
 	@Getter @JsonProperty("refresh_token") protected @NotNull String refreshToken;
 	@Getter protected String scope;
 
-	protected AuthenticationInfo(@NotNull String tokenType, long expiresIn, @NotNull String accessToken,
+	public AuthenticationInfo(@NotNull String tokenType, long expiresIn, @NotNull String accessToken,
 								 @NotNull String refreshToken, @NotNull String scope) {
 		this.tokenType = tokenType;
 		this.expiresIn = expiresIn;
