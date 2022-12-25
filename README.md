@@ -100,6 +100,14 @@ Client client = new Client(clientId, scope, redirectURL, clientSecret);
 // without login
 Client client = new Client(clientId, scope, redirectURL, clientSecret, false);
 client.login();
+
+// With tokens provided from outside source 
+String accessToken = "<access_token>";
+String refreshToken = "<refresh_token>"
+String tokenType = "bearer";
+long expiresIn = 0;
+
+Client client = new Client(clientId, scope, redirectURL, clientSecret, accessToken, refreshToken, tokenType, expiresIn);
 ```
 
 

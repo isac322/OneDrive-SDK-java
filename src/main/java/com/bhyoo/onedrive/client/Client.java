@@ -2,6 +2,7 @@ package com.bhyoo.onedrive.client;
 
 import com.bhyoo.onedrive.client.auth.AbstractAuthHelper;
 import com.bhyoo.onedrive.client.auth.AuthHelper;
+import com.bhyoo.onedrive.client.auth.AuthenticationInfo;
 import com.bhyoo.onedrive.container.AsyncJobMonitor;
 import com.bhyoo.onedrive.container.items.*;
 import com.bhyoo.onedrive.container.items.pointer.BasePointer;
@@ -25,6 +26,7 @@ import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 import static com.bhyoo.onedrive.container.items.pointer.Operator.*;
 import static io.netty.handler.codec.http.HttpMethod.GET;
@@ -96,6 +98,30 @@ public class Client {
 	}
 
 
+	/**
+	 * Constructor used when authorization is handled by an external system.  In this case, the accessToken,
+	 * refreshToken and expiresIn values have been obtained elsewhere.
+	 * @param clientId The OAuth clientID
+	 * @param scope A {@link String[]} of scopes
+	 * @param redirectURL The OAuth redirect URL
+	 * @param clientSecret The OAuth clientSecret token
+	 * @param accessToken The OAuth accessToken
+	 * @param refreshToken The OAuth refreshToken
+	 * @param tokenType The OAuth tokenType
+	 * @param expiresIn The OAuth expiresIn value
+	 */
+	public Client(@NotNull String clientId,
+								@NotNull String[] scope,
+								@NotNull String redirectURL,
+								@NotNull String clientSecret,
+								@NotNull String accessToken,
+								@NotNull String refreshToken,
+								String tokenType,
+								long expiresIn) {
+		requestTool = new RequestTool(this);
+		AuthenticationInfo authInfo = new AuthenticationInfo(tokenType, expiresIn, accessToken, refreshToken, Arrays.toString(scope));
+		authHelper = new AuthHelper(scope, clientId, clientSecret, redirectURL, requestTool, authInfo);
+	}
 
 
 	/*

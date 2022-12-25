@@ -46,6 +46,25 @@ public class AuthHelper implements AbstractAuthHelper {
 		this.requestTool = requestTool;
 	}
 
+	/**
+	 * Creates an AuthHelper object when the initial access and refresh tokens are obtained programmatically.
+	 * @param scopes A list of scopes
+	 * @param clientId The OAuth 2.0 clientID token
+	 * @param clientSecret The OAuth 2.0 client secret token
+	 * @param redirectURL The OAuth 2.0 redirect URL
+	 * @param requestTool The {@link RequestTool} for making HTTP requests
+	 * @param authInfo The {@link AuthenticationInfo} containing the access and refresh tokens.
+	 */
+	public AuthHelper(@NotNull String[] scopes, @NotNull String clientId, @NotNull String clientSecret,
+										@NotNull String redirectURL, @NotNull RequestTool requestTool, @NotNull AuthenticationInfo authInfo) {
+		this.scopes = scopes;
+		this.clientId = clientId;
+		this.clientSecret = clientSecret;
+		this.redirectURL = redirectURL;
+		this.requestTool = requestTool;
+		this.authInfo = authInfo;
+	}
+
 
 	@Override public boolean isLogin() {
 		return authCode != null && authInfo != null;
