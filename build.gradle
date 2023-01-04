@@ -7,7 +7,7 @@ plugins {
 }
 
 group 'org.onedrive'
-version '0.10.1'
+version '0.10.2'
 
 compileJava {
 	sourceCompatibility = 1.7
